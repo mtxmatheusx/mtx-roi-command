@@ -1,63 +1,33 @@
 
 
-## Plano: Status de Campanhas + Log de Automação + Sync Global + Correções
+## Plan: Fix Meta API Connection + Budget Configuration
 
-### 1. Edge Function — Adicionar `campaign_id`, `effective_status` ao fetch
+### Problem
+The edge function requests `effective_status` in the `/insights` endpoint fields (line 138), which Meta API rejects with error `(#100) effective_status is not valid for fields param`. This breaks ALL data fetching -- campaigns, creatives, and dashboard are empty.
 
-**`supabase/functions/meta-ads-sync/index.ts`**
-- Adicionar `campaign_id` e `effective_status` aos fields do fetch de campanhas
-- Retornar esses campos no response para cada campaign row
-- O campo `effective_status` da Meta API retorna: `ACTIVE`, `PAUSED`, `DELETED`, `ARCHIVED`, etc.
+### 1. Edge Function Fix (`supabase/functions/meta-ads-sync/index.ts`)
 
-### 2. `useMetaAds.ts` — Expor status real + invalidar cache ao trocar perfil
+**Remove `effective_status` from insights fields** (line 138) and add a **separate fetch** to the `/campaigns` endpoint:
 
-- Adicionar `effectiveStatus` ao `MetaAdsCampaign` e mapear para `Campaign.status` baseado no valor da API:
-  - `ACTIVE` → `active`
-  - `PAUSED` → `paused`
-  - Outros → `paused`
-- Remover lógica atual que infere status a partir de spend/ROAS
-- `queryKey` já inclui `adAccountId`, portanto trocar perfil já invalida cache automaticamente
+```
+GET /{adAccountId}/campaigns?fields=id,name,effective_status&limit=100&access_token=...
+```
 
-### 3. `mockData.ts` — Adicionar campo `effectiveStatus` ao Campaign type
+After fetching both insights and campaigns list:
+- Build a status map: `{ campaign_id → effective_status }`
+- Merge into each campaign row from insights using `campaign_id` as key
+- If no match found, default to `undefined` (existing fallback logic handles it)
 
-- Adicionar `effectiveStatus?: string` ao type `Campaign`
+### 2. Test Connection Fix (`Configuracoes.tsx`)
 
-### 4. `CampaignsTable.tsx` — Coluna Status com badges + Toggle de filtro
+The test connection calls `meta-ads-sync` which currently fails. The edge function fix above resolves this. No additional changes needed to the test logic -- it already checks for `data.error` and `data.total`.
 
-- Adicionar coluna "Status" com badges: `[ATIVO]` verde neon, `[PAUSADO]` cinza
-- Adicionar `Switch` toggle "Mostrar apenas ativas" acima da tabela
-- Filtrar campanhas com base no toggle
+### 3. Budget Configuration
 
-### 5. Campanhas, Criativos, Simulador — Botão "Forçar Atualização" replicado
+Budget fields (`budget_maximo`, `budget_frequency`) already exist in the database and are already wired in `Configuracoes.tsx`. The user just needs to save values via the existing UI. The budget progress bar in `Index.tsx` already reads these values and renders correctly.
 
-- **`Campanhas.tsx`**: Adicionar `useClientProfiles` + `DateRangePicker` + botão Refresh com `forceRefetch()` e timestamp independente
-- **`Criativos.tsx`**: Adicionar botão Refresh com `forceRefetch()` e timestamp independente
-- **`Simulador.tsx`**: Consumir `useMetaAds` para pegar CPA e Ticket Médio reais; adicionar botão Refresh
+No code changes needed for budget -- it works once the edge function is fixed and real data flows.
 
-### 6. `Configuracoes.tsx` — Limpar campos duplicados
-
-- A seção "Controle de Teto Financeiro" tem campos CPA Meta, Ticket Médio e Limite Escala duplicados. Remover a duplicação, mantendo apenas Budget Máximo + Frequência nessa seção.
-
-### 7. `Index.tsx` — Indicador "Monitoramento Ativo" + Log de Automação
-
-- Adicionar pill pulsante no topo: `"● Monitoramento Ativo em Tempo Real"` com animação pulse neon
-- Criar seção "Log de Automação" abaixo das campanhas com entries geradas client-side:
-  - A cada renderização/refetch, gerar entry: `"Check realizado às HH:MM — ROI atual: X.XX — Nenhuma ação necessária"`
-  - Se alguma campanha tiver CPA > 2× meta com 0 vendas: `"AÇÃO: Campanha [Nome] sinalizada por CPA alto"`
-  - Armazenar últimos 20 logs em state local
-
-### 8. Não necessita migração SQL
-
-Budget frequency e budget_maximo já existem no schema. Nenhuma alteração de banco necessária.
-
-### Arquivos modificados
-- `supabase/functions/meta-ads-sync/index.ts` — campos effective_status
-- `src/lib/mockData.ts` — type Campaign atualizado  
-- `src/hooks/useMetaAds.ts` — mapear status real
-- `src/components/CampaignsTable.tsx` — badges status + toggle filtro
-- `src/pages/Campanhas.tsx` — botão refresh + profiles
-- `src/pages/Criativos.tsx` — botão refresh
-- `src/pages/Simulador.tsx` — dados reais + botão refresh
-- `src/pages/Index.tsx` — indicador pulse + log de automação
-- `src/pages/Configuracoes.tsx` — remover campos duplicados
+### Files Modified
+- `supabase/functions/meta-ads-sync/index.ts` -- remove `effective_status` from insights fields, add separate `/campaigns` fetch, merge status data
 
