@@ -1,72 +1,63 @@
 
 
-## Plano: Limite de Orçamento com Frequência + Barra de Progresso + Sincronização de Criativos
+## Plano: Status de Campanhas + Log de Automação + Sync Global + Correções
 
-### 1. Migração SQL — adicionar colunas de frequência do limite
+### 1. Edge Function — Adicionar `campaign_id`, `effective_status` ao fetch
 
-```sql
-ALTER TABLE public.client_profiles 
-  ADD COLUMN budget_frequency TEXT NOT NULL DEFAULT 'monthly';
--- budget_frequency: 'daily', 'weekly', 'monthly'
--- budget_maximo já existe (valor do limite)
-```
+**`supabase/functions/meta-ads-sync/index.ts`**
+- Adicionar `campaign_id` e `effective_status` aos fields do fetch de campanhas
+- Retornar esses campos no response para cada campaign row
+- O campo `effective_status` da Meta API retorna: `ACTIVE`, `PAUSED`, `DELETED`, `ARCHIVED`, etc.
 
-### 2. `useClientProfiles.ts` — expor `budgetFrequency`
-- Adicionar `budgetFrequency` ao retorno do hook
-- Incluir no `updateProfile`
+### 2. `useMetaAds.ts` — Expor status real + invalidar cache ao trocar perfil
 
-### 3. `Configuracoes.tsx` — UI do Limite de Orçamento
-- Substituir campo simples de "Budget Máximo" por um grupo com:
-  - Input "Valor do Limite (R$)" (já existe como `budgetMaximo`)
-  - Select dropdown "Frequência" com opções: Diário, Semanal, Mensal
-- Incluir `budgetFrequency` no schema Zod e no `handleSave`
+- Adicionar `effectiveStatus` ao `MetaAdsCampaign` e mapear para `Campaign.status` baseado no valor da API:
+  - `ACTIVE` → `active`
+  - `PAUSED` → `paused`
+  - Outros → `paused`
+- Remover lógica atual que infere status a partir de spend/ROAS
+- `queryKey` já inclui `adAccountId`, portanto trocar perfil já invalida cache automaticamente
 
-### 4. `Index.tsx` — Lógica de cálculo por período + barra de progresso
-- Calcular `totalSpend` baseado no período que corresponde à frequência:
-  - **Diário**: spend do dia atual (filtrar `daily` pelo dia de hoje)
-  - **Semanal**: spend dos últimos 7 dias (soma de `daily`)
-  - **Mensal**: spend do mês atual (soma de `daily` filtrado pelo mês)
-- Comparar com `budgetMaximo`; se atingido, exibir alerta com texto dinâmico: "Limite [Diário/Semanal/Mensal] de R$ X atingido"
-- Adicionar `Progress` bar abaixo do alerta mostrando `(spendNoPeriodo / budgetMaximo) * 100`%
-- Passar `budgetExceeded` para `CampaignsTable`
+### 3. `mockData.ts` — Adicionar campo `effectiveStatus` ao Campaign type
 
-### 5. `meta-ads-sync/index.ts` — Buscar dados por Ad (criativos reais)
-- Adicionar novo fetch com `level=ad` incluindo campos extras: `ad_name`, `adcreatives{thumbnail_url}`
-- Retornar array `creatives` no response com: nome, thumbnail, spend, purchases, roas, ctr
-- Manter fetches existentes (campaign, daily, previous) inalterados
+- Adicionar `effectiveStatus?: string` ao type `Campaign`
 
-### 6. `useMetaAds.ts` — Expor `creatives` do response
-- Mapear `data.creatives` para um tipo `MetaCreative`
-- Retornar no hook junto com campaigns/daily
+### 4. `CampaignsTable.tsx` — Coluna Status com badges + Toggle de filtro
 
-### 7. `Criativos.tsx` — Renderizar criativos reais
-- Consumir `useMetaAds` + `useClientProfiles` em vez de `mockCreatives`
-- Exibir thumbnail real do criativo (se disponível)
-- Mostrar ROI individual, spend, CTR por criativo
-- Fallback para mock se `isUsingMock`
+- Adicionar coluna "Status" com badges: `[ATIVO]` verde neon, `[PAUSADO]` cinza
+- Adicionar `Switch` toggle "Mostrar apenas ativas" acima da tabela
+- Filtrar campanhas com base no toggle
+
+### 5. Campanhas, Criativos, Simulador — Botão "Forçar Atualização" replicado
+
+- **`Campanhas.tsx`**: Adicionar `useClientProfiles` + `DateRangePicker` + botão Refresh com `forceRefetch()` e timestamp independente
+- **`Criativos.tsx`**: Adicionar botão Refresh com `forceRefetch()` e timestamp independente
+- **`Simulador.tsx`**: Consumir `useMetaAds` para pegar CPA e Ticket Médio reais; adicionar botão Refresh
+
+### 6. `Configuracoes.tsx` — Limpar campos duplicados
+
+- A seção "Controle de Teto Financeiro" tem campos CPA Meta, Ticket Médio e Limite Escala duplicados. Remover a duplicação, mantendo apenas Budget Máximo + Frequência nessa seção.
+
+### 7. `Index.tsx` — Indicador "Monitoramento Ativo" + Log de Automação
+
+- Adicionar pill pulsante no topo: `"● Monitoramento Ativo em Tempo Real"` com animação pulse neon
+- Criar seção "Log de Automação" abaixo das campanhas com entries geradas client-side:
+  - A cada renderização/refetch, gerar entry: `"Check realizado às HH:MM — ROI atual: X.XX — Nenhuma ação necessária"`
+  - Se alguma campanha tiver CPA > 2× meta com 0 vendas: `"AÇÃO: Campanha [Nome] sinalizada por CPA alto"`
+  - Armazenar últimos 20 logs em state local
+
+### 8. Não necessita migração SQL
+
+Budget frequency e budget_maximo já existem no schema. Nenhuma alteração de banco necessária.
 
 ### Arquivos modificados
-- **Migração SQL**: coluna `budget_frequency`
-- `src/hooks/useClientProfiles.ts` — expor budgetFrequency
-- `src/pages/Configuracoes.tsx` — dropdown de frequência
-- `src/pages/Index.tsx` — lógica por período + Progress bar
-- `supabase/functions/meta-ads-sync/index.ts` — fetch level=ad
-- `src/hooks/useMetaAds.ts` — expor creatives
-- `src/pages/Criativos.tsx` — renderizar criativos reais
-
-### Fluxo de dados
-
-```text
-client_profiles.budget_frequency + budget_maximo
-  ↓
-Index.tsx → calcula spend no período (daily/weekly/monthly)
-  ↓
-  spend >= limite? → alerta vermelho + Progress bar + disableScale
-  
-meta-ads-sync (level=ad) → creatives[]
-  ↓
-useMetaAds → { creatives }
-  ↓
-Criativos.tsx → cards com thumbnail + ROI individual
-```
+- `supabase/functions/meta-ads-sync/index.ts` — campos effective_status
+- `src/lib/mockData.ts` — type Campaign atualizado  
+- `src/hooks/useMetaAds.ts` — mapear status real
+- `src/components/CampaignsTable.tsx` — badges status + toggle filtro
+- `src/pages/Campanhas.tsx` — botão refresh + profiles
+- `src/pages/Criativos.tsx` — botão refresh
+- `src/pages/Simulador.tsx` — dados reais + botão refresh
+- `src/pages/Index.tsx` — indicador pulse + log de automação
+- `src/pages/Configuracoes.tsx` — remover campos duplicados
 
