@@ -246,5 +246,6 @@ export function useMetaAds(dateRange?: DateRange, profileConfig?: { adAccountId?
     forceRefetch,
     fetchedAt,
     dataVerified,
+    isRateLimited,
   };
 }
