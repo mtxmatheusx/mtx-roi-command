@@ -218,12 +218,13 @@ Deno.serve(async (req) => {
     const dataVerified = campaigns.length > 0 && campaigns.every((c: { verified: boolean }) => c.verified);
 
     let daily: unknown[] = [];
-    if (dailyUrl && results[1]?.data) {
-      daily = results[1].data.map((r: Record<string, unknown>) => parseCampaignRow(r));
+    const dailyIdx = dailyUrl ? 2 : -1;
+    if (dailyIdx > 0 && results[dailyIdx]?.data) {
+      daily = results[dailyIdx].data.map((r: Record<string, unknown>) => parseCampaignRow(r));
     }
 
     let previous: Record<string, number> | null = null;
-    const prevIdx = dailyUrl ? 2 : 1;
+    const prevIdx = dailyUrl ? 3 : 2;
     if (prevUrl && results[prevIdx]?.data) {
       const prevRows = results[prevIdx].data.map((r: Record<string, unknown>) => parseCampaignRow(r));
       const totalImpressions = prevRows.reduce((s: number, c: { impressions: number }) => s + c.impressions, 0);

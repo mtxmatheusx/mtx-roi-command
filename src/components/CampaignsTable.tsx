@@ -15,6 +15,10 @@ export default function CampaignsTable({ campaigns, disableScale }: CampaignsTab
   const [data, setData] = useState(campaigns);
   const [showActiveOnly, setShowActiveOnly] = useState(false);
 
+  useEffect(() => {
+    setData(campaigns);
+  }, [campaigns]);
+
   const filteredData = showActiveOnly ? data.filter(c => c.status === 'active' || c.status === 'scaling') : data;
 
   const handlePause = (id: string) => {
