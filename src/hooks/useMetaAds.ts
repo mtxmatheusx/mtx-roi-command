@@ -214,7 +214,11 @@ export function useMetaAds(dateRange?: DateRange, profileConfig?: { adAccountId?
       };
     },
     staleTime: shortRange ? 0 : 5 * 60 * 1000,
-    retry: 1,
+    retry: (failureCount, error) => {
+      const msg = (error as Error)?.message || "";
+      if (msg.includes("rate limit") || msg.includes("Limite") || msg.includes("permission")) return false;
+      return failureCount < 1;
+    },
   });
 
   useEffect(() => {
