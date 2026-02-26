@@ -1,14 +1,29 @@
+import { useState } from "react";
 import { motion } from "framer-motion";
+import { subDays, format } from "date-fns";
 import { formatCurrency } from "@/lib/mockData";
-import { useMetaAds } from "@/hooks/useMetaAds";
+import { useMetaAds, DateRange } from "@/hooks/useMetaAds";
 import MetricCard from "@/components/MetricCard";
 import CampaignsTable from "@/components/CampaignsTable";
+import DashboardCharts from "@/components/DashboardCharts";
+import DateRangePicker from "@/components/DateRangePicker";
 import AppLayout from "@/components/AppLayout";
 import { DollarSign, TrendingUp, Target, BarChart3, Loader2, AlertTriangle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
+const defaultRange: DateRange = {
+  since: format(subDays(new Date(), 6), "yyyy-MM-dd"),
+  until: format(new Date(), "yyyy-MM-dd"),
+};
+
+function calcDelta(current: number, previous: number): number | null {
+  if (!previous || previous === 0) return null;
+  return ((current - previous) / Math.abs(previous)) * 100;
+}
+
 export default function Dashboard() {
-  const { campaigns, isLoading, isUsingMock, refetch } = useMetaAds();
+  const [dateRange, setDateRange] = useState<DateRange>(defaultRange);
+  const { campaigns, daily, previous, isLoading, isUsingMock, refetch } = useMetaAds(dateRange);
 
   const totalSpend = campaigns.reduce((s, c) => s + c.spend, 0);
   const totalRevenue = campaigns.reduce((s, c) => s + c.revenue, 0);
@@ -17,9 +32,15 @@ export default function Dashboard() {
   const avgCPA = totalPurchases > 0 ? totalSpend / totalPurchases : 0;
   const roas = totalSpend > 0 ? totalRevenue / totalSpend : 0;
 
+  const deltaProfit = previous ? calcDelta(totalProfit, previous.profit) : null;
+  const deltaSpend = previous ? calcDelta(totalSpend, previous.spend) : null;
+  const deltaCPA = previous ? calcDelta(avgCPA, previous.cpa) : null;
+  const deltaROAS = previous ? calcDelta(roas, previous.roas) : null;
+  const deltaPurchases = previous ? calcDelta(totalPurchases, previous.purchases) : null;
+
   return (
     <AppLayout>
-      <div className="mb-8 flex items-start justify-between">
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <motion.h1
             initial={{ opacity: 0, x: -20 }}
@@ -32,10 +53,16 @@ export default function Dashboard() {
             Visão geral de performance · {isUsingMock ? "Dados de demonstração" : "Dados em tempo real"}
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isLoading} className="gap-2">
-          <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
-          Atualizar
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isLoading} className="gap-2 h-8">
+            <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
+            Atualizar
+          </Button>
+        </div>
+      </div>
+
+      <div className="mb-6">
+        <DateRangePicker value={dateRange} onChange={setDateRange} />
       </div>
 
       {isUsingMock && (
@@ -51,7 +78,7 @@ export default function Dashboard() {
         </div>
       ) : (
         <>
-          {/* Hero metric: Lucro Líquido */}
+          {/* Hero metric */}
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -60,9 +87,16 @@ export default function Dashboard() {
           >
             <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-2">Lucro Líquido Total</p>
             <p className="text-5xl font-black tracking-tight text-neon-green">{formatCurrency(totalProfit)}</p>
-            <p className="text-sm text-muted-foreground mt-2">
-              Receita {formatCurrency(totalRevenue)} · Investimento {formatCurrency(totalSpend)}
-            </p>
+            <div className="flex items-center gap-3 mt-2">
+              <p className="text-sm text-muted-foreground">
+                Receita {formatCurrency(totalRevenue)} · Investimento {formatCurrency(totalSpend)}
+              </p>
+              {deltaProfit !== null && isFinite(deltaProfit) && (
+                <span className={`text-xs font-medium ${deltaProfit >= 0 ? "text-neon-green" : "text-neon-red"}`}>
+                  {deltaProfit > 0 ? "+" : ""}{deltaProfit.toFixed(1)}% vs anterior
+                </span>
+              )}
+            </div>
           </motion.div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -70,6 +104,8 @@ export default function Dashboard() {
               title="Investimento Total"
               value={formatCurrency(totalSpend)}
               icon={<DollarSign className="w-4 h-4" />}
+              delta={deltaSpend}
+              invertDelta
             />
             <MetricCard
               title="CPA Real"
@@ -77,19 +113,25 @@ export default function Dashboard() {
               subtitle="Meta: R$ 200,00"
               variant={avgCPA > 200 * 1.2 ? "danger" : "default"}
               icon={<Target className="w-4 h-4" />}
+              delta={deltaCPA}
+              invertDelta
             />
             <MetricCard
               title="ROAS"
               value={`${roas.toFixed(2)}x`}
               variant={roas > 3 ? "profit" : "default"}
               icon={<TrendingUp className="w-4 h-4" />}
+              delta={deltaROAS}
             />
             <MetricCard
               title="Compras Totais"
               value={String(totalPurchases)}
               icon={<BarChart3 className="w-4 h-4" />}
+              delta={deltaPurchases}
             />
           </div>
+
+          <DashboardCharts daily={daily} cpaMeta={200} />
 
           <CampaignsTable campaigns={campaigns} />
         </>
