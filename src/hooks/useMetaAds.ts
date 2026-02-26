@@ -29,6 +29,18 @@ interface MetaAdsCampaign {
   verified?: boolean;
 }
 
+export interface MetaCreative {
+  adName: string;
+  spend: number;
+  purchases: number;
+  purchaseValue: number;
+  roas: number;
+  ctr: number;
+  cpc: number;
+  impressions: number;
+  clicks: number;
+}
+
 export interface DailyDataPoint {
   date: string;
   spend: number;
@@ -137,11 +149,12 @@ export function useMetaAds(dateRange?: DateRange, profileConfig?: { adAccountId?
       campaigns: Campaign[];
       daily: DailyDataPoint[];
       previous: PreviousPeriod | null;
+      creatives: MetaCreative[];
       fetchedAt: string | null;
       dataVerified: boolean;
     }> => {
       if (!adAccountId || adAccountId === "act_") {
-        return { campaigns: mockCampaigns, daily: generateMockDaily(), previous: mockPrevious, fetchedAt: null, dataVerified: false };
+        return { campaigns: mockCampaigns, daily: generateMockDaily(), previous: mockPrevious, creatives: [], fetchedAt: null, dataVerified: false };
       }
 
       const body: Record<string, string> = { adAccountId };
@@ -166,10 +179,13 @@ export function useMetaAds(dateRange?: DateRange, profileConfig?: { adAccountId?
         cpa: d.cpa, roas: d.roas, profit: d.profit,
       }));
 
+      const creatives: MetaCreative[] = (data?.creatives || []);
+
       return {
         campaigns,
         daily: daily.length ? daily : generateMockDaily(),
         previous: data?.previous || null,
+        creatives,
         fetchedAt: data?.fetchedAt || null,
         dataVerified: data?.dataVerified ?? false,
       };
@@ -183,7 +199,7 @@ export function useMetaAds(dateRange?: DateRange, profileConfig?: { adAccountId?
     if (query.data?.dataVerified !== undefined) setDataVerified(query.data.dataVerified);
   }, [query.data?.fetchedAt, query.data?.dataVerified]);
 
-  const result = query.data ?? { campaigns: mockCampaigns, daily: generateMockDaily(), previous: mockPrevious, fetchedAt: null, dataVerified: false };
+  const result = query.data ?? { campaigns: mockCampaigns, daily: generateMockDaily(), previous: mockPrevious, creatives: [] as MetaCreative[], fetchedAt: null, dataVerified: false };
   const isUsingMock = !adAccountId || adAccountId === "act_" || !!query.error;
 
   const forceRefetch = useCallback(() => {
@@ -194,6 +210,7 @@ export function useMetaAds(dateRange?: DateRange, profileConfig?: { adAccountId?
     campaigns: result.campaigns,
     daily: result.daily,
     previous: result.previous,
+    creatives: result.creatives,
     isLoading: query.isLoading,
     isError: query.isError,
     error: query.error,

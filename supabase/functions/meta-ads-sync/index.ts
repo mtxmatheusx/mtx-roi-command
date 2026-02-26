@@ -143,6 +143,12 @@ Deno.serve(async (req) => {
       "cost_per_action_type", "purchase_roas",
     ].join(",");
 
+    const adFields = [
+      "ad_name", "spend", "cpm", "ctr", "cpc",
+      "actions", "action_values", "impressions", "clicks",
+      "cost_per_action_type", "purchase_roas",
+    ].join(",");
+
     const useDateRange = since && until;
 
     const campaignUrl = buildUrl(adAccountId, fields, accessToken, {
@@ -152,6 +158,11 @@ Deno.serve(async (req) => {
     const dailyUrl = useDateRange
       ? buildUrl(adAccountId, dailyFields, accessToken, { since, until, level: "account" })
       : null;
+
+    // Ad-level fetch for creatives
+    const adUrl = buildUrl(adAccountId, adFields, accessToken, {
+      since, until, datePreset: datePreset || "last_7d", level: "ad",
+    });
 
     let prevUrl: string | null = null;
     let prevPeriod: { prevSince: string; prevUntil: string } | null = null;
@@ -165,6 +176,7 @@ Deno.serve(async (req) => {
     const fetches: Promise<Response>[] = [fetch(campaignUrl)];
     if (dailyUrl) fetches.push(fetch(dailyUrl));
     if (prevUrl) fetches.push(fetch(prevUrl));
+    fetches.push(fetch(adUrl));
 
     const responses = await Promise.all(fetches);
     const results = await Promise.all(responses.map((r) => r.json()));
@@ -208,8 +220,28 @@ Deno.serve(async (req) => {
       previous.roas = previous.spend > 0 ? previous.purchaseValue / previous.spend : 0;
     }
 
+    // Parse ad-level creatives
+    const adIdx = fetches.length - 1; // ad fetch is always last
+    let creatives: unknown[] = [];
+    if (results[adIdx]?.data) {
+      creatives = results[adIdx].data.map((r: Record<string, unknown>) => {
+        const parsed = parseCampaignRow(r);
+        return {
+          adName: r.ad_name || "Sem nome",
+          spend: parsed.spend,
+          purchases: parsed.purchases,
+          purchaseValue: parsed.purchaseValue,
+          roas: parsed.roas,
+          ctr: parsed.ctr,
+          cpc: parsed.cpc,
+          impressions: parsed.impressions,
+          clicks: parsed.clicks,
+        };
+      });
+    }
+
     return new Response(
-      JSON.stringify({ campaigns, daily, previous, dataVerified, total: campaigns.length, fetchedAt: new Date().toISOString() }),
+      JSON.stringify({ campaigns, daily, previous, creatives, dataVerified, total: campaigns.length, fetchedAt: new Date().toISOString() }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {

@@ -1,0 +1,1 @@
+ALTER TABLE public.client_profiles ADD COLUMN budget_frequency TEXT NOT NULL DEFAULT 'monthly';

@@ -17,6 +17,7 @@ export type Database = {
       client_profiles: {
         Row: {
           ad_account_id: string
+          budget_frequency: string
           budget_maximo: number
           cpa_meta: number
           created_at: string
@@ -31,6 +32,7 @@ export type Database = {
         }
         Insert: {
           ad_account_id?: string
+          budget_frequency?: string
           budget_maximo?: number
           cpa_meta?: number
           created_at?: string
@@ -45,6 +47,7 @@ export type Database = {
         }
         Update: {
           ad_account_id?: string
+          budget_frequency?: string
           budget_maximo?: number
           cpa_meta?: number
           created_at?: string

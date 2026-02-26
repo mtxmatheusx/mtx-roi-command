@@ -118,5 +118,6 @@ export function useClientProfiles() {
     ticketMedio: activeProfile?.ticket_medio ?? 697,
     limiteEscala: activeProfile?.limite_escala ?? 15,
     budgetMaximo: (activeProfile as any)?.budget_maximo ?? 0,
+    budgetFrequency: (activeProfile as any)?.budget_frequency ?? "monthly",
   };
 }
