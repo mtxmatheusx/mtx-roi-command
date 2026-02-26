@@ -178,17 +178,29 @@ export function useMetaAds(dateRange?: DateRange, profileConfig?: { adAccountId?
 
       // Check for rate limit or permission errors — return mock data instead of crashing
       const errorMsg = data?.error || (error as Error)?.message || "";
-      const isRateOrPermission = typeof errorMsg === "string" && (
+      const isRateLimit = typeof errorMsg === "string" && (
         errorMsg.includes("Limite de requisições") ||
         errorMsg.includes("Application request limit reached") ||
-        errorMsg.includes("rate limit") ||
-        errorMsg.includes("permission")
+        errorMsg.includes("rate limit")
       );
-      if (isRateOrPermission) {
+      const isPermission = typeof errorMsg === "string" && (
+        errorMsg.includes("(#10)") ||
+        errorMsg.includes("ads_read") ||
+        errorMsg.includes("Unsupported get request") ||
+        (errorMsg.includes("permission") && !isRateLimit)
+      );
+      if (isRateLimit) {
         setIsRateLimited(true);
+        setIsPermissionError(false);
+        return { campaigns: mockCampaigns, daily: generateMockDaily(), previous: mockPrevious, creatives: [], fetchedAt: null, dataVerified: false };
+      }
+      if (isPermission) {
+        setIsPermissionError(true);
+        setIsRateLimited(false);
         return { campaigns: mockCampaigns, daily: generateMockDaily(), previous: mockPrevious, creatives: [], fetchedAt: null, dataVerified: false };
       }
       setIsRateLimited(false);
+      setIsPermissionError(false);
 
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
