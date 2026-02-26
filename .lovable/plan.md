@@ -1,39 +1,45 @@
 
 
-## Plano: Ajuste de Precisao - Meta Ads API
+## Plano: Auditoria de Dados + Novos KPIs + Selo de Verificacao
 
-### 1. Atualizar Edge Function `meta-ads-sync/index.ts`
-- Adicionar `action_attribution_windows=["7d_click","1d_view"]` em todas as chamadas da API
-- Adicionar `time_zone=America/Sao_Paulo` (GMT-3) no `buildUrl`
-- Garantir mapeamento correto: `actions:purchase`, `action_values:purchase`, `actions:add_to_cart`, `actions:initiate_checkout`, `actions:landing_page_view`
-- Retornar campo `fetched_at` (timestamp ISO) na resposta para controle de latencia
+### 1. Edge Function `meta-ads-sync/index.ts`
+- Adicionar campos `cost_per_action_type` e `purchase_roas` ao request da Meta API para auditoria
+- No `parseCampaignRow`, extrair `cost_per_action_type:purchase` e `purchase_roas` da Meta e comparar com calculo interno
+- Se divergencia > 1%, usar os valores da Meta como fonte de verdade
+- Retornar flag `dataVerified: boolean` na resposta (true quando calculos internos batem com Meta)
+- Incluir `cpm` e `ctr` nos previous period totals para deltas dos novos KPIs
 
-### 2. Atualizar hook `useMetaAds.ts`
-- Adicionar suporte a `forceRefresh` flag que bypassa o cache do React Query (`refetchType: 'all'` + timestamp na query key)
-- Retornar `fetchedAt` do response da Edge Function
-- Expor funcao `forceRefetch` que limpa cache e refaz a chamada
+### 2. Hook `useMetaAds.ts`
+- Retornar `dataVerified` flag vinda da Edge Function
+- Adicionar `cpm`, `ctr`, `impressions` aos totais e previous period
+- Calcular `ticketMedio` (AOV) = purchaseValue / purchases
+- Ao mudar dateRange, forcar `staleTime: 0` para "Hoje"/"Ontem" (cache bypass automatico)
 
-### 3. Atualizar Dashboard `Index.tsx`
-- Trocar botao "Atualizar" por "Forcar Atualizacao" que chama `forceRefetch`
-- Adicionar label "Ultima atualizacao: HH:mm" discreto ao lado do botao
-- Melhorar mensagem de erro/loading: "Sincronizando dados com Meta Ads..."
+### 3. Dashboard `Index.tsx` - Novos KPIs
+- Expandir grid de 4 para 7 cards (2 linhas: 4 + 3):
+  - **CPM** com delta vs anterior
+  - **CTR** com `variant="danger"` se < 1%
+  - **Ticket Medio (AOV)** calculado dinamicamente
+- Manter hierarquia: Lucro Liquido hero > ROAS > demais metricas
+- Adicionar selo "Dados Verificados com Meta Ads" (icone ShieldCheck verde) no rodape quando `dataVerified === true`
 
 ### 4. Arquivos modificados
-- `supabase/functions/meta-ads-sync/index.ts` - attribution windows, timezone, fetched_at
-- `src/hooks/useMetaAds.ts` - forceRefetch, fetchedAt
-- `src/pages/Index.tsx` - UI de ultima atualizacao e forca refresh
+- `supabase/functions/meta-ads-sync/index.ts` - auditoria com campos nativos da Meta, flag verified
+- `src/hooks/useMetaAds.ts` - expor dataVerified, AOV, CPM/CTR totais, cache bypass para hoje/ontem
+- `src/pages/Index.tsx` - 3 novos MetricCards (CPM, CTR, AOV), selo de verificacao no rodape
 
 ### Detalhes tecnicos
 
-**Attribution windows** - parametro `action_attribution_windows` na URL da Meta API:
+**Campos adicionais na API Meta:**
 ```
-&action_attribution_windows=["7d_click","1d_view"]
-```
-
-**Timezone** - parametro na URL:
-```
-&time_zone=America/Sao_Paulo
+cost_per_action_type, purchase_roas
 ```
 
-**Mapeamentos de eventos** - ja estao corretos no `parseCampaignRow` atual (purchase, add_to_cart, initiate_checkout, landing_page_view). Sera validado e mantido.
+**Logica de auditoria** (no parseCampaignRow):
+- `metaCpa = cost_per_action_type.find(purchase).value`
+- `metaRoas = purchase_roas[0].value`
+- Se `|calculado - meta| / meta > 0.01`, usar valor da Meta
+
+**Cache bypass** para filtros curtos:
+- Quando `since === until` (Hoje/Ontem), setar `staleTime: 0` na query
 
