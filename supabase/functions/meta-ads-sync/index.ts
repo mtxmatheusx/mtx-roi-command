@@ -117,7 +117,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { adAccountId, datePreset, since, until } = await req.json();
+    const { adAccountId, datePreset, since, until, testConnection } = await req.json();
 
     if (!adAccountId) {
       return new Response(
@@ -131,6 +131,26 @@ Deno.serve(async (req) => {
       return new Response(
         JSON.stringify({ error: "META_ACCESS_TOKEN não configurado" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Lightweight test mode — single request to validate credentials
+    if (testConnection) {
+      const testUrl = `https://graph.facebook.com/v21.0/${adAccountId}/campaigns?fields=id,name&limit=1&access_token=${accessToken}`;
+      const testRes = await fetch(testUrl);
+      const testData = await testRes.json();
+      if (testData.error) {
+        const msg = testData.error.message?.includes("Application request limit reached")
+          ? "Limite de requisições da Meta atingido. Aguarde alguns minutos."
+          : testData.error.message;
+        return new Response(
+          JSON.stringify({ error: msg }),
+          { status: testData.error.message?.includes("Application request limit reached") ? 429 : 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      return new Response(
+        JSON.stringify({ success: true, total: testData.data?.length ?? 0, fetchedAt: new Date().toISOString() }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
