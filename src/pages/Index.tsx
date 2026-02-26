@@ -128,7 +128,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      {isUsingMock && !isRateLimited && (
+      {isUsingMock && !isRateLimited && !isPermissionError && (
         <div className="mb-4 flex items-center gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-sm text-amber-400">
           <AlertTriangle className="w-4 h-4 shrink-0" />
           Exibindo dados de demonstração. Configure o Ad Account ID em <strong className="mx-1">Configurações</strong> para ver dados reais.
