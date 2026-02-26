@@ -7,29 +7,40 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 
 export default function Auth() {
-  const { signIn, resetPassword, user } = useAuth();
+  const { signIn, signUp, resetPassword, user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [mode, setMode] = useState<"login" | "forgot">("login");
+  const [mode, setMode] = useState<"login" | "signup" | "forgot">("login");
 
   if (user) {
     navigate("/", { replace: true });
     return null;
   }
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await signIn(email, password);
-    setLoading(false);
-    if (error) {
-      toast({ title: "Erro ao entrar", description: error.message, variant: "destructive" });
+    if (mode === "signup") {
+      const { error } = await signUp(email, password);
+      setLoading(false);
+      if (error) {
+        toast({ title: "Erro ao criar conta", description: error.message, variant: "destructive" });
+      } else {
+        toast({ title: "Conta criada!", description: "Você já está logado." });
+        navigate("/");
+      }
     } else {
-      navigate("/");
+      const { error } = await signIn(email, password);
+      setLoading(false);
+      if (error) {
+        toast({ title: "Erro ao entrar", description: error.message, variant: "destructive" });
+      } else {
+        navigate("/");
+      }
     }
   };
 
@@ -60,8 +71,8 @@ export default function Auth() {
 
         {/* Card */}
         <div className="rounded-xl border border-neon-red/20 bg-card p-8 shadow-lg shadow-neon-red/5">
-          {mode === "login" ? (
-            <form onSubmit={handleLogin} className="space-y-5">
+          {mode !== "forgot" ? (
+            <form onSubmit={handleSubmit} className="space-y-5">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground">Email</label>
                 <Input
@@ -101,16 +112,27 @@ export default function Auth() {
                 className="w-full bg-foreground text-background hover:bg-neon-red hover:text-foreground transition-all duration-300 font-semibold"
               >
                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogIn className="w-4 h-4" />}
-                Entrar
+                {mode === "signup" ? "Criar Conta" : "Entrar"}
               </Button>
 
-              <button
-                type="button"
-                onClick={() => setMode("forgot")}
-                className="w-full text-sm text-muted-foreground hover:text-neon-red transition-colors"
-              >
-                Esqueci minha senha
-              </button>
+              <div className="flex flex-col items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setMode(mode === "login" ? "signup" : "login")}
+                  className="text-sm text-muted-foreground hover:text-neon-red transition-colors"
+                >
+                  {mode === "login" ? "Não tem conta? Criar conta" : "Já tem conta? Entrar"}
+                </button>
+                {mode === "login" && (
+                  <button
+                    type="button"
+                    onClick={() => setMode("forgot")}
+                    className="text-sm text-muted-foreground hover:text-neon-red transition-colors"
+                  >
+                    Esqueci minha senha
+                  </button>
+                )}
+              </div>
             </form>
           ) : (
             <form onSubmit={handleForgot} className="space-y-5">
