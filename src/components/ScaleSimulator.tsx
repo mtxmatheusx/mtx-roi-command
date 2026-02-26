@@ -1,12 +1,17 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { formatCurrency } from "@/lib/mockData";
-import { Zap, TrendingUp, DollarSign } from "lucide-react";
+import { Zap } from "lucide-react";
 
-export default function ScaleSimulator() {
+interface ScaleSimulatorProps {
+  initialCpa?: number;
+  initialTicket?: number;
+}
+
+export default function ScaleSimulator({ initialCpa = 200, initialTicket = 697 }: ScaleSimulatorProps) {
   const [budget, setBudget] = useState(5000);
-  const [cpa, setCpa] = useState(200);
-  const ticket = 697;
+  const [cpa, setCpa] = useState(initialCpa);
+  const ticket = initialTicket;
 
   const purchases = Math.floor(budget / cpa);
   const revenue = purchases * ticket;
@@ -32,28 +37,14 @@ export default function ScaleSimulator() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         <div>
           <label className="block text-sm font-medium text-muted-foreground mb-2">Orçamento Diário</label>
-          <input
-            type="range"
-            min={500}
-            max={50000}
-            step={500}
-            value={budget}
-            onChange={(e) => setBudget(Number(e.target.value))}
-            className="w-full accent-neon-red"
-          />
+          <input type="range" min={500} max={50000} step={500} value={budget}
+            onChange={(e) => setBudget(Number(e.target.value))} className="w-full accent-neon-red" />
           <p className="text-2xl font-bold mt-2">{formatCurrency(budget)}</p>
         </div>
         <div>
           <label className="block text-sm font-medium text-muted-foreground mb-2">CPA Estimado</label>
-          <input
-            type="range"
-            min={50}
-            max={500}
-            step={10}
-            value={cpa}
-            onChange={(e) => setCpa(Number(e.target.value))}
-            className="w-full accent-neon-red"
-          />
+          <input type="range" min={50} max={500} step={10} value={cpa}
+            onChange={(e) => setCpa(Number(e.target.value))} className="w-full accent-neon-red" />
           <p className="text-2xl font-bold mt-2">{formatCurrency(cpa)}</p>
         </div>
       </div>

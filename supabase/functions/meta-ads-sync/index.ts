@@ -77,6 +77,8 @@ function parseCampaignRow(row: Record<string, unknown>) {
 
   return {
     campaignName: row.campaign_name || undefined,
+    campaignId: row.campaign_id || undefined,
+    effectiveStatus: row.effective_status || undefined,
     date_start: row.date_start || undefined,
     spend,
     cpm: Number(row.cpm || 0),
@@ -133,7 +135,8 @@ Deno.serve(async (req) => {
     }
 
     const fields = [
-      "campaign_name", "spend", "cpm", "ctr", "cpc",
+      "campaign_name", "campaign_id", "effective_status",
+      "spend", "cpm", "ctr", "cpc",
       "actions", "action_values", "impressions", "clicks",
       "cost_per_action_type", "purchase_roas",
     ].join(",");

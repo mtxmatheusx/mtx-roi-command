@@ -1,20 +1,49 @@
+import { useState } from "react";
 import AppLayout from "@/components/AppLayout";
 import CampaignsTable from "@/components/CampaignsTable";
 import { formatCurrency, formatPercent } from "@/lib/mockData";
-import { useMetaAds } from "@/hooks/useMetaAds";
+import { useMetaAds, DateRange } from "@/hooks/useMetaAds";
+import { useClientProfiles } from "@/hooks/useClientProfiles";
+import DateRangePicker from "@/components/DateRangePicker";
 import { motion } from "framer-motion";
-import { Loader2 } from "lucide-react";
+import { Loader2, RefreshCw } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { subDays, format } from "date-fns";
+
+const defaultRange: DateRange = {
+  since: format(subDays(new Date(), 6), "yyyy-MM-dd"),
+  until: format(new Date(), "yyyy-MM-dd"),
+};
 
 export default function CampanhasPage() {
-  const { campaigns, isLoading } = useMetaAds();
+  const [dateRange, setDateRange] = useState<DateRange>(defaultRange);
+  const { adAccountId, cpaMeta, ticketMedio } = useClientProfiles();
+  const { campaigns, isLoading, forceRefetch, fetchedAt } = useMetaAds(dateRange, { adAccountId, cpaMeta, ticketMedio });
 
   return (
     <AppLayout>
-      <div className="mb-8">
-        <motion.h1 initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-3xl font-bold tracking-tight">
-          Campanhas
-        </motion.h1>
-        <p className="text-muted-foreground mt-1">Gestão completa com funil profundo e motor de decisão</p>
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <motion.h1 initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-3xl font-bold tracking-tight">
+            Campanhas
+          </motion.h1>
+          <p className="text-muted-foreground mt-1">Gestão completa com funil profundo e motor de decisão</p>
+        </div>
+        <div className="flex items-center gap-3">
+          {fetchedAt && (
+            <span className="text-xs text-muted-foreground hidden sm:inline">
+              Última atualização: {new Date(fetchedAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+            </span>
+          )}
+          <Button variant="outline" size="sm" onClick={() => forceRefetch()} disabled={isLoading} className="gap-2 h-8">
+            <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
+            Forçar Atualização
+          </Button>
+        </div>
+      </div>
+
+      <div className="mb-6">
+        <DateRangePicker value={dateRange} onChange={setDateRange} />
       </div>
 
       {isLoading ? (
