@@ -23,7 +23,7 @@ function calcDelta(current: number, previous: number): number | null {
 
 export default function Dashboard() {
   const [dateRange, setDateRange] = useState<DateRange>(defaultRange);
-  const { campaigns, daily, previous, isLoading, isUsingMock, refetch } = useMetaAds(dateRange);
+  const { campaigns, daily, previous, isLoading, isUsingMock, forceRefetch, fetchedAt } = useMetaAds(dateRange);
 
   const totalSpend = campaigns.reduce((s, c) => s + c.spend, 0);
   const totalRevenue = campaigns.reduce((s, c) => s + c.revenue, 0);
@@ -53,10 +53,15 @@ export default function Dashboard() {
             Visão geral de performance · {isUsingMock ? "Dados de demonstração" : "Dados em tempo real"}
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isLoading} className="gap-2 h-8">
+        <div className="flex items-center gap-3">
+          {fetchedAt && (
+            <span className="text-xs text-muted-foreground hidden sm:inline">
+              Última atualização: {new Date(fetchedAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+            </span>
+          )}
+          <Button variant="outline" size="sm" onClick={() => forceRefetch()} disabled={isLoading} className="gap-2 h-8">
             <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
-            Atualizar
+            Forçar Atualização
           </Button>
         </div>
       </div>
@@ -73,8 +78,9 @@ export default function Dashboard() {
       )}
 
       {isLoading ? (
-        <div className="flex items-center justify-center py-20">
+        <div className="flex flex-col items-center justify-center py-20 gap-3">
           <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">Sincronizando dados com Meta Ads...</p>
         </div>
       ) : (
         <>
