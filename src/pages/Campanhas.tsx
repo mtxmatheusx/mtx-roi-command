@@ -17,8 +17,8 @@ const defaultRange: DateRange = {
 
 export default function CampanhasPage() {
   const [dateRange, setDateRange] = useState<DateRange>(defaultRange);
-  const { adAccountId, cpaMeta, ticketMedio } = useClientProfiles();
-  const { campaigns, isLoading, forceRefetch, fetchedAt } = useMetaAds(dateRange, { adAccountId, cpaMeta, ticketMedio });
+  const { adAccountId, cpaMeta, ticketMedio, metaAccessToken } = useClientProfiles();
+  const { campaigns, isLoading, forceRefetch, fetchedAt } = useMetaAds(dateRange, { adAccountId, cpaMeta, ticketMedio, accessToken: metaAccessToken });
 
   return (
     <AppLayout>
