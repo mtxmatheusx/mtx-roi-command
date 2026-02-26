@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -19,6 +20,7 @@ const configSchema = z.object({
   ticketMedio: z.number().min(0.01, "Ticket Médio deve ser maior que 0"),
   limiteEscala: z.number().min(1).max(100, "Limite deve ser entre 1% e 100%"),
   budgetMaximo: z.number().min(0, "Budget Máximo deve ser >= 0"),
+  budgetFrequency: z.enum(["daily", "weekly", "monthly"]),
 });
 
 export default function Configuracoes() {
@@ -32,6 +34,7 @@ export default function Configuracoes() {
     ticketMedio: "697",
     limiteEscala: "15",
     budgetMaximo: "0",
+    budgetFrequency: "monthly" as "daily" | "weekly" | "monthly",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
@@ -48,6 +51,7 @@ export default function Configuracoes() {
         ticketMedio: String(activeProfile.ticket_medio ?? 697),
         limiteEscala: String(activeProfile.limite_escala ?? 15),
         budgetMaximo: String((activeProfile as any).budget_maximo ?? 0),
+        budgetFrequency: (activeProfile as any).budget_frequency ?? "monthly",
       });
     }
   }, [activeProfile?.id]);
@@ -69,6 +73,7 @@ export default function Configuracoes() {
       ticketMedio: Number(form.ticketMedio),
       limiteEscala: Number(form.limiteEscala),
       budgetMaximo: Number(form.budgetMaximo),
+      budgetFrequency: form.budgetFrequency,
     });
 
     if (!parsed.success) {
@@ -91,6 +96,7 @@ export default function Configuracoes() {
         ticket_medio: parsed.data.ticketMedio,
         limite_escala: parsed.data.limiteEscala,
         budget_maximo: parsed.data.budgetMaximo,
+        budget_frequency: parsed.data.budgetFrequency,
       } as any);
       toast({ title: "✅ Configurações salvas no Cloud", description: "Parâmetros atualizados com sucesso." });
     } catch (err) {
@@ -212,7 +218,29 @@ export default function Configuracoes() {
             <CardDescription>Defina os limites para pausa inteligente, escala automática e alertas.</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+              <div className="space-y-2">
+                <Label htmlFor="cpaMeta">CPA Meta (R$)</Label>
+                <Input id="cpaMeta" type="number" min="0.01" step="0.01" value={form.cpaMeta} onChange={(e) => handleChange("cpaMeta", e.target.value)} />
+                {errors.cpaMeta && <p className="text-xs text-destructive">{errors.cpaMeta}</p>}
+                <p className="text-xs text-muted-foreground">Pausa se CPA &gt; 2× este valor sem vendas</p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="ticketMedio">Ticket Médio (R$)</Label>
+                <Input id="ticketMedio" type="number" min="0.01" step="0.01" value={form.ticketMedio} onChange={(e) => handleChange("ticketMedio", e.target.value)} />
+                {errors.ticketMedio && <p className="text-xs text-destructive">{errors.ticketMedio}</p>}
+                <p className="text-xs text-muted-foreground">Base para cálculo de lucro e simulações</p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="limiteEscala">Limite de Escala (%)</Label>
+                <Input id="limiteEscala" type="number" min="1" max="100" value={form.limiteEscala} onChange={(e) => handleChange("limiteEscala", e.target.value)} />
+                {errors.limiteEscala && <p className="text-xs text-destructive">{errors.limiteEscala}</p>}
+                <p className="text-xs text-muted-foreground">Incremento de orçamento por ciclo de 24h</p>
+              </div>
+            </div>
+
+            <h4 className="text-sm font-semibold mb-3 text-muted-foreground uppercase tracking-wide">Controle de Teto Financeiro</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="cpaMeta">CPA Meta (R$)</Label>
                 <Input id="cpaMeta" type="number" min="0.01" step="0.01" value={form.cpaMeta} onChange={(e) => handleChange("cpaMeta", e.target.value)} />
@@ -232,10 +260,24 @@ export default function Configuracoes() {
                 <p className="text-xs text-muted-foreground">Incremento de orçamento por ciclo de 24h</p>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="budgetMaximo">Budget Máximo (R$)</Label>
+                <Label htmlFor="budgetMaximo">Valor do Limite (R$)</Label>
                 <Input id="budgetMaximo" type="number" min="0" step="1" value={form.budgetMaximo} onChange={(e) => handleChange("budgetMaximo", e.target.value)} />
                 {errors.budgetMaximo && <p className="text-xs text-destructive">{errors.budgetMaximo}</p>}
                 <p className="text-xs text-muted-foreground">0 = sem limite. Trava escala ao atingir</p>
+              </div>
+              <div className="space-y-2">
+                <Label>Frequência do Limite</Label>
+                <Select value={form.budgetFrequency} onValueChange={(v) => setForm(prev => ({ ...prev, budgetFrequency: v as any }))}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="daily">Diário</SelectItem>
+                    <SelectItem value="weekly">Semanal</SelectItem>
+                    <SelectItem value="monthly">Mensal</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">Período de acumulação do teto</p>
               </div>
             </div>
           </CardContent>

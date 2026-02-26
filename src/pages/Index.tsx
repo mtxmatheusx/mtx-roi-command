@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import { subDays, format } from "date-fns";
 import { formatCurrency } from "@/lib/mockData";
@@ -9,6 +9,7 @@ import CampaignsTable from "@/components/CampaignsTable";
 import DashboardCharts from "@/components/DashboardCharts";
 import DateRangePicker from "@/components/DateRangePicker";
 import AppLayout from "@/components/AppLayout";
+import { Progress } from "@/components/ui/progress";
 import { DollarSign, TrendingUp, Target, BarChart3, Loader2, AlertTriangle, RefreshCw, Eye, MousePointerClick, ShoppingBag, ShieldCheck, OctagonAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -24,7 +25,7 @@ function calcDelta(current: number, previous: number): number | null {
 
 export default function Dashboard() {
   const [dateRange, setDateRange] = useState<DateRange>(defaultRange);
-  const { adAccountId, cpaMeta, ticketMedio, budgetMaximo, activeProfile } = useClientProfiles();
+  const { adAccountId, cpaMeta, ticketMedio, budgetMaximo, budgetFrequency, activeProfile } = useClientProfiles();
   const { campaigns, daily, previous, isLoading, isUsingMock, forceRefetch, fetchedAt, dataVerified } = useMetaAds(dateRange, { adAccountId, cpaMeta, ticketMedio });
 
   const totalSpend = campaigns.reduce((s, c) => s + c.spend, 0);
@@ -87,12 +88,43 @@ export default function Dashboard() {
         </div>
       )}
 
-      {budgetMaximo > 0 && totalSpend >= budgetMaximo && !isLoading && (
-        <div className="mb-4 flex items-center gap-2 p-4 rounded-lg bg-destructive/15 border border-destructive/30 text-sm font-semibold text-destructive">
-          <OctagonAlert className="w-5 h-5 shrink-0" />
-          🚨 TETO DE GASTOS ATINGIDO — Gasto atual {formatCurrency(totalSpend)} ≥ Budget Máximo {formatCurrency(budgetMaximo)}. Escala automática desabilitada.
-        </div>
-      )}
+      {budgetMaximo > 0 && !isLoading && (() => {
+        const freqLabels: Record<string, string> = { daily: "Diário", weekly: "Semanal", monthly: "Mensal" };
+        const today = new Date().toISOString().slice(0, 10);
+        const thisMonth = today.slice(0, 7);
+        let spendNoPeriodo = totalSpend;
+        if (daily.length > 0) {
+          if (budgetFrequency === "daily") {
+            spendNoPeriodo = daily.filter(d => d.date === today).reduce((s, d) => s + d.spend, 0);
+          } else if (budgetFrequency === "weekly") {
+            const sevenAgo = format(subDays(new Date(), 6), "yyyy-MM-dd");
+            spendNoPeriodo = daily.filter(d => d.date >= sevenAgo).reduce((s, d) => s + d.spend, 0);
+          } else {
+            spendNoPeriodo = daily.filter(d => d.date.startsWith(thisMonth)).reduce((s, d) => s + d.spend, 0);
+          }
+        }
+        const pct = Math.min((spendNoPeriodo / budgetMaximo) * 100, 100);
+        const exceeded = spendNoPeriodo >= budgetMaximo;
+        return (
+          <div className="mb-4 space-y-2">
+            {exceeded && (
+              <div className="flex items-center gap-2 p-4 rounded-lg bg-destructive/15 border border-destructive/30 text-sm font-semibold text-destructive">
+                <OctagonAlert className="w-5 h-5 shrink-0" />
+                🚨 Limite {freqLabels[budgetFrequency]} de {formatCurrency(budgetMaximo)} atingido. Escala suspensa para proteção de ROI.
+              </div>
+            )}
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-muted-foreground whitespace-nowrap">
+                {formatCurrency(spendNoPeriodo)} / {formatCurrency(budgetMaximo)} ({freqLabels[budgetFrequency]})
+              </span>
+              <Progress value={pct} className={`h-2 flex-1 ${exceeded ? "[&>div]:bg-destructive" : pct > 80 ? "[&>div]:bg-amber-500" : "[&>div]:bg-neon-green"}`} />
+              <span className="text-xs font-bold">{pct.toFixed(0)}%</span>
+            </div>
+          </div>
+        );
+      })()}
+
+
 
       {isLoading ? (
         <div className="flex flex-col items-center justify-center py-20 gap-3">
@@ -179,7 +211,18 @@ export default function Dashboard() {
 
           <DashboardCharts daily={daily} cpaMeta={200} />
 
-          <CampaignsTable campaigns={campaigns} disableScale={budgetMaximo > 0 && totalSpend >= budgetMaximo} />
+          <CampaignsTable campaigns={campaigns} disableScale={(() => {
+            if (budgetMaximo <= 0) return false;
+            const today = new Date().toISOString().slice(0, 10);
+            const thisMonth = today.slice(0, 7);
+            let sp = totalSpend;
+            if (daily.length > 0) {
+              if (budgetFrequency === "daily") sp = daily.filter(d => d.date === today).reduce((s, d) => s + d.spend, 0);
+              else if (budgetFrequency === "weekly") sp = daily.filter(d => d.date >= format(subDays(new Date(), 6), "yyyy-MM-dd")).reduce((s, d) => s + d.spend, 0);
+              else sp = daily.filter(d => d.date.startsWith(thisMonth)).reduce((s, d) => s + d.spend, 0);
+            }
+            return sp >= budgetMaximo;
+          })()} />
 
           {/* Verification seal */}
           {!isUsingMock && dataVerified && (
