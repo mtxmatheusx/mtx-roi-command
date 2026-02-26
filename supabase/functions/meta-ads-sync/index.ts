@@ -135,7 +135,7 @@ Deno.serve(async (req) => {
     }
 
     const fields = [
-      "campaign_name", "campaign_id", "effective_status",
+      "campaign_name", "campaign_id",
       "spend", "cpm", "ctr", "cpc",
       "actions", "action_values", "impressions", "clicks",
       "cost_per_action_type", "purchase_roas",
