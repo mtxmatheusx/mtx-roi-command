@@ -37,11 +37,20 @@ export default function AppSidebar() {
           </RouterNavLink>
         ))}
       </nav>
-      <div className="p-4 border-t border-border">
-        <button className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-secondary w-full transition-colors">
+    <div className="p-4 border-t border-border">
+        <RouterNavLink
+          to="/configuracoes"
+          className={({ isActive }) =>
+            `flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 w-full ${
+              isActive
+                ? "bg-primary/10 text-neon-red border-glow-red border glow-red"
+                : "text-muted-foreground hover:text-foreground hover:bg-secondary"
+            }`
+          }
+        >
           <Settings className="w-4 h-4" />
           Configurações
-        </button>
+        </RouterNavLink>
       </div>
     </aside>
   );
