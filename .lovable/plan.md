@@ -1,46 +1,48 @@
 
 
-## Plan: Autenticação + Lovable Cloud + Edge Function Meta Ads
+## Plano: Gráficos + Filtro de Data + Deltas de Comparação
 
-### Pre-requisito: Ativar Lovable Cloud
-Antes de implementar, você precisa ativar o **Lovable Cloud** clicando na aba "Cloud" no painel superior do editor. Isso habilita banco de dados, autenticação e Edge Functions.
+### 1. Atualizar Edge Function `meta-ads-sync`
+- Aceitar parâmetros `since` e `until` (datas) além do `datePreset`
+- Quando `since`/`until` forem passados, usar `time_range` da Meta API em vez de `date_preset`
+- Adicionar campo `date_start` nos dados retornados para permitir gráficos por dia
+- Fazer segunda chamada com período anterior (mesmo intervalo) para calcular deltas
 
-### Nota de Segurança
-A senha compartilhada no chat **não será hardcoded** no código. Usaremos Supabase Auth — você criará sua conta (mtxagenciacriativa@gmail.com) pela tela de signup ou diretamente no painel do Cloud.
+### 2. Atualizar hook `useMetaAds`
+- Aceitar parâmetros de data (`dateRange: { since, until } | preset`)
+- Passar datas para a Edge Function
+- Retornar dados do período atual E do período anterior para cálculo de deltas
+- Query key incluir datas para reatividade automática
 
----
+### 3. Criar componente `DateRangePicker` (`src/components/DateRangePicker.tsx`)
+- Botões de atalho: "Hoje", "Ontem", "Últimos 7 dias", "Últimos 30 dias", "Mês Atual"
+- Popover com Calendar em modo `range` para seleção personalizada
+- Estilo dark com bordas zinc-800, período selecionado em vermelho neon
+- Emitir `onChange` com `{ since, until }`
 
-### Passo 1: Criar tela de Login (`src/pages/Auth.tsx`)
-- Card centralizado com fundo escuro, logo "MTX" em destaque
-- Inputs de email e senha com estilo neon (bordas vermelhas)
-- Botão "Entrar" preto com hover vermelho neon
-- Link "Esqueci minha senha" que dispara reset via Supabase Auth
-- Criar também `/reset-password` page para completar o fluxo
+### 4. Atualizar `MetricCard` com delta
+- Adicionar prop `delta?: number` (percentual de variação)
+- Exibir seta para cima/baixo com cor verde/vermelho e texto "vs período anterior"
 
-### Passo 2: Criar hook de autenticação (`src/hooks/useAuth.tsx`)
-- Context provider com `onAuthStateChange` + `getSession`
-- Expor `user`, `signIn`, `signOut`, `loading`
+### 5. Criar componente `DashboardCharts` (`src/components/DashboardCharts.tsx`)
+- 3 gráficos em grid usando Recharts (`LineChart` ou `AreaChart`):
+  - **CPA** ao longo do tempo (com linha de meta em vermelho tracejado)
+  - **ROAS** ao longo do tempo
+  - **Lucro** acumulado (AreaChart verde)
+- Estilo: cards com bordas zinc-800, labels em DM Sans, cores neon
 
-### Passo 3: Proteger rotas (`src/components/ProtectedRoute.tsx`)
-- Wrapper que redireciona para `/auth` se não autenticado
-- Envolver todas as rotas (/, /campanhas, /simulador, /criativos, /configuracoes) com este componente
+### 6. Atualizar `Index.tsx` (Dashboard)
+- Adicionar `DateRangePicker` no header ao lado do botão Atualizar
+- Estado de data controlado no Dashboard, passado ao `useMetaAds`
+- Calcular deltas comparando período atual vs anterior
+- Renderizar `DashboardCharts` entre os MetricCards e a tabela
+- Passar deltas aos MetricCards
 
-### Passo 4: Atualizar `App.tsx`
-- Adicionar rotas `/auth` e `/reset-password` como públicas
-- Envolver rotas existentes com `ProtectedRoute`
-- Adicionar `AuthProvider` no tree
-
-### Passo 5: Botão de Logout no sidebar
-- Adicionar botão "Sair" no `AppSidebar.tsx`
-
-### Passo 6: Edge Function `meta-ads-sync`
-- Criar `supabase/functions/meta-ads-sync/index.ts`
-- Lê o secret `META_ACCESS_TOKEN` do ambiente
-- Chama Meta Marketing API (`/act_{id}/insights`) com campos: spend, cpm, ctr, cpc, actions
-- Retorna dados processados (CPA, ROAS, ATC, IC, compras, taxa de conversão)
-- CORS headers incluídos
-
-### Passo 7: Atualizar página de Configurações
-- Conectar botão "Salvar" para armazenar token via Edge Function
-- Remover alerta de "Cloud necessário" após ativação
+### Arquivos modificados/criados:
+- `supabase/functions/meta-ads-sync/index.ts` — suporte a time_range + período anterior
+- `src/hooks/useMetaAds.ts` — aceitar datas, retornar dados de comparação
+- `src/components/DateRangePicker.tsx` — novo
+- `src/components/DashboardCharts.tsx` — novo
+- `src/components/MetricCard.tsx` — adicionar delta
+- `src/pages/Index.tsx` — integrar tudo
 
