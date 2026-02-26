@@ -29,6 +29,8 @@ function buildUrl(adAccountId: string, fields: string, accessToken: string, opts
 function parseCampaignRow(row: Record<string, unknown>) {
   const actions = (row.actions as Array<{ action_type: string; value: string }>) || [];
   const actionValues = (row.action_values as Array<{ action_type: string; value: string }>) || [];
+  const costPerAction = (row.cost_per_action_type as Array<{ action_type: string; value: string }>) || [];
+  const purchaseRoasArr = (row.purchase_roas as Array<{ action_type: string; value: string }>) || [];
 
   const getAction = (type: string) =>
     Number(actions.find((a) => a.action_type === type)?.value || 0);
@@ -42,8 +44,34 @@ function parseCampaignRow(row: Record<string, unknown>) {
   const initiateCheckout = getAction("initiate_checkout");
   const pageView = getAction("landing_page_view");
 
-  const cpa = purchases > 0 ? spend / purchases : 0;
-  const roas = spend > 0 ? purchaseValue / spend : 0;
+  // Internal calculations
+  let cpa = purchases > 0 ? spend / purchases : 0;
+  let roas = spend > 0 ? purchaseValue / spend : 0;
+
+  // Audit: compare with Meta's native values
+  const metaCpaRaw = costPerAction.find((a) => a.action_type === "purchase");
+  const metaRoasRaw = purchaseRoasArr.find((a) => a.action_type === "omni_purchase") || purchaseRoasArr[0];
+  const metaCpa = metaCpaRaw ? Number(metaCpaRaw.value) : null;
+  const metaRoas = metaRoasRaw ? Number(metaRoasRaw.value) : null;
+
+  let verified = true;
+
+  if (metaCpa !== null && metaCpa > 0 && cpa > 0) {
+    const cpaDivergence = Math.abs(cpa - metaCpa) / metaCpa;
+    if (cpaDivergence > 0.01) {
+      cpa = metaCpa; // use Meta's value as source of truth
+      verified = false;
+    }
+  }
+
+  if (metaRoas !== null && metaRoas > 0 && roas > 0) {
+    const roasDivergence = Math.abs(roas - metaRoas) / metaRoas;
+    if (roasDivergence > 0.01) {
+      roas = metaRoas;
+      verified = false;
+    }
+  }
+
   const profit = purchaseValue - spend;
   const conversionRate = initiateCheckout > 0 ? (purchases / initiateCheckout) * 100 : 0;
 
@@ -65,6 +93,7 @@ function parseCampaignRow(row: Record<string, unknown>) {
     roas,
     profit,
     conversionRate,
+    verified,
   };
 }
 
@@ -72,7 +101,7 @@ function shiftDateRange(since: string, until: string): { prevSince: string; prev
   const s = new Date(since + "T00:00:00Z");
   const u = new Date(until + "T00:00:00Z");
   const diffMs = u.getTime() - s.getTime();
-  const prevUntil = new Date(s.getTime() - 86400000); // day before since
+  const prevUntil = new Date(s.getTime() - 86400000);
   const prevSince = new Date(prevUntil.getTime() - diffMs);
   return {
     prevSince: prevSince.toISOString().slice(0, 10),
@@ -106,25 +135,24 @@ Deno.serve(async (req) => {
     const fields = [
       "campaign_name", "spend", "cpm", "ctr", "cpc",
       "actions", "action_values", "impressions", "clicks",
+      "cost_per_action_type", "purchase_roas",
     ].join(",");
 
     const dailyFields = [
-      "spend", "actions", "action_values", "impressions", "clicks", "cpm",
+      "spend", "actions", "action_values", "impressions", "clicks", "cpm", "ctr",
+      "cost_per_action_type", "purchase_roas",
     ].join(",");
 
     const useDateRange = since && until;
 
-    // 1) Campaign-level data
     const campaignUrl = buildUrl(adAccountId, fields, accessToken, {
       since, until, datePreset: datePreset || "last_7d", level: "campaign",
     });
 
-    // 2) Daily breakdown for charts (account level, time_increment=1)
     const dailyUrl = useDateRange
       ? buildUrl(adAccountId, dailyFields, accessToken, { since, until, level: "account" })
       : null;
 
-    // 3) Previous period for deltas
     let prevUrl: string | null = null;
     let prevPeriod: { prevSince: string; prevUntil: string } | null = null;
     if (useDateRange) {
@@ -134,7 +162,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Fetch in parallel
     const fetches: Promise<Response>[] = [fetch(campaignUrl)];
     if (dailyUrl) fetches.push(fetch(dailyUrl));
     if (prevUrl) fetches.push(fetch(prevUrl));
@@ -152,21 +179,29 @@ Deno.serve(async (req) => {
 
     const campaigns = (campaignData.data || []).map((r: Record<string, unknown>) => parseCampaignRow(r));
 
-    // Daily data for charts
+    // Check if all campaigns passed audit
+    const dataVerified = campaigns.length > 0 && campaigns.every((c: { verified: boolean }) => c.verified);
+
     let daily: unknown[] = [];
     if (dailyUrl && results[1]?.data) {
       daily = results[1].data.map((r: Record<string, unknown>) => parseCampaignRow(r));
     }
 
-    // Previous period totals
     let previous: Record<string, number> | null = null;
     const prevIdx = dailyUrl ? 2 : 1;
     if (prevUrl && results[prevIdx]?.data) {
       const prevRows = results[prevIdx].data.map((r: Record<string, unknown>) => parseCampaignRow(r));
+      const totalImpressions = prevRows.reduce((s: number, c: { impressions: number }) => s + c.impressions, 0);
+      const totalSpend = prevRows.reduce((s: number, c: { spend: number }) => s + c.spend, 0);
+      const totalClicks = prevRows.reduce((s: number, c: { clicks: number }) => s + c.clicks, 0);
       previous = {
-        spend: prevRows.reduce((s: number, c: { spend: number }) => s + c.spend, 0),
+        spend: totalSpend,
         purchases: prevRows.reduce((s: number, c: { purchases: number }) => s + c.purchases, 0),
         purchaseValue: prevRows.reduce((s: number, c: { purchaseValue: number }) => s + c.purchaseValue, 0),
+        impressions: totalImpressions,
+        clicks: totalClicks,
+        cpm: totalImpressions > 0 ? (totalSpend / totalImpressions) * 1000 : 0,
+        ctr: totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0,
       };
       previous.profit = previous.purchaseValue - previous.spend;
       previous.cpa = previous.purchases > 0 ? previous.spend / previous.purchases : 0;
@@ -174,7 +209,7 @@ Deno.serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ campaigns, daily, previous, total: campaigns.length, fetchedAt: new Date().toISOString() }),
+      JSON.stringify({ campaigns, daily, previous, dataVerified, total: campaigns.length, fetchedAt: new Date().toISOString() }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
