@@ -52,14 +52,6 @@ export interface PreviousPeriod {
   clicks: number;
 }
 
-function getConfig() {
-  try {
-    const raw = localStorage.getItem("mtx_config");
-    if (raw) return JSON.parse(raw);
-  } catch {}
-  return null;
-}
-
 function mapToCampaign(c: MetaAdsCampaign, index: number, cpaMeta: number, ticketMedio: number): Campaign {
   const costPerPV = c.pageView > 0 ? c.spend / c.pageView : 0;
   const costPerATC = c.addToCart > 0 ? c.spend / c.addToCart : 0;
@@ -129,11 +121,10 @@ function isShortRange(dateRange?: DateRange): boolean {
   return diffDays <= 1;
 }
 
-export function useMetaAds(dateRange?: DateRange) {
-  const config = getConfig();
-  const adAccountId = config?.adAccountId;
-  const cpaMeta = config?.cpaMeta || 200;
-  const ticketMedio = config?.ticketMedio || 697;
+export function useMetaAds(dateRange?: DateRange, profileConfig?: { adAccountId?: string; cpaMeta?: number; ticketMedio?: number }) {
+  const adAccountId = profileConfig?.adAccountId;
+  const cpaMeta = profileConfig?.cpaMeta || 200;
+  const ticketMedio = profileConfig?.ticketMedio || 697;
   const [forceKey, setForceKey] = useState(0);
   const [fetchedAt, setFetchedAt] = useState<string | null>(null);
   const [dataVerified, setDataVerified] = useState(false);

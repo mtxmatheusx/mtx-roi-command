@@ -14,7 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      client_profiles: {
+        Row: {
+          ad_account_id: string
+          cpa_meta: number
+          created_at: string
+          id: string
+          is_active: boolean
+          limite_escala: number
+          name: string
+          pixel_id: string | null
+          ticket_medio: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          ad_account_id?: string
+          cpa_meta?: number
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          limite_escala?: number
+          name: string
+          pixel_id?: string | null
+          ticket_medio?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          ad_account_id?: string
+          cpa_meta?: number
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          limite_escala?: number
+          name?: string
+          pixel_id?: string | null
+          ticket_medio?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

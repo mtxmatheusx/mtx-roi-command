@@ -1,6 +1,7 @@
 import { NavLink as RouterNavLink } from "react-router-dom";
 import { BarChart3, Zap, Target, ImageIcon, Settings, LogOut } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import ProfileSelector from "@/components/ProfileSelector";
 
 const navItems = [
   { to: "/", label: "Dashboard", icon: BarChart3 },
@@ -21,6 +22,7 @@ export default function AppSidebar() {
         </h1>
         <p className="text-xs text-muted-foreground mt-1">ROI Command Center</p>
       </div>
+      <ProfileSelector />
       <nav className="flex-1 p-4 space-y-1">
         {navItems.map((item) => (
           <RouterNavLink
