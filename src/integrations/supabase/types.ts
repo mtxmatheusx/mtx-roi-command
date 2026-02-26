@@ -24,6 +24,7 @@ export type Database = {
           id: string
           is_active: boolean
           limite_escala: number
+          meta_access_token: string | null
           name: string
           pixel_id: string | null
           ticket_medio: number
@@ -39,6 +40,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           limite_escala?: number
+          meta_access_token?: string | null
           name: string
           pixel_id?: string | null
           ticket_medio?: number
@@ -54,6 +56,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           limite_escala?: number
+          meta_access_token?: string | null
           name?: string
           pixel_id?: string | null
           ticket_medio?: number

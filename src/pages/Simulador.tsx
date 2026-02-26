@@ -14,8 +14,8 @@ const defaultRange: DateRange = {
 };
 
 export default function SimuladorPage() {
-  const { adAccountId, cpaMeta, ticketMedio } = useClientProfiles();
-  const { campaigns, isLoading, forceRefetch, fetchedAt } = useMetaAds(defaultRange, { adAccountId, cpaMeta, ticketMedio });
+  const { adAccountId, cpaMeta, ticketMedio, metaAccessToken } = useClientProfiles();
+  const { campaigns, isLoading, forceRefetch, fetchedAt } = useMetaAds(defaultRange, { adAccountId, cpaMeta, ticketMedio, accessToken: metaAccessToken });
 
   // Derive real CPA and ticket from live data
   const totalSpend = campaigns.reduce((s, c) => s + c.spend, 0);

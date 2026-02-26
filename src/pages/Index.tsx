@@ -31,8 +31,8 @@ interface LogEntry {
 
 export default function Dashboard() {
   const [dateRange, setDateRange] = useState<DateRange>(defaultRange);
-  const { adAccountId, cpaMeta, ticketMedio, budgetMaximo, budgetFrequency, activeProfile } = useClientProfiles();
-  const { campaigns, daily, previous, isLoading, isUsingMock, forceRefetch, fetchedAt, dataVerified, isRateLimited, isPermissionError } = useMetaAds(dateRange, { adAccountId, cpaMeta, ticketMedio });
+  const { adAccountId, cpaMeta, ticketMedio, budgetMaximo, budgetFrequency, activeProfile, metaAccessToken } = useClientProfiles();
+  const { campaigns, daily, previous, isLoading, isUsingMock, forceRefetch, fetchedAt, dataVerified, isRateLimited, isPermissionError, isCached } = useMetaAds(dateRange, { adAccountId, cpaMeta, ticketMedio, accessToken: metaAccessToken });
 
   const [logs, setLogs] = useState<LogEntry[]>([]);
 
@@ -121,14 +121,28 @@ export default function Dashboard() {
         </div>
       )}
 
-      {isRateLimited && (
-        <div className="mb-4 flex items-center gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-sm text-amber-400">
+      {isCached && (
+        <div className="mb-4 flex items-center gap-2 p-3 rounded-lg bg-primary/10 border border-primary/20 text-sm text-primary">
           <AlertTriangle className="w-4 h-4 shrink-0" />
-          Limite de requisições da Meta atingido. Exibindo dados em cache. Aguarde alguns minutos e clique em <strong className="mx-1">Forçar Atualização</strong>.
+          Exibindo dados reais do cache local (última sync: {fetchedAt ? new Date(fetchedAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) : "—"}). Aguarde para sincronizar novamente.
         </div>
       )}
 
-      {isUsingMock && !isRateLimited && !isPermissionError && (
+      {isRateLimited && !isCached && (
+        <div className="mb-4 flex items-center gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-sm text-amber-400">
+          <AlertTriangle className="w-4 h-4 shrink-0" />
+          Limite de requisições da Meta atingido. Exibindo dados de demonstração. Aguarde alguns minutos e clique em <strong className="mx-1">Forçar Atualização</strong>.
+        </div>
+      )}
+
+      {isPermissionError && !isCached && (
+        <div className="mb-4 flex items-center gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-sm text-amber-400">
+          <AlertTriangle className="w-4 h-4 shrink-0" />
+          Conecte seu Token com permissão <strong className="mx-1">ads_read</strong> na Meta para visualizar dados reais. Atualize o token em <strong className="mx-1">Configurações</strong>.
+        </div>
+      )}
+
+      {isUsingMock && !isRateLimited && !isPermissionError && !isCached && (
         <div className="mb-4 flex items-center gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-sm text-amber-400">
           <AlertTriangle className="w-4 h-4 shrink-0" />
           Exibindo dados de demonstração. Configure o Ad Account ID em <strong className="mx-1">Configurações</strong> para ver dados reais.

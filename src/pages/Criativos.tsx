@@ -27,8 +27,8 @@ function getCreativeStatus(roas: number, spend: number): Creative["status"] {
 }
 
 export default function CriativosPage() {
-  const { adAccountId, cpaMeta, ticketMedio } = useClientProfiles();
-  const { creatives, isLoading, isUsingMock, forceRefetch, fetchedAt } = useMetaAds(defaultRange, { adAccountId, cpaMeta, ticketMedio });
+  const { adAccountId, cpaMeta, ticketMedio, metaAccessToken } = useClientProfiles();
+  const { creatives, isLoading, isUsingMock, forceRefetch, fetchedAt } = useMetaAds(defaultRange, { adAccountId, cpaMeta, ticketMedio, accessToken: metaAccessToken });
 
   const displayCreatives: Array<{
     id: string; name: string; type: "video" | "image" | "carousel";

@@ -1,0 +1,1 @@
+ALTER TABLE public.client_profiles ADD COLUMN meta_access_token TEXT DEFAULT NULL;

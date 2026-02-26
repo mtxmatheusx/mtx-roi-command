@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Campaign, mockCampaigns } from "@/lib/mockData";
 
 export interface DateRange {
-  since: string; // YYYY-MM-DD
+  since: string;
   until: string;
 }
 
@@ -66,6 +66,39 @@ export interface PreviousPeriod {
   clicks: number;
 }
 
+// --- localStorage cache helpers ---
+interface CachedData {
+  campaigns: Campaign[];
+  daily: DailyDataPoint[];
+  previous: PreviousPeriod | null;
+  creatives: MetaCreative[];
+  fetchedAt: string;
+  dataVerified: boolean;
+}
+
+function getCacheKey(adAccountId: string) {
+  return `meta-ads-cache-${adAccountId}`;
+}
+
+function saveToCache(adAccountId: string, data: CachedData) {
+  try {
+    localStorage.setItem(getCacheKey(adAccountId), JSON.stringify(data));
+  } catch {
+    // localStorage full — silently ignore
+  }
+}
+
+function loadFromCache(adAccountId: string): CachedData | null {
+  try {
+    const raw = localStorage.getItem(getCacheKey(adAccountId));
+    if (!raw) return null;
+    return JSON.parse(raw) as CachedData;
+  } catch {
+    return null;
+  }
+}
+
+// --- mappers ---
 function mapToCampaign(c: MetaAdsCampaign, index: number, cpaMeta: number, ticketMedio: number): Campaign {
   const costPerPV = c.pageView > 0 ? c.spend / c.pageView : 0;
   const costPerATC = c.addToCart > 0 ? c.spend / c.addToCart : 0;
@@ -140,15 +173,17 @@ function isShortRange(dateRange?: DateRange): boolean {
   return diffDays <= 1;
 }
 
-export function useMetaAds(dateRange?: DateRange, profileConfig?: { adAccountId?: string; cpaMeta?: number; ticketMedio?: number }) {
+export function useMetaAds(dateRange?: DateRange, profileConfig?: { adAccountId?: string; cpaMeta?: number; ticketMedio?: number; accessToken?: string | null }) {
   const adAccountId = profileConfig?.adAccountId;
   const cpaMeta = profileConfig?.cpaMeta || 200;
   const ticketMedio = profileConfig?.ticketMedio || 697;
+  const accessToken = profileConfig?.accessToken;
   const [forceKey, setForceKey] = useState(0);
   const [fetchedAt, setFetchedAt] = useState<string | null>(null);
   const [dataVerified, setDataVerified] = useState(false);
   const [isRateLimited, setIsRateLimited] = useState(false);
   const [isPermissionError, setIsPermissionError] = useState(false);
+  const [isCached, setIsCached] = useState(false);
 
   const shortRange = isShortRange(dateRange);
 
@@ -161,9 +196,11 @@ export function useMetaAds(dateRange?: DateRange, profileConfig?: { adAccountId?
       creatives: MetaCreative[];
       fetchedAt: string | null;
       dataVerified: boolean;
+      isCached: boolean;
     }> => {
       if (!adAccountId || adAccountId === "act_") {
-        return { campaigns: mockCampaigns, daily: generateMockDaily(), previous: mockPrevious, creatives: [], fetchedAt: null, dataVerified: false };
+        setIsCached(false);
+        return { campaigns: mockCampaigns, daily: generateMockDaily(), previous: mockPrevious, creatives: [], fetchedAt: null, dataVerified: false, isCached: false };
       }
 
       const body: Record<string, string> = { adAccountId };
@@ -173,10 +210,12 @@ export function useMetaAds(dateRange?: DateRange, profileConfig?: { adAccountId?
       } else {
         body.datePreset = "last_7d";
       }
+      if (accessToken) {
+        body.accessToken = accessToken;
+      }
 
       const { data, error } = await supabase.functions.invoke("meta-ads-sync", { body });
 
-      // Check for rate limit or permission errors — return mock data instead of crashing
       const errorMsg = data?.error || (error as Error)?.message || "";
       const isRateLimit = typeof errorMsg === "string" && (
         errorMsg.includes("Limite de requisições") ||
@@ -189,18 +228,22 @@ export function useMetaAds(dateRange?: DateRange, profileConfig?: { adAccountId?
         errorMsg.includes("Unsupported get request") ||
         (errorMsg.includes("permission") && !isRateLimit)
       );
-      if (isRateLimit) {
-        setIsRateLimited(true);
-        setIsPermissionError(false);
-        return { campaigns: mockCampaigns, daily: generateMockDaily(), previous: mockPrevious, creatives: [], fetchedAt: null, dataVerified: false };
-      }
-      if (isPermission) {
-        setIsPermissionError(true);
-        setIsRateLimited(false);
-        return { campaigns: mockCampaigns, daily: generateMockDaily(), previous: mockPrevious, creatives: [], fetchedAt: null, dataVerified: false };
+
+      // On rate limit or permission error, try cache first
+      if (isRateLimit || isPermission) {
+        setIsRateLimited(isRateLimit);
+        setIsPermissionError(isPermission);
+        const cached = loadFromCache(adAccountId);
+        if (cached) {
+          setIsCached(true);
+          return { ...cached, isCached: true };
+        }
+        setIsCached(false);
+        return { campaigns: mockCampaigns, daily: generateMockDaily(), previous: mockPrevious, creatives: [], fetchedAt: null, dataVerified: false, isCached: false };
       }
       setIsRateLimited(false);
       setIsPermissionError(false);
+      setIsCached(false);
 
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
@@ -216,14 +259,29 @@ export function useMetaAds(dateRange?: DateRange, profileConfig?: { adAccountId?
       }));
 
       const creatives: MetaCreative[] = (data?.creatives || []);
+      const resultFetchedAt = data?.fetchedAt || null;
+      const resultVerified = data?.dataVerified ?? false;
+
+      // Save to localStorage cache on success
+      if ((data?.campaigns || []).length > 0 && resultFetchedAt) {
+        saveToCache(adAccountId, {
+          campaigns,
+          daily: daily.length ? daily : generateMockDaily(),
+          previous: data?.previous || null,
+          creatives,
+          fetchedAt: resultFetchedAt,
+          dataVerified: resultVerified,
+        });
+      }
 
       return {
         campaigns,
         daily: daily.length ? daily : generateMockDaily(),
         previous: data?.previous || null,
         creatives,
-        fetchedAt: data?.fetchedAt || null,
-        dataVerified: data?.dataVerified ?? false,
+        fetchedAt: resultFetchedAt,
+        dataVerified: resultVerified,
+        isCached: false,
       };
     },
     staleTime: shortRange ? 0 : 5 * 60 * 1000,
@@ -237,10 +295,11 @@ export function useMetaAds(dateRange?: DateRange, profileConfig?: { adAccountId?
   useEffect(() => {
     if (query.data?.fetchedAt) setFetchedAt(query.data.fetchedAt);
     if (query.data?.dataVerified !== undefined) setDataVerified(query.data.dataVerified);
-  }, [query.data?.fetchedAt, query.data?.dataVerified]);
+    if (query.data?.isCached !== undefined) setIsCached(query.data.isCached);
+  }, [query.data?.fetchedAt, query.data?.dataVerified, query.data?.isCached]);
 
-  const result = query.data ?? { campaigns: mockCampaigns, daily: generateMockDaily(), previous: mockPrevious, creatives: [] as MetaCreative[], fetchedAt: null, dataVerified: false };
-  const isUsingMock = !adAccountId || adAccountId === "act_" || !!query.error;
+  const result = query.data ?? { campaigns: mockCampaigns, daily: generateMockDaily(), previous: mockPrevious, creatives: [] as MetaCreative[], fetchedAt: null, dataVerified: false, isCached: false };
+  const isUsingMock = !adAccountId || adAccountId === "act_" || (!!query.error && !isCached);
 
   const forceRefetch = useCallback(() => {
     setForceKey((k) => k + 1);
@@ -261,5 +320,6 @@ export function useMetaAds(dateRange?: DateRange, profileConfig?: { adAccountId?
     dataVerified,
     isRateLimited,
     isPermissionError,
+    isCached,
   };
 }
