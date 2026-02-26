@@ -211,9 +211,10 @@ Deno.serve(async (req) => {
     const statusData = results[1];
 
     if (campaignData.error) {
+      const isRateLimit = campaignData.error.message?.includes("Application request limit reached");
       return new Response(
-        JSON.stringify({ error: campaignData.error.message, type: campaignData.error.type }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: isRateLimit ? "Limite de requisições da Meta atingido. Aguarde alguns minutos e tente novamente." : campaignData.error.message, type: campaignData.error.type }),
+        { status: isRateLimit ? 429 : 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
