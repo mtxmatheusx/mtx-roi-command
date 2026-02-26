@@ -27,30 +27,28 @@ function buildUrl(adAccountId: string, fields: string, accessToken: string, opts
 }
 
 function parseCampaignRow(row: Record<string, unknown>) {
-  const actions = (row.actions as Array<{ action_type: string; value: string }>) || [];
-  const actionValues = (row.action_values as Array<{ action_type: string; value: string }>) || [];
-  const costPerAction = (row.cost_per_action_type as Array<{ action_type: string; value: string }>) || [];
-  const purchaseRoasArr = (row.purchase_roas as Array<{ action_type: string; value: string }>) || [];
+  const actions = (row?.actions as Array<{ action_type: string; value: string }>) || [];
+  const actionValues = (row?.action_values as Array<{ action_type: string; value: string }>) || [];
+  const costPerAction = (row?.cost_per_action_type as Array<{ action_type: string; value: string }>) || [];
+  const purchaseRoasArr = (row?.purchase_roas as Array<{ action_type: string; value: string }>) || [];
 
   const getAction = (type: string) =>
-    Number(actions.find((a) => a.action_type === type)?.value || 0);
+    Number(actions.find((a) => a?.action_type === type)?.value || 0);
   const getActionValue = (type: string) =>
-    Number(actionValues.find((a) => a.action_type === type)?.value || 0);
+    Number(actionValues.find((a) => a?.action_type === type)?.value || 0);
 
-  const spend = Number(row.spend || 0);
+  const spend = Number(row?.spend || 0);
   const purchases = getAction("purchase");
   const purchaseValue = getActionValue("purchase");
   const addToCart = getAction("add_to_cart");
   const initiateCheckout = getAction("initiate_checkout");
   const pageView = getAction("landing_page_view");
 
-  // Internal calculations
   let cpa = purchases > 0 ? spend / purchases : 0;
   let roas = spend > 0 ? purchaseValue / spend : 0;
 
-  // Audit: compare with Meta's native values
-  const metaCpaRaw = costPerAction.find((a) => a.action_type === "purchase");
-  const metaRoasRaw = purchaseRoasArr.find((a) => a.action_type === "omni_purchase") || purchaseRoasArr[0];
+  const metaCpaRaw = costPerAction.find((a) => a?.action_type === "purchase");
+  const metaRoasRaw = purchaseRoasArr.find((a) => a?.action_type === "omni_purchase") || purchaseRoasArr[0];
   const metaCpa = metaCpaRaw ? Number(metaCpaRaw.value) : null;
   const metaRoas = metaRoasRaw ? Number(metaRoasRaw.value) : null;
 
@@ -59,7 +57,7 @@ function parseCampaignRow(row: Record<string, unknown>) {
   if (metaCpa !== null && metaCpa > 0 && cpa > 0) {
     const cpaDivergence = Math.abs(cpa - metaCpa) / metaCpa;
     if (cpaDivergence > 0.01) {
-      cpa = metaCpa; // use Meta's value as source of truth
+      cpa = metaCpa;
       verified = false;
     }
   }
@@ -76,16 +74,16 @@ function parseCampaignRow(row: Record<string, unknown>) {
   const conversionRate = initiateCheckout > 0 ? (purchases / initiateCheckout) * 100 : 0;
 
   return {
-    campaignName: row.campaign_name || undefined,
-    campaignId: row.campaign_id || undefined,
-    effectiveStatus: row.effective_status || undefined,
-    date_start: row.date_start || undefined,
+    campaignName: row?.campaign_name || undefined,
+    campaignId: row?.campaign_id || undefined,
+    effectiveStatus: row?.effective_status || undefined,
+    date_start: row?.date_start || undefined,
     spend,
-    cpm: Number(row.cpm || 0),
-    ctr: Number(row.ctr || 0),
-    cpc: Number(row.cpc || 0),
-    impressions: Number(row.impressions || 0),
-    clicks: Number(row.clicks || 0),
+    cpm: Number(row?.cpm || 0),
+    ctr: Number(row?.ctr || 0),
+    cpc: Number(row?.cpc || 0),
+    impressions: Number(row?.impressions || 0),
+    clicks: Number(row?.clicks || 0),
     pageView,
     addToCart,
     initiateCheckout,
@@ -134,22 +132,21 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Lightweight test mode — single request to validate credentials
+    // Lightweight test mode
     if (testConnection) {
       const testUrl = `https://graph.facebook.com/v21.0/${adAccountId}/campaigns?fields=id,name&limit=1&access_token=${accessToken}`;
       const testRes = await fetch(testUrl);
       const testData = await testRes.json();
-      if (testData.error) {
-        const msg = testData.error.message?.includes("Application request limit reached")
-          ? "Limite de requisições da Meta atingido. Aguarde alguns minutos."
-          : testData.error.message;
+      if (testData?.error) {
+        const msg = testData.error.message || "";
+        const isRateLimit = msg.includes("Application request limit reached");
         return new Response(
-          JSON.stringify({ error: msg }),
-          { status: testData.error.message?.includes("Application request limit reached") ? 429 : 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          JSON.stringify({ error: isRateLimit ? "Limite de requisições da Meta atingido. Aguarde alguns minutos." : msg }),
+          { status: isRateLimit ? 429 : 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
       return new Response(
-        JSON.stringify({ success: true, total: testData.data?.length ?? 0, fetchedAt: new Date().toISOString() }),
+        JSON.stringify({ success: true, total: testData?.data?.length ?? 0, fetchedAt: new Date().toISOString() }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -182,7 +179,6 @@ Deno.serve(async (req) => {
       ? buildUrl(adAccountId, dailyFields, accessToken, { since, until, level: "account" })
       : null;
 
-    // Ad-level fetch for creatives
     const adUrl = buildUrl(adAccountId, adFields, accessToken, {
       since, until, datePreset: datePreset || "last_7d", level: "ad",
     });
@@ -196,7 +192,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Separate fetch for campaign statuses (effective_status is NOT available on /insights)
     const statusUrl = `https://graph.facebook.com/v21.0/${adAccountId}/campaigns?fields=id,name,effective_status&limit=100&access_token=${accessToken}`;
 
     const fetches: Promise<Response>[] = [fetch(campaignUrl), fetch(statusUrl)];
@@ -207,54 +202,69 @@ Deno.serve(async (req) => {
     const responses = await Promise.all(fetches);
     const results = await Promise.all(responses.map((r) => r.json()));
 
-    const campaignData = results[0];
-    const statusData = results[1];
-
-    if (campaignData.error) {
-      const isRateLimit = campaignData.error.message?.includes("Application request limit reached");
-      return new Response(
-        JSON.stringify({ error: isRateLimit ? "Limite de requisições da Meta atingido. Aguarde alguns minutos e tente novamente." : campaignData.error.message, type: campaignData.error.type }),
-        { status: isRateLimit ? 429 : 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Build status map from /campaigns endpoint
-    const statusMap: Record<string, string> = {};
-    if (statusData?.data) {
-      for (const c of statusData.data) {
-        statusMap[c.id] = c.effective_status;
+    // Check ALL results for rate limit errors first
+    for (const result of results) {
+      if (result?.error) {
+        const msg = typeof result.error === "string" ? result.error : result.error?.message || "";
+        if (typeof msg === "string" && msg.includes("Application request limit reached")) {
+          return new Response(
+            JSON.stringify({ error: "Limite de requisições da Meta atingido. Aguarde alguns minutos e tente novamente.", type: "RateLimitError" }),
+            { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
       }
     }
 
-    // Merge effective_status into each campaign row
-    const campaigns = (campaignData.data || []).map((r: Record<string, unknown>) => {
-      const cid = r.campaign_id as string;
+    const campaignData = results[0];
+    const statusData = results[1];
+
+    // If primary campaign fetch failed with a non-rate-limit error, return it
+    if (campaignData?.error) {
+      return new Response(
+        JSON.stringify({ error: campaignData.error?.message || campaignData.error, type: campaignData.error?.type }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Build status map (null-safe — statusData might have failed)
+    const statusMap: Record<string, string> = {};
+    if (statusData?.data && Array.isArray(statusData.data)) {
+      for (const c of statusData.data) {
+        if (c?.id) statusMap[c.id] = c.effective_status;
+      }
+    }
+
+    // Merge effective_status (null-safe)
+    const campaignRows = campaignData?.data && Array.isArray(campaignData.data) ? campaignData.data : [];
+    const campaigns = campaignRows.map((r: Record<string, unknown>) => {
+      const cid = r?.campaign_id as string;
       if (cid && statusMap[cid]) {
         r.effective_status = statusMap[cid];
       }
       return parseCampaignRow(r);
     });
 
-    // Check if all campaigns passed audit
     const dataVerified = campaigns.length > 0 && campaigns.every((c: { verified: boolean }) => c.verified);
 
+    // Daily data (null-safe)
     let daily: unknown[] = [];
     const dailyIdx = dailyUrl ? 2 : -1;
-    if (dailyIdx > 0 && results[dailyIdx]?.data) {
+    if (dailyIdx > 0 && results[dailyIdx]?.data && Array.isArray(results[dailyIdx].data)) {
       daily = results[dailyIdx].data.map((r: Record<string, unknown>) => parseCampaignRow(r));
     }
 
+    // Previous period (null-safe)
     let previous: Record<string, number> | null = null;
     const prevIdx = dailyUrl ? 3 : 2;
-    if (prevUrl && results[prevIdx]?.data) {
+    if (prevUrl && results[prevIdx]?.data && Array.isArray(results[prevIdx].data)) {
       const prevRows = results[prevIdx].data.map((r: Record<string, unknown>) => parseCampaignRow(r));
-      const totalImpressions = prevRows.reduce((s: number, c: { impressions: number }) => s + c.impressions, 0);
-      const totalSpend = prevRows.reduce((s: number, c: { spend: number }) => s + c.spend, 0);
-      const totalClicks = prevRows.reduce((s: number, c: { clicks: number }) => s + c.clicks, 0);
+      const totalImpressions = prevRows.reduce((s: number, c: { impressions: number }) => s + (c?.impressions || 0), 0);
+      const totalSpend = prevRows.reduce((s: number, c: { spend: number }) => s + (c?.spend || 0), 0);
+      const totalClicks = prevRows.reduce((s: number, c: { clicks: number }) => s + (c?.clicks || 0), 0);
       previous = {
         spend: totalSpend,
-        purchases: prevRows.reduce((s: number, c: { purchases: number }) => s + c.purchases, 0),
-        purchaseValue: prevRows.reduce((s: number, c: { purchaseValue: number }) => s + c.purchaseValue, 0),
+        purchases: prevRows.reduce((s: number, c: { purchases: number }) => s + (c?.purchases || 0), 0),
+        purchaseValue: prevRows.reduce((s: number, c: { purchaseValue: number }) => s + (c?.purchaseValue || 0), 0),
         impressions: totalImpressions,
         clicks: totalClicks,
         cpm: totalImpressions > 0 ? (totalSpend / totalImpressions) * 1000 : 0,
@@ -265,14 +275,14 @@ Deno.serve(async (req) => {
       previous.roas = previous.spend > 0 ? previous.purchaseValue / previous.spend : 0;
     }
 
-    // Parse ad-level creatives
-    const adIdx = fetches.length - 1; // ad fetch is always last
+    // Creatives (null-safe)
+    const adIdx = fetches.length - 1;
     let creatives: unknown[] = [];
-    if (results[adIdx]?.data) {
+    if (results[adIdx]?.data && Array.isArray(results[adIdx].data)) {
       creatives = results[adIdx].data.map((r: Record<string, unknown>) => {
         const parsed = parseCampaignRow(r);
         return {
-          adName: r.ad_name || "Sem nome",
+          adName: r?.ad_name || "Sem nome",
           spend: parsed.spend,
           purchases: parsed.purchases,
           purchaseValue: parsed.purchaseValue,
