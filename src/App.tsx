@@ -7,6 +7,7 @@ import Index from "./pages/Index";
 import Campanhas from "./pages/Campanhas";
 import Simulador from "./pages/Simulador";
 import Criativos from "./pages/Criativos";
+import Configuracoes from "./pages/Configuracoes";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -22,6 +23,7 @@ const App = () => (
           <Route path="/campanhas" element={<Campanhas />} />
           <Route path="/simulador" element={<Simulador />} />
           <Route path="/criativos" element={<Criativos />} />
+          <Route path="/configuracoes" element={<Configuracoes />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
