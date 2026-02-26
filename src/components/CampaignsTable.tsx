@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Campaign, getCampaignAlert, formatCurrency, formatPercent } from "@/lib/mockData";
 import StatusBadge from "./StatusBadge";
@@ -14,6 +14,10 @@ interface CampaignsTableProps {
 export default function CampaignsTable({ campaigns, disableScale }: CampaignsTableProps) {
   const [data, setData] = useState(campaigns);
   const [showActiveOnly, setShowActiveOnly] = useState(false);
+
+  useEffect(() => {
+    setData(campaigns);
+  }, [campaigns]);
 
   const filteredData = showActiveOnly ? data.filter(c => c.status === 'active' || c.status === 'scaling') : data;
 

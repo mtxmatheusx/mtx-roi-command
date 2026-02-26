@@ -135,7 +135,7 @@ Deno.serve(async (req) => {
     }
 
     const fields = [
-      "campaign_name", "campaign_id", "effective_status",
+      "campaign_name", "campaign_id",
       "spend", "cpm", "ctr", "cpc",
       "actions", "action_values", "impressions", "clicks",
       "cost_per_action_type", "purchase_roas",
@@ -176,7 +176,10 @@ Deno.serve(async (req) => {
       });
     }
 
-    const fetches: Promise<Response>[] = [fetch(campaignUrl)];
+    // Separate fetch for campaign statuses (effective_status is NOT available on /insights)
+    const statusUrl = `https://graph.facebook.com/v21.0/${adAccountId}/campaigns?fields=id,name,effective_status&limit=100&access_token=${accessToken}`;
+
+    const fetches: Promise<Response>[] = [fetch(campaignUrl), fetch(statusUrl)];
     if (dailyUrl) fetches.push(fetch(dailyUrl));
     if (prevUrl) fetches.push(fetch(prevUrl));
     fetches.push(fetch(adUrl));
@@ -185,6 +188,8 @@ Deno.serve(async (req) => {
     const results = await Promise.all(responses.map((r) => r.json()));
 
     const campaignData = results[0];
+    const statusData = results[1];
+
     if (campaignData.error) {
       return new Response(
         JSON.stringify({ error: campaignData.error.message, type: campaignData.error.type }),
@@ -192,18 +197,34 @@ Deno.serve(async (req) => {
       );
     }
 
-    const campaigns = (campaignData.data || []).map((r: Record<string, unknown>) => parseCampaignRow(r));
+    // Build status map from /campaigns endpoint
+    const statusMap: Record<string, string> = {};
+    if (statusData?.data) {
+      for (const c of statusData.data) {
+        statusMap[c.id] = c.effective_status;
+      }
+    }
+
+    // Merge effective_status into each campaign row
+    const campaigns = (campaignData.data || []).map((r: Record<string, unknown>) => {
+      const cid = r.campaign_id as string;
+      if (cid && statusMap[cid]) {
+        r.effective_status = statusMap[cid];
+      }
+      return parseCampaignRow(r);
+    });
 
     // Check if all campaigns passed audit
     const dataVerified = campaigns.length > 0 && campaigns.every((c: { verified: boolean }) => c.verified);
 
     let daily: unknown[] = [];
-    if (dailyUrl && results[1]?.data) {
-      daily = results[1].data.map((r: Record<string, unknown>) => parseCampaignRow(r));
+    const dailyIdx = dailyUrl ? 2 : -1;
+    if (dailyIdx > 0 && results[dailyIdx]?.data) {
+      daily = results[dailyIdx].data.map((r: Record<string, unknown>) => parseCampaignRow(r));
     }
 
     let previous: Record<string, number> | null = null;
-    const prevIdx = dailyUrl ? 2 : 1;
+    const prevIdx = dailyUrl ? 3 : 2;
     if (prevUrl && results[prevIdx]?.data) {
       const prevRows = results[prevIdx].data.map((r: Record<string, unknown>) => parseCampaignRow(r));
       const totalImpressions = prevRows.reduce((s: number, c: { impressions: number }) => s + c.impressions, 0);
