@@ -10,6 +10,8 @@ export interface DateRange {
 
 interface MetaAdsCampaign {
   campaignName: string;
+  campaignId?: string;
+  effectiveStatus?: string;
   date_start?: string;
   spend: number;
   cpm: number;
@@ -70,13 +72,18 @@ function mapToCampaign(c: MetaAdsCampaign, index: number, cpaMeta: number, ticke
   const costPerIC = c.initiateCheckout > 0 ? c.spend / c.initiateCheckout : 0;
 
   let status: Campaign["status"] = "active";
-  if (c.spend > 2 * cpaMeta && c.purchases === 0) status = "paused";
-  else if (c.roas > 3 && c.purchases > 5) status = "scaling";
+  if (c.effectiveStatus) {
+    status = c.effectiveStatus === "ACTIVE" ? "active" : "paused";
+  } else {
+    if (c.spend > 2 * cpaMeta && c.purchases === 0) status = "paused";
+    else if (c.roas > 3 && c.purchases > 5) status = "scaling";
+  }
 
   return {
-    id: String(index + 1),
+    id: c.campaignId || String(index + 1),
     name: c.campaignName,
     status,
+    effectiveStatus: c.effectiveStatus,
     spend: c.spend,
     revenue: c.purchaseValue,
     cpm: c.cpm,

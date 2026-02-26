@@ -3,6 +3,8 @@ import { motion } from "framer-motion";
 import { Campaign, getCampaignAlert, formatCurrency, formatPercent } from "@/lib/mockData";
 import StatusBadge from "./StatusBadge";
 import { Pause, TrendingUp } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 interface CampaignsTableProps {
   campaigns: Campaign[];
@@ -11,6 +13,9 @@ interface CampaignsTableProps {
 
 export default function CampaignsTable({ campaigns, disableScale }: CampaignsTableProps) {
   const [data, setData] = useState(campaigns);
+  const [showActiveOnly, setShowActiveOnly] = useState(false);
+
+  const filteredData = showActiveOnly ? data.filter(c => c.status === 'active' || c.status === 'scaling') : data;
 
   const handlePause = (id: string) => {
     setData(prev => prev.map(c => c.id === id ? { ...c, status: 'paused' as const } : c));
@@ -26,16 +31,23 @@ export default function CampaignsTable({ campaigns, disableScale }: CampaignsTab
       animate={{ opacity: 1 }}
       className="bg-card rounded-xl border border-border overflow-hidden"
     >
-      <div className="p-6 border-b border-border">
-        <h2 className="text-lg font-bold">Campanhas Ativas</h2>
-        <p className="text-sm text-muted-foreground">Monitoramento em tempo real com motor de decisão MTX</p>
+      <div className="p-6 border-b border-border flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-bold">Campanhas Ativas</h2>
+          <p className="text-sm text-muted-foreground">Monitoramento em tempo real com motor de decisão MTX</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Switch id="active-only" checked={showActiveOnly} onCheckedChange={setShowActiveOnly} />
+          <Label htmlFor="active-only" className="text-xs text-muted-foreground cursor-pointer">Apenas ativas</Label>
+        </div>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border text-muted-foreground">
               <th className="text-left px-6 py-4 font-medium">Campanha</th>
-              <th className="text-left px-4 py-4 font-medium">Status</th>
+              <th className="text-left px-4 py-4 font-medium">Status API</th>
+              <th className="text-left px-4 py-4 font-medium">Alerta</th>
               <th className="text-right px-4 py-4 font-medium">Investido</th>
               <th className="text-right px-4 py-4 font-medium">CPA</th>
               <th className="text-right px-4 py-4 font-medium">ROAS</th>
@@ -45,12 +57,22 @@ export default function CampaignsTable({ campaigns, disableScale }: CampaignsTab
             </tr>
           </thead>
           <tbody>
-            {data.map((c) => {
+            {filteredData.map((c) => {
               const alert = getCampaignAlert(c);
               const cpaAboveMeta = c.purchases > 0 && c.costPerPurchase > c.cpaMeta * 1.2;
+              const isActive = c.status === 'active' || c.status === 'scaling';
               return (
                 <tr key={c.id} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
                   <td className="px-6 py-4 font-medium max-w-[250px] truncate">{c.name}</td>
+                  <td className="px-4 py-4">
+                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${
+                      isActive
+                        ? "bg-neon-green/15 text-neon-green border-neon-green/30"
+                        : "bg-secondary text-muted-foreground border-border"
+                    }`}>
+                      {isActive ? "ATIVO" : "PAUSADO"}
+                    </span>
+                  </td>
                   <td className="px-4 py-4"><StatusBadge status={alert} /></td>
                   <td className="text-right px-4 py-4 text-muted-foreground">{formatCurrency(c.spend)}</td>
                   <td className={`text-right px-4 py-4 font-semibold ${cpaAboveMeta ? 'text-neon-red' : 'text-foreground'}`}>

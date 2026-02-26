@@ -4,6 +4,7 @@ export interface Campaign {
   id: string;
   name: string;
   status: 'active' | 'paused' | 'scaling';
+  effectiveStatus?: string;
   spend: number;
   revenue: number;
   cpm: number;

@@ -27,20 +27,14 @@ export default function Configuracoes() {
   const { toast } = useToast();
   const { activeProfile, updateProfile, isLoading: profilesLoading } = useClientProfiles();
   const [form, setForm] = useState({
-    name: "",
-    adAccountId: "act_",
-    pixelId: "",
-    cpaMeta: "45",
-    ticketMedio: "697",
-    limiteEscala: "15",
-    budgetMaximo: "0",
-    budgetFrequency: "monthly" as "daily" | "weekly" | "monthly",
+    name: "", adAccountId: "act_", pixelId: "",
+    cpaMeta: "45", ticketMedio: "697", limiteEscala: "15",
+    budgetMaximo: "0", budgetFrequency: "monthly" as "daily" | "weekly" | "monthly",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [testResult, setTestResult] = useState<"idle" | "loading" | "success" | "error">("idle");
 
-  // Load active profile data
   useEffect(() => {
     if (activeProfile) {
       setForm({
@@ -62,60 +56,34 @@ export default function Configuracoes() {
   };
 
   const handleSave = async () => {
-    if (!activeProfile) {
-      toast({ title: "Erro", description: "Crie um perfil primeiro no seletor do sidebar.", variant: "destructive" });
-      return;
-    }
-
+    if (!activeProfile) { toast({ title: "Erro", description: "Crie um perfil primeiro.", variant: "destructive" }); return; }
     const parsed = configSchema.safeParse({
-      ...form,
-      cpaMeta: Number(form.cpaMeta),
-      ticketMedio: Number(form.ticketMedio),
-      limiteEscala: Number(form.limiteEscala),
-      budgetMaximo: Number(form.budgetMaximo),
-      budgetFrequency: form.budgetFrequency,
+      ...form, cpaMeta: Number(form.cpaMeta), ticketMedio: Number(form.ticketMedio),
+      limiteEscala: Number(form.limiteEscala), budgetMaximo: Number(form.budgetMaximo), budgetFrequency: form.budgetFrequency,
     });
-
     if (!parsed.success) {
       const fieldErrors: Record<string, string> = {};
-      parsed.error.errors.forEach((e) => {
-        if (e.path[0]) fieldErrors[e.path[0] as string] = e.message;
-      });
-      setErrors(fieldErrors);
-      return;
+      parsed.error.errors.forEach((e) => { if (e.path[0]) fieldErrors[e.path[0] as string] = e.message; });
+      setErrors(fieldErrors); return;
     }
-
     setSaving(true);
     try {
       await updateProfile({
-        id: activeProfile.id,
-        name: parsed.data.name,
-        ad_account_id: parsed.data.adAccountId,
-        pixel_id: parsed.data.pixelId || "",
-        cpa_meta: parsed.data.cpaMeta,
-        ticket_medio: parsed.data.ticketMedio,
-        limite_escala: parsed.data.limiteEscala,
-        budget_maximo: parsed.data.budgetMaximo,
-        budget_frequency: parsed.data.budgetFrequency,
+        id: activeProfile.id, name: parsed.data.name, ad_account_id: parsed.data.adAccountId,
+        pixel_id: parsed.data.pixelId || "", cpa_meta: parsed.data.cpaMeta, ticket_medio: parsed.data.ticketMedio,
+        limite_escala: parsed.data.limiteEscala, budget_maximo: parsed.data.budgetMaximo, budget_frequency: parsed.data.budgetFrequency,
       } as any);
-      toast({ title: "✅ Configurações salvas no Cloud", description: "Parâmetros atualizados com sucesso." });
+      toast({ title: "✅ Configurações salvas", description: "Parâmetros atualizados com sucesso." });
     } catch (err) {
       toast({ title: "Erro ao salvar", description: (err as Error).message, variant: "destructive" });
-    } finally {
-      setSaving(false);
-    }
+    } finally { setSaving(false); }
   };
 
   const handleTestConnection = async () => {
-    if (!form.adAccountId || form.adAccountId === "act_") {
-      toast({ title: "Erro", description: "Preencha o Ad Account ID.", variant: "destructive" });
-      return;
-    }
+    if (!form.adAccountId || form.adAccountId === "act_") { toast({ title: "Erro", description: "Preencha o Ad Account ID.", variant: "destructive" }); return; }
     setTestResult("loading");
     try {
-      const { data, error } = await supabase.functions.invoke("meta-ads-sync", {
-        body: { adAccountId: form.adAccountId, datePreset: "last_7d" },
-      });
+      const { data, error } = await supabase.functions.invoke("meta-ads-sync", { body: { adAccountId: form.adAccountId, datePreset: "last_7d" } });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       setTestResult("success");
@@ -126,42 +94,19 @@ export default function Configuracoes() {
     }
   };
 
-  if (profilesLoading) {
-    return (
-      <AppLayout>
-        <div className="flex items-center justify-center py-20">
-          <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-        </div>
-      </AppLayout>
-    );
-  }
-
-  if (!activeProfile) {
-    return (
-      <AppLayout>
-        <div className="space-y-4 text-center py-20">
-          <h2 className="text-xl font-bold">Nenhum perfil encontrado</h2>
-          <p className="text-muted-foreground text-sm">Use o seletor no sidebar para criar seu primeiro perfil de cliente.</p>
-        </div>
-      </AppLayout>
-    );
-  }
+  if (profilesLoading) return <AppLayout><div className="flex items-center justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div></AppLayout>;
+  if (!activeProfile) return <AppLayout><div className="space-y-4 text-center py-20"><h2 className="text-xl font-bold">Nenhum perfil encontrado</h2><p className="text-muted-foreground text-sm">Use o seletor no sidebar para criar seu primeiro perfil.</p></div></AppLayout>;
 
   return (
     <AppLayout>
       <div className="space-y-6">
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Configurações — {activeProfile.name}</h2>
-          <p className="text-muted-foreground text-sm mt-1">
-            Configure a conexão com a Meta Ads e as regras de automação para este perfil.
-          </p>
+          <p className="text-muted-foreground text-sm mt-1">Configure a conexão com a Meta Ads e as regras de automação.</p>
         </div>
 
-        {/* Client Name */}
         <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Perfil do Cliente</CardTitle>
-          </CardHeader>
+          <CardHeader><CardTitle className="text-lg">Perfil do Cliente</CardTitle></CardHeader>
           <CardContent>
             <div className="space-y-2 max-w-md">
               <Label htmlFor="name">Nome do Cliente</Label>
@@ -171,21 +116,15 @@ export default function Configuracoes() {
           </CardContent>
         </Card>
 
-        {/* API Credentials */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Shield className="w-5 h-5 text-primary" />
-              Credenciais Meta Ads
-            </CardTitle>
-            <CardDescription>
-              O token de acesso está armazenado como secret seguro no Cloud.
-            </CardDescription>
+            <CardTitle className="flex items-center gap-2 text-lg"><Shield className="w-5 h-5 text-primary" />Credenciais Meta Ads</CardTitle>
+            <CardDescription>O token de acesso está armazenado como secret seguro no Cloud.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center gap-2 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
               <CheckCircle className="w-4 h-4 text-emerald-500 shrink-0" />
-              <span className="text-sm text-emerald-400">Access Token configurado como secret seguro no Cloud</span>
+              <span className="text-sm text-emerald-400">Access Token configurado como secret seguro</span>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -200,8 +139,7 @@ export default function Configuracoes() {
             </div>
             <div className="flex items-center gap-3">
               <Button variant="outline" onClick={handleTestConnection} disabled={testResult === "loading"} className="gap-2">
-                {testResult === "loading" ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-                Testar Conexão
+                {testResult === "loading" ? <Loader2 className="w-4 h-4 animate-spin" /> : null}Testar Conexão
               </Button>
               {testResult === "success" && <span className="text-sm text-emerald-400">✓ Conectado</span>}
               {testResult === "error" && <span className="text-sm text-destructive">✗ Falha</span>}
@@ -211,7 +149,6 @@ export default function Configuracoes() {
 
         <Separator />
 
-        {/* Automation Config */}
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">Parâmetros de Automação</CardTitle>
@@ -242,24 +179,6 @@ export default function Configuracoes() {
             <h4 className="text-sm font-semibold mb-3 text-muted-foreground uppercase tracking-wide">Controle de Teto Financeiro</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="cpaMeta">CPA Meta (R$)</Label>
-                <Input id="cpaMeta" type="number" min="0.01" step="0.01" value={form.cpaMeta} onChange={(e) => handleChange("cpaMeta", e.target.value)} />
-                {errors.cpaMeta && <p className="text-xs text-destructive">{errors.cpaMeta}</p>}
-                <p className="text-xs text-muted-foreground">Pausa se CPA &gt; 2× este valor sem vendas</p>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="ticketMedio">Ticket Médio (R$)</Label>
-                <Input id="ticketMedio" type="number" min="0.01" step="0.01" value={form.ticketMedio} onChange={(e) => handleChange("ticketMedio", e.target.value)} />
-                {errors.ticketMedio && <p className="text-xs text-destructive">{errors.ticketMedio}</p>}
-                <p className="text-xs text-muted-foreground">Base para cálculo de lucro e simulações</p>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="limiteEscala">Limite de Escala (%)</Label>
-                <Input id="limiteEscala" type="number" min="1" max="100" value={form.limiteEscala} onChange={(e) => handleChange("limiteEscala", e.target.value)} />
-                {errors.limiteEscala && <p className="text-xs text-destructive">{errors.limiteEscala}</p>}
-                <p className="text-xs text-muted-foreground">Incremento de orçamento por ciclo de 24h</p>
-              </div>
-              <div className="space-y-2">
                 <Label htmlFor="budgetMaximo">Valor do Limite (R$)</Label>
                 <Input id="budgetMaximo" type="number" min="0" step="1" value={form.budgetMaximo} onChange={(e) => handleChange("budgetMaximo", e.target.value)} />
                 {errors.budgetMaximo && <p className="text-xs text-destructive">{errors.budgetMaximo}</p>}
@@ -268,9 +187,7 @@ export default function Configuracoes() {
               <div className="space-y-2">
                 <Label>Frequência do Limite</Label>
                 <Select value={form.budgetFrequency} onValueChange={(v) => setForm(prev => ({ ...prev, budgetFrequency: v as any }))}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="daily">Diário</SelectItem>
                     <SelectItem value="weekly">Semanal</SelectItem>
@@ -283,14 +200,10 @@ export default function Configuracoes() {
           </CardContent>
         </Card>
 
-        {/* Save */}
         <div className="flex items-center justify-between">
-          <p className="text-xs text-muted-foreground max-w-md">
-            🔒 Dados salvos no banco de dados com segurança. Token armazenado como secret no Cloud.
-          </p>
+          <p className="text-xs text-muted-foreground max-w-md">🔒 Dados salvos com segurança no Cloud.</p>
           <Button onClick={handleSave} disabled={saving} className="gap-2">
-            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            Salvar Configurações
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}Salvar Configurações
           </Button>
         </div>
       </div>
