@@ -8,7 +8,7 @@ import CampaignsTable from "@/components/CampaignsTable";
 import DashboardCharts from "@/components/DashboardCharts";
 import DateRangePicker from "@/components/DateRangePicker";
 import AppLayout from "@/components/AppLayout";
-import { DollarSign, TrendingUp, Target, BarChart3, Loader2, AlertTriangle, RefreshCw } from "lucide-react";
+import { DollarSign, TrendingUp, Target, BarChart3, Loader2, AlertTriangle, RefreshCw, Eye, MousePointerClick, ShoppingBag, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const defaultRange: DateRange = {
@@ -23,20 +23,28 @@ function calcDelta(current: number, previous: number): number | null {
 
 export default function Dashboard() {
   const [dateRange, setDateRange] = useState<DateRange>(defaultRange);
-  const { campaigns, daily, previous, isLoading, isUsingMock, forceRefetch, fetchedAt } = useMetaAds(dateRange);
+  const { campaigns, daily, previous, isLoading, isUsingMock, forceRefetch, fetchedAt, dataVerified } = useMetaAds(dateRange);
 
   const totalSpend = campaigns.reduce((s, c) => s + c.spend, 0);
   const totalRevenue = campaigns.reduce((s, c) => s + c.revenue, 0);
   const totalProfit = totalRevenue - totalSpend;
   const totalPurchases = campaigns.reduce((s, c) => s + c.purchases, 0);
+  const totalImpressions = campaigns.reduce((s, c) => s + (c.clicks / (c.ctr / 100 || 1)), 0);
+  const totalClicks = campaigns.reduce((s, c) => s + c.clicks, 0);
   const avgCPA = totalPurchases > 0 ? totalSpend / totalPurchases : 0;
   const roas = totalSpend > 0 ? totalRevenue / totalSpend : 0;
+  const avgCPM = totalImpressions > 0 ? (totalSpend / totalImpressions) * 1000 : 0;
+  const avgCTR = totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0;
+  const ticketMedio = totalPurchases > 0 ? totalRevenue / totalPurchases : 0;
 
   const deltaProfit = previous ? calcDelta(totalProfit, previous.profit) : null;
   const deltaSpend = previous ? calcDelta(totalSpend, previous.spend) : null;
   const deltaCPA = previous ? calcDelta(avgCPA, previous.cpa) : null;
   const deltaROAS = previous ? calcDelta(roas, previous.roas) : null;
   const deltaPurchases = previous ? calcDelta(totalPurchases, previous.purchases) : null;
+  const deltaCPM = previous ? calcDelta(avgCPM, previous.cpm) : null;
+  const deltaCTR = previous ? calcDelta(avgCTR, previous.ctr) : null;
+  const deltaTM = previous && previous.purchases > 0 ? calcDelta(ticketMedio, previous.purchaseValue / previous.purchases) : null;
 
   return (
     <AppLayout>
@@ -105,7 +113,7 @@ export default function Dashboard() {
             </div>
           </motion.div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
             <MetricCard
               title="Investimento Total"
               value={formatCurrency(totalSpend)}
@@ -137,9 +145,45 @@ export default function Dashboard() {
             />
           </div>
 
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+            <MetricCard
+              title="CPM"
+              value={formatCurrency(avgCPM)}
+              icon={<Eye className="w-4 h-4" />}
+              delta={deltaCPM}
+              invertDelta
+            />
+            <MetricCard
+              title="CTR"
+              value={`${avgCTR.toFixed(2)}%`}
+              variant={avgCTR < 1 ? "danger" : "default"}
+              icon={<MousePointerClick className="w-4 h-4" />}
+              delta={deltaCTR}
+            />
+            <MetricCard
+              title="Ticket Médio (AOV)"
+              value={formatCurrency(ticketMedio)}
+              icon={<ShoppingBag className="w-4 h-4" />}
+              delta={deltaTM}
+            />
+          </div>
+
           <DashboardCharts daily={daily} cpaMeta={200} />
 
           <CampaignsTable campaigns={campaigns} />
+
+          {/* Verification seal */}
+          {!isUsingMock && dataVerified && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.6 }}
+              className="mt-8 flex items-center justify-center gap-2 py-3 text-xs text-neon-green"
+            >
+              <ShieldCheck className="w-4 h-4" />
+              <span>Dados Verificados com Meta Ads · Janela 7d click / 1d view</span>
+            </motion.div>
+          )}
         </>
       )}
     </AppLayout>

@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Campaign, mockCampaigns } from "@/lib/mockData";
@@ -26,6 +26,7 @@ interface MetaAdsCampaign {
   roas: number;
   profit: number;
   conversionRate: number;
+  verified?: boolean;
 }
 
 export interface DailyDataPoint {
@@ -45,6 +46,10 @@ export interface PreviousPeriod {
   profit: number;
   cpa: number;
   roas: number;
+  cpm: number;
+  ctr: number;
+  impressions: number;
+  clicks: number;
 }
 
 function getConfig() {
@@ -90,7 +95,6 @@ function mapToCampaign(c: MetaAdsCampaign, index: number, cpaMeta: number, ticke
   };
 }
 
-// Generate mock daily data for demo mode
 function generateMockDaily(): DailyDataPoint[] {
   const days: DailyDataPoint[] = [];
   const now = new Date();
@@ -102,9 +106,7 @@ function generateMockDaily(): DailyDataPoint[] {
     const purchaseValue = purchases * (600 + Math.random() * 200);
     days.push({
       date: d.toISOString().slice(0, 10),
-      spend,
-      purchases,
-      purchaseValue,
+      spend, purchases, purchaseValue,
       cpa: spend / purchases,
       roas: purchaseValue / spend,
       profit: purchaseValue - spend,
@@ -114,13 +116,18 @@ function generateMockDaily(): DailyDataPoint[] {
 }
 
 const mockPrevious: PreviousPeriod = {
-  spend: 14000,
-  purchases: 60,
-  purchaseValue: 43000,
-  profit: 29000,
-  cpa: 233,
-  roas: 3.07,
+  spend: 14000, purchases: 60, purchaseValue: 43000,
+  profit: 29000, cpa: 233, roas: 3.07,
+  cpm: 32.5, ctr: 1.8, impressions: 430000, clicks: 7740,
 };
+
+function isShortRange(dateRange?: DateRange): boolean {
+  if (!dateRange) return false;
+  const s = new Date(dateRange.since);
+  const u = new Date(dateRange.until);
+  const diffDays = (u.getTime() - s.getTime()) / 86400000;
+  return diffDays <= 1;
+}
 
 export function useMetaAds(dateRange?: DateRange) {
   const config = getConfig();
@@ -129,6 +136,9 @@ export function useMetaAds(dateRange?: DateRange) {
   const ticketMedio = config?.ticketMedio || 697;
   const [forceKey, setForceKey] = useState(0);
   const [fetchedAt, setFetchedAt] = useState<string | null>(null);
+  const [dataVerified, setDataVerified] = useState(false);
+
+  const shortRange = isShortRange(dateRange);
 
   const query = useQuery({
     queryKey: ["meta-ads", adAccountId, dateRange?.since, dateRange?.until, forceKey],
@@ -137,9 +147,10 @@ export function useMetaAds(dateRange?: DateRange) {
       daily: DailyDataPoint[];
       previous: PreviousPeriod | null;
       fetchedAt: string | null;
+      dataVerified: boolean;
     }> => {
       if (!adAccountId || adAccountId === "act_") {
-        return { campaigns: mockCampaigns, daily: generateMockDaily(), previous: mockPrevious, fetchedAt: null };
+        return { campaigns: mockCampaigns, daily: generateMockDaily(), previous: mockPrevious, fetchedAt: null, dataVerified: false };
       }
 
       const body: Record<string, string> = { adAccountId };
@@ -151,7 +162,6 @@ export function useMetaAds(dateRange?: DateRange) {
       }
 
       const { data, error } = await supabase.functions.invoke("meta-ads-sync", { body });
-
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
@@ -161,12 +171,8 @@ export function useMetaAds(dateRange?: DateRange) {
 
       const daily: DailyDataPoint[] = (data?.daily || []).map((d: MetaAdsCampaign) => ({
         date: d.date_start || "",
-        spend: d.spend,
-        purchases: d.purchases,
-        purchaseValue: d.purchaseValue,
-        cpa: d.cpa,
-        roas: d.roas,
-        profit: d.profit,
+        spend: d.spend, purchases: d.purchases, purchaseValue: d.purchaseValue,
+        cpa: d.cpa, roas: d.roas, profit: d.profit,
       }));
 
       return {
@@ -174,19 +180,19 @@ export function useMetaAds(dateRange?: DateRange) {
         daily: daily.length ? daily : generateMockDaily(),
         previous: data?.previous || null,
         fetchedAt: data?.fetchedAt || null,
+        dataVerified: data?.dataVerified ?? false,
       };
     },
-    staleTime: 5 * 60 * 1000,
+    staleTime: shortRange ? 0 : 5 * 60 * 1000,
     retry: 1,
   });
 
   useEffect(() => {
-    if (query.data?.fetchedAt) {
-      setFetchedAt(query.data.fetchedAt);
-    }
-  }, [query.data?.fetchedAt]);
+    if (query.data?.fetchedAt) setFetchedAt(query.data.fetchedAt);
+    if (query.data?.dataVerified !== undefined) setDataVerified(query.data.dataVerified);
+  }, [query.data?.fetchedAt, query.data?.dataVerified]);
 
-  const result = query.data ?? { campaigns: mockCampaigns, daily: generateMockDaily(), previous: mockPrevious, fetchedAt: null };
+  const result = query.data ?? { campaigns: mockCampaigns, daily: generateMockDaily(), previous: mockPrevious, fetchedAt: null, dataVerified: false };
   const isUsingMock = !adAccountId || adAccountId === "act_" || !!query.error;
 
   const forceRefetch = useCallback(() => {
@@ -204,5 +210,6 @@ export function useMetaAds(dateRange?: DateRange) {
     refetch: query.refetch,
     forceRefetch,
     fetchedAt,
+    dataVerified,
   };
 }
