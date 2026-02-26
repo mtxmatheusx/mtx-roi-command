@@ -21,7 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 
 export default function ProfileSelector() {
-  const { profiles, activeProfile, setActiveProfile, createProfile, isLoading } = useClientProfiles();
+  const { profiles, activeProfile, setActiveProfile, createProfile, deleteProfile, isLoading } = useClientProfiles();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [newName, setNewName] = useState("");
   const [newAdAccount, setNewAdAccount] = useState("act_");
