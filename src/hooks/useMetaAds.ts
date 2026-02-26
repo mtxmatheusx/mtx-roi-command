@@ -174,6 +174,21 @@ export function useMetaAds(dateRange?: DateRange, profileConfig?: { adAccountId?
       }
 
       const { data, error } = await supabase.functions.invoke("meta-ads-sync", { body });
+
+      // Check for rate limit or permission errors — return mock data instead of crashing
+      const errorMsg = data?.error || (error as Error)?.message || "";
+      const isRateOrPermission = typeof errorMsg === "string" && (
+        errorMsg.includes("Limite de requisições") ||
+        errorMsg.includes("Application request limit reached") ||
+        errorMsg.includes("rate limit") ||
+        errorMsg.includes("permission")
+      );
+      if (isRateOrPermission) {
+        setIsRateLimited(true);
+        return { campaigns: mockCampaigns, daily: generateMockDaily(), previous: mockPrevious, creatives: [], fetchedAt: null, dataVerified: false };
+      }
+      setIsRateLimited(false);
+
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
