@@ -1,63 +1,34 @@
 
 
-## Plano: Status de Campanhas + Log de Automação + Sync Global + Correções
+## Plan: Update Token, Permission Handling, Delete Profiles, Budget R$4000
 
-### 1. Edge Function — Adicionar `campaign_id`, `effective_status` ao fetch
+### 1. Update META_ACCESS_TOKEN Secret
+- Use the `add_secret` tool to update `META_ACCESS_TOKEN` with the new long-lived token provided by the user.
 
-**`supabase/functions/meta-ads-sync/index.ts`**
-- Adicionar `campaign_id` e `effective_status` aos fields do fetch de campanhas
-- Retornar esses campos no response para cada campaign row
-- O campo `effective_status` da Meta API retorna: `ACTIVE`, `PAUSED`, `DELETED`, `ARCHIVED`, etc.
+### 2. Friendly Permission Error Banner (`src/hooks/useMetaAds.ts`)
+- Add `ads_read` permission error detection to the existing rate limit check (look for `"(#10)" `, `"ads_read"`, `"permission"`, `"Unsupported get request"`)
+- Set a new `permissionError` state when detected
+- Return mock data gracefully instead of crashing
 
-### 2. `useMetaAds.ts` — Expor status real + invalidar cache ao trocar perfil
+### 3. Permission Banner UI (`src/pages/Index.tsx`)
+- Add a specific banner for permission errors: "Conecte seu Token com permissão ads_read na Meta para visualizar dados reais"
+- Show above the existing rate limit and mock data banners
 
-- Adicionar `effectiveStatus` ao `MetaAdsCampaign` e mapear para `Campaign.status` baseado no valor da API:
-  - `ACTIVE` → `active`
-  - `PAUSED` → `paused`
-  - Outros → `paused`
-- Remover lógica atual que infere status a partir de spend/ROAS
-- `queryKey` já inclui `adAccountId`, portanto trocar perfil já invalida cache automaticamente
+### 4. Delete Profile Button (`src/components/ProfileSelector.tsx`)
+- Add a delete button (Trash icon) next to each profile in the dropdown
+- Call `deleteProfile` from `useClientProfiles` (already implemented)
+- Prevent deleting the last remaining profile
+- Show confirmation via toast
 
-### 3. `mockData.ts` — Adicionar campo `effectiveStatus` ao Campaign type
+### 5. Set Budget R$4000 for Active Profile
+- Use the database insert tool to update the active profile's `budget_maximo` to `4000` and `budget_frequency` to `'monthly'`
 
-- Adicionar `effectiveStatus?: string` ao type `Campaign`
+### Files Modified
+- `src/hooks/useMetaAds.ts` — add `permissionError` state and detection
+- `src/pages/Index.tsx` — permission error banner
+- `src/components/ProfileSelector.tsx` — delete profile button
 
-### 4. `CampaignsTable.tsx` — Coluna Status com badges + Toggle de filtro
-
-- Adicionar coluna "Status" com badges: `[ATIVO]` verde neon, `[PAUSADO]` cinza
-- Adicionar `Switch` toggle "Mostrar apenas ativas" acima da tabela
-- Filtrar campanhas com base no toggle
-
-### 5. Campanhas, Criativos, Simulador — Botão "Forçar Atualização" replicado
-
-- **`Campanhas.tsx`**: Adicionar `useClientProfiles` + `DateRangePicker` + botão Refresh com `forceRefetch()` e timestamp independente
-- **`Criativos.tsx`**: Adicionar botão Refresh com `forceRefetch()` e timestamp independente
-- **`Simulador.tsx`**: Consumir `useMetaAds` para pegar CPA e Ticket Médio reais; adicionar botão Refresh
-
-### 6. `Configuracoes.tsx` — Limpar campos duplicados
-
-- A seção "Controle de Teto Financeiro" tem campos CPA Meta, Ticket Médio e Limite Escala duplicados. Remover a duplicação, mantendo apenas Budget Máximo + Frequência nessa seção.
-
-### 7. `Index.tsx` — Indicador "Monitoramento Ativo" + Log de Automação
-
-- Adicionar pill pulsante no topo: `"● Monitoramento Ativo em Tempo Real"` com animação pulse neon
-- Criar seção "Log de Automação" abaixo das campanhas com entries geradas client-side:
-  - A cada renderização/refetch, gerar entry: `"Check realizado às HH:MM — ROI atual: X.XX — Nenhuma ação necessária"`
-  - Se alguma campanha tiver CPA > 2× meta com 0 vendas: `"AÇÃO: Campanha [Nome] sinalizada por CPA alto"`
-  - Armazenar últimos 20 logs em state local
-
-### 8. Não necessita migração SQL
-
-Budget frequency e budget_maximo já existem no schema. Nenhuma alteração de banco necessária.
-
-### Arquivos modificados
-- `supabase/functions/meta-ads-sync/index.ts` — campos effective_status
-- `src/lib/mockData.ts` — type Campaign atualizado  
-- `src/hooks/useMetaAds.ts` — mapear status real
-- `src/components/CampaignsTable.tsx` — badges status + toggle filtro
-- `src/pages/Campanhas.tsx` — botão refresh + profiles
-- `src/pages/Criativos.tsx` — botão refresh
-- `src/pages/Simulador.tsx` — dados reais + botão refresh
-- `src/pages/Index.tsx` — indicador pulse + log de automação
-- `src/pages/Configuracoes.tsx` — remover campos duplicados
+### Database Operations
+- Update `META_ACCESS_TOKEN` secret with user's new token
+- Update active profile budget to R$4000 monthly
 
