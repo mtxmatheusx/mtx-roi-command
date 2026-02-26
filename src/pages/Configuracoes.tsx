@@ -83,7 +83,7 @@ export default function Configuracoes() {
     if (!form.adAccountId || form.adAccountId === "act_") { toast({ title: "Erro", description: "Preencha o Ad Account ID.", variant: "destructive" }); return; }
     setTestResult("loading");
     try {
-      const { data, error } = await supabase.functions.invoke("meta-ads-sync", { body: { adAccountId: form.adAccountId, datePreset: "last_7d" } });
+      const { data, error } = await supabase.functions.invoke("meta-ads-sync", { body: { adAccountId: form.adAccountId, testConnection: true } });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       setTestResult("success");
