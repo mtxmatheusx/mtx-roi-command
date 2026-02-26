@@ -117,5 +117,6 @@ export function useClientProfiles() {
     cpaMeta: activeProfile?.cpa_meta ?? 45,
     ticketMedio: activeProfile?.ticket_medio ?? 697,
     limiteEscala: activeProfile?.limite_escala ?? 15,
+    budgetMaximo: (activeProfile as any)?.budget_maximo ?? 0,
   };
 }

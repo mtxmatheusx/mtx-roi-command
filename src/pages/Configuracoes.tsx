@@ -18,6 +18,7 @@ const configSchema = z.object({
   cpaMeta: z.number().min(0.01, "CPA Meta deve ser maior que 0"),
   ticketMedio: z.number().min(0.01, "Ticket Médio deve ser maior que 0"),
   limiteEscala: z.number().min(1).max(100, "Limite deve ser entre 1% e 100%"),
+  budgetMaximo: z.number().min(0, "Budget Máximo deve ser >= 0"),
 });
 
 export default function Configuracoes() {
@@ -30,6 +31,7 @@ export default function Configuracoes() {
     cpaMeta: "45",
     ticketMedio: "697",
     limiteEscala: "15",
+    budgetMaximo: "0",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
@@ -45,6 +47,7 @@ export default function Configuracoes() {
         cpaMeta: String(activeProfile.cpa_meta ?? 45),
         ticketMedio: String(activeProfile.ticket_medio ?? 697),
         limiteEscala: String(activeProfile.limite_escala ?? 15),
+        budgetMaximo: String((activeProfile as any).budget_maximo ?? 0),
       });
     }
   }, [activeProfile?.id]);
@@ -65,6 +68,7 @@ export default function Configuracoes() {
       cpaMeta: Number(form.cpaMeta),
       ticketMedio: Number(form.ticketMedio),
       limiteEscala: Number(form.limiteEscala),
+      budgetMaximo: Number(form.budgetMaximo),
     });
 
     if (!parsed.success) {
@@ -86,8 +90,9 @@ export default function Configuracoes() {
         cpa_meta: parsed.data.cpaMeta,
         ticket_medio: parsed.data.ticketMedio,
         limite_escala: parsed.data.limiteEscala,
-      });
-      toast({ title: "✅ Configurações salvas", description: "Parâmetros atualizados no banco de dados." });
+        budget_maximo: parsed.data.budgetMaximo,
+      } as any);
+      toast({ title: "✅ Configurações salvas no Cloud", description: "Parâmetros atualizados com sucesso." });
     } catch (err) {
       toast({ title: "Erro ao salvar", description: (err as Error).message, variant: "destructive" });
     } finally {
@@ -207,7 +212,7 @@ export default function Configuracoes() {
             <CardDescription>Defina os limites para pausa inteligente, escala automática e alertas.</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="cpaMeta">CPA Meta (R$)</Label>
                 <Input id="cpaMeta" type="number" min="0.01" step="0.01" value={form.cpaMeta} onChange={(e) => handleChange("cpaMeta", e.target.value)} />
@@ -225,6 +230,12 @@ export default function Configuracoes() {
                 <Input id="limiteEscala" type="number" min="1" max="100" value={form.limiteEscala} onChange={(e) => handleChange("limiteEscala", e.target.value)} />
                 {errors.limiteEscala && <p className="text-xs text-destructive">{errors.limiteEscala}</p>}
                 <p className="text-xs text-muted-foreground">Incremento de orçamento por ciclo de 24h</p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="budgetMaximo">Budget Máximo (R$)</Label>
+                <Input id="budgetMaximo" type="number" min="0" step="1" value={form.budgetMaximo} onChange={(e) => handleChange("budgetMaximo", e.target.value)} />
+                {errors.budgetMaximo && <p className="text-xs text-destructive">{errors.budgetMaximo}</p>}
+                <p className="text-xs text-muted-foreground">0 = sem limite. Trava escala ao atingir</p>
               </div>
             </div>
           </CardContent>
