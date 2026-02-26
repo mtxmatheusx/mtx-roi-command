@@ -148,6 +148,7 @@ export function useMetaAds(dateRange?: DateRange, profileConfig?: { adAccountId?
   const [fetchedAt, setFetchedAt] = useState<string | null>(null);
   const [dataVerified, setDataVerified] = useState(false);
   const [isRateLimited, setIsRateLimited] = useState(false);
+  const [isPermissionError, setIsPermissionError] = useState(false);
 
   const shortRange = isShortRange(dateRange);
 
@@ -177,17 +178,29 @@ export function useMetaAds(dateRange?: DateRange, profileConfig?: { adAccountId?
 
       // Check for rate limit or permission errors — return mock data instead of crashing
       const errorMsg = data?.error || (error as Error)?.message || "";
-      const isRateOrPermission = typeof errorMsg === "string" && (
+      const isRateLimit = typeof errorMsg === "string" && (
         errorMsg.includes("Limite de requisições") ||
         errorMsg.includes("Application request limit reached") ||
-        errorMsg.includes("rate limit") ||
-        errorMsg.includes("permission")
+        errorMsg.includes("rate limit")
       );
-      if (isRateOrPermission) {
+      const isPermission = typeof errorMsg === "string" && (
+        errorMsg.includes("(#10)") ||
+        errorMsg.includes("ads_read") ||
+        errorMsg.includes("Unsupported get request") ||
+        (errorMsg.includes("permission") && !isRateLimit)
+      );
+      if (isRateLimit) {
         setIsRateLimited(true);
+        setIsPermissionError(false);
+        return { campaigns: mockCampaigns, daily: generateMockDaily(), previous: mockPrevious, creatives: [], fetchedAt: null, dataVerified: false };
+      }
+      if (isPermission) {
+        setIsPermissionError(true);
+        setIsRateLimited(false);
         return { campaigns: mockCampaigns, daily: generateMockDaily(), previous: mockPrevious, creatives: [], fetchedAt: null, dataVerified: false };
       }
       setIsRateLimited(false);
+      setIsPermissionError(false);
 
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
@@ -216,7 +229,7 @@ export function useMetaAds(dateRange?: DateRange, profileConfig?: { adAccountId?
     staleTime: shortRange ? 0 : 5 * 60 * 1000,
     retry: (failureCount, error) => {
       const msg = (error as Error)?.message || "";
-      if (msg.includes("rate limit") || msg.includes("Limite") || msg.includes("permission")) return false;
+      if (msg.includes("rate limit") || msg.includes("Limite") || msg.includes("permission") || msg.includes("(#10)") || msg.includes("ads_read") || msg.includes("Unsupported get request")) return false;
       return failureCount < 1;
     },
   });
@@ -247,5 +260,6 @@ export function useMetaAds(dateRange?: DateRange, profileConfig?: { adAccountId?
     fetchedAt,
     dataVerified,
     isRateLimited,
+    isPermissionError,
   };
 }

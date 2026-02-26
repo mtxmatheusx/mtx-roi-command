@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Check, ChevronDown, Plus, User } from "lucide-react";
+import { Check, ChevronDown, Plus, User, Trash2 } from "lucide-react";
 import { useClientProfiles, CreateProfileInput } from "@/hooks/useClientProfiles";
 import {
   DropdownMenu,
@@ -21,7 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 
 export default function ProfileSelector() {
-  const { profiles, activeProfile, setActiveProfile, createProfile, isLoading } = useClientProfiles();
+  const { profiles, activeProfile, setActiveProfile, createProfile, deleteProfile, isLoading } = useClientProfiles();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [newName, setNewName] = useState("");
   const [newAdAccount, setNewAdAccount] = useState("act_");
@@ -84,6 +84,21 @@ export default function ProfileSelector() {
                   <p className="text-xs text-muted-foreground truncate">{p.ad_account_id}</p>
                 </div>
                 {p.is_active && <Check className="w-4 h-4 text-primary shrink-0" />}
+                {profiles.length > 1 && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deleteProfile(p.id).then(() => {
+                        toast({ title: "Perfil excluído", description: `${p.name} foi removido.` });
+                      }).catch((err) => {
+                        toast({ title: "Erro", description: (err as Error).message, variant: "destructive" });
+                      });
+                    }}
+                    className="p-1 rounded hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                )}
               </DropdownMenuItem>
             ))}
             {profiles.length > 0 && <DropdownMenuSeparator />}

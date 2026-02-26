@@ -32,7 +32,7 @@ interface LogEntry {
 export default function Dashboard() {
   const [dateRange, setDateRange] = useState<DateRange>(defaultRange);
   const { adAccountId, cpaMeta, ticketMedio, budgetMaximo, budgetFrequency, activeProfile } = useClientProfiles();
-  const { campaigns, daily, previous, isLoading, isUsingMock, forceRefetch, fetchedAt, dataVerified, isRateLimited } = useMetaAds(dateRange, { adAccountId, cpaMeta, ticketMedio });
+  const { campaigns, daily, previous, isLoading, isUsingMock, forceRefetch, fetchedAt, dataVerified, isRateLimited, isPermissionError } = useMetaAds(dateRange, { adAccountId, cpaMeta, ticketMedio });
 
   const [logs, setLogs] = useState<LogEntry[]>([]);
 
@@ -114,14 +114,21 @@ export default function Dashboard() {
 
       <div className="mb-6"><DateRangePicker value={dateRange} onChange={setDateRange} /></div>
 
-      {isRateLimited && (
+      {isPermissionError && (
+        <div className="mb-4 flex items-center gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-sm text-amber-400">
+          <AlertTriangle className="w-4 h-4 shrink-0" />
+          Conecte seu Token com permissão <strong className="mx-1">ads_read</strong> na Meta para visualizar dados reais. Atualize o token em <strong className="mx-1">Configurações</strong>.
+        </div>
+      )}
+
+      {isRateLimited && !
         <div className="mb-4 flex items-center gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-sm text-amber-400">
           <AlertTriangle className="w-4 h-4 shrink-0" />
           Limite de requisições da Meta atingido. Exibindo dados em cache. Aguarde alguns minutos e clique em <strong className="mx-1">Forçar Atualização</strong>.
         </div>
       )}
 
-      {isUsingMock && !isRateLimited && (
+      {isUsingMock && !isRateLimited && !isPermissionError && (
         <div className="mb-4 flex items-center gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-sm text-amber-400">
           <AlertTriangle className="w-4 h-4 shrink-0" />
           Exibindo dados de demonstração. Configure o Ad Account ID em <strong className="mx-1">Configurações</strong> para ver dados reais.
