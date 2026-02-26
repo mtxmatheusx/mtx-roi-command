@@ -1,0 +1,69 @@
+import AppLayout from "@/components/AppLayout";
+import CampaignsTable from "@/components/CampaignsTable";
+import { mockCampaigns, formatCurrency, formatPercent } from "@/lib/mockData";
+import { motion } from "framer-motion";
+
+export default function CampanhasPage() {
+  return (
+    <AppLayout>
+      <div className="mb-8">
+        <motion.h1 initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-3xl font-bold tracking-tight">
+          Campanhas
+        </motion.h1>
+        <p className="text-muted-foreground mt-1">Gestão completa com funil profundo e motor de decisão</p>
+      </div>
+
+      <CampaignsTable campaigns={mockCampaigns} />
+
+      {/* Full funnel detail table */}
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }} className="bg-card rounded-xl border border-border overflow-hidden mt-8">
+        <div className="p-6 border-b border-border">
+          <h2 className="text-lg font-bold">Funil Detalhado</h2>
+          <p className="text-sm text-muted-foreground">Métricas de topo, meio e fundo de funil</p>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border text-muted-foreground text-xs uppercase tracking-wider">
+                <th className="text-left px-6 py-3 font-medium">Campanha</th>
+                <th className="text-right px-3 py-3 font-medium">CPM</th>
+                <th className="text-right px-3 py-3 font-medium">CTR</th>
+                <th className="text-right px-3 py-3 font-medium">Cliques</th>
+                <th className="text-right px-3 py-3 font-medium">PV</th>
+                <th className="text-right px-3 py-3 font-medium">$/PV</th>
+                <th className="text-right px-3 py-3 font-medium">ATC</th>
+                <th className="text-right px-3 py-3 font-medium">$/ATC</th>
+                <th className="text-right px-3 py-3 font-medium">IC</th>
+                <th className="text-right px-3 py-3 font-medium">$/IC</th>
+                <th className="text-right px-3 py-3 font-medium">Compras</th>
+                <th className="text-right px-3 py-3 font-medium">CPA</th>
+                <th className="text-right px-3 py-3 font-medium">CVR</th>
+              </tr>
+            </thead>
+            <tbody>
+              {mockCampaigns.map((c) => (
+                <tr key={c.id} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
+                  <td className="px-6 py-3 font-medium max-w-[200px] truncate">{c.name}</td>
+                  <td className="text-right px-3 py-3 text-muted-foreground">{formatCurrency(c.cpm)}</td>
+                  <td className={`text-right px-3 py-3 ${c.ctr < 1 ? 'text-neon-red' : 'text-foreground'}`}>{formatPercent(c.ctr)}</td>
+                  <td className="text-right px-3 py-3">{c.clicks.toLocaleString()}</td>
+                  <td className="text-right px-3 py-3">{c.pageViews.toLocaleString()}</td>
+                  <td className="text-right px-3 py-3 text-muted-foreground">{formatCurrency(c.costPerPageView)}</td>
+                  <td className="text-right px-3 py-3">{c.addToCart}</td>
+                  <td className="text-right px-3 py-3 text-muted-foreground">{formatCurrency(c.costPerATC)}</td>
+                  <td className="text-right px-3 py-3">{c.initiateCheckout}</td>
+                  <td className="text-right px-3 py-3 text-muted-foreground">{formatCurrency(c.costPerIC)}</td>
+                  <td className="text-right px-3 py-3 font-semibold">{c.purchases}</td>
+                  <td className={`text-right px-3 py-3 font-semibold ${c.purchases > 0 && c.costPerPurchase > c.cpaMeta * 1.2 ? 'text-neon-red' : ''}`}>
+                    {c.purchases > 0 ? formatCurrency(c.costPerPurchase) : '—'}
+                  </td>
+                  <td className="text-right px-3 py-3">{formatPercent(c.conversionRate)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </motion.div>
+    </AppLayout>
+  );
+}
