@@ -12,6 +12,8 @@ function buildUrl(adAccountId: string, fields: string, accessToken: string, opts
   const base = `https://graph.facebook.com/v21.0/${adAccountId}/insights?fields=${fields}&limit=50&access_token=${accessToken}`;
   const level = opts.level || "campaign";
   let url = `${base}&level=${level}`;
+  url += `&action_attribution_windows=["7d_click","1d_view"]`;
+  url += `&time_zone=America/Sao_Paulo`;
 
   if (opts.since && opts.until) {
     url += `&time_range={"since":"${opts.since}","until":"${opts.until}"}`;
@@ -172,7 +174,7 @@ Deno.serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ campaigns, daily, previous, total: campaigns.length }),
+      JSON.stringify({ campaigns, daily, previous, total: campaigns.length, fetchedAt: new Date().toISOString() }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {

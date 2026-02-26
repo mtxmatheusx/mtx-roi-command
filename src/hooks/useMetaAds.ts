@@ -1,3 +1,4 @@
+import { useState, useCallback, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Campaign, mockCampaigns } from "@/lib/mockData";
@@ -126,16 +127,19 @@ export function useMetaAds(dateRange?: DateRange) {
   const adAccountId = config?.adAccountId;
   const cpaMeta = config?.cpaMeta || 200;
   const ticketMedio = config?.ticketMedio || 697;
+  const [forceKey, setForceKey] = useState(0);
+  const [fetchedAt, setFetchedAt] = useState<string | null>(null);
 
   const query = useQuery({
-    queryKey: ["meta-ads", adAccountId, dateRange?.since, dateRange?.until],
+    queryKey: ["meta-ads", adAccountId, dateRange?.since, dateRange?.until, forceKey],
     queryFn: async (): Promise<{
       campaigns: Campaign[];
       daily: DailyDataPoint[];
       previous: PreviousPeriod | null;
+      fetchedAt: string | null;
     }> => {
       if (!adAccountId || adAccountId === "act_") {
-        return { campaigns: mockCampaigns, daily: generateMockDaily(), previous: mockPrevious };
+        return { campaigns: mockCampaigns, daily: generateMockDaily(), previous: mockPrevious, fetchedAt: null };
       }
 
       const body: Record<string, string> = { adAccountId };
@@ -169,14 +173,25 @@ export function useMetaAds(dateRange?: DateRange) {
         campaigns,
         daily: daily.length ? daily : generateMockDaily(),
         previous: data?.previous || null,
+        fetchedAt: data?.fetchedAt || null,
       };
     },
     staleTime: 5 * 60 * 1000,
     retry: 1,
   });
 
-  const result = query.data ?? { campaigns: mockCampaigns, daily: generateMockDaily(), previous: mockPrevious };
+  useEffect(() => {
+    if (query.data?.fetchedAt) {
+      setFetchedAt(query.data.fetchedAt);
+    }
+  }, [query.data?.fetchedAt]);
+
+  const result = query.data ?? { campaigns: mockCampaigns, daily: generateMockDaily(), previous: mockPrevious, fetchedAt: null };
   const isUsingMock = !adAccountId || adAccountId === "act_" || !!query.error;
+
+  const forceRefetch = useCallback(() => {
+    setForceKey((k) => k + 1);
+  }, []);
 
   return {
     campaigns: result.campaigns,
@@ -187,5 +202,7 @@ export function useMetaAds(dateRange?: DateRange) {
     error: query.error,
     isUsingMock,
     refetch: query.refetch,
+    forceRefetch,
+    fetchedAt,
   };
 }
