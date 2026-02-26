@@ -1,0 +1,1 @@
+ALTER TABLE public.client_profiles ADD COLUMN budget_maximo NUMERIC NOT NULL DEFAULT 0;

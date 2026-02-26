@@ -6,9 +6,10 @@ import { Pause, TrendingUp } from "lucide-react";
 
 interface CampaignsTableProps {
   campaigns: Campaign[];
+  disableScale?: boolean;
 }
 
-export default function CampaignsTable({ campaigns }: CampaignsTableProps) {
+export default function CampaignsTable({ campaigns, disableScale }: CampaignsTableProps) {
   const [data, setData] = useState(campaigns);
 
   const handlePause = (id: string) => {
@@ -75,9 +76,9 @@ export default function CampaignsTable({ campaigns }: CampaignsTableProps) {
                       </button>
                       <button
                         onClick={() => handleScale(c.id)}
-                        disabled={alert !== 'escalando' && alert !== 'lucrativa'}
+                        disabled={disableScale || (alert !== 'escalando' && alert !== 'lucrativa')}
                         className="p-2 rounded-lg bg-secondary hover:bg-accent/20 hover:text-neon-green transition-colors disabled:opacity-30"
-                        title="Escalar +15%"
+                        title={disableScale ? "Budget máximo atingido" : "Escalar +15%"}
                       >
                         <TrendingUp className="w-3.5 h-3.5" />
                       </button>

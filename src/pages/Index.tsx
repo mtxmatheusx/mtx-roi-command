@@ -9,7 +9,7 @@ import CampaignsTable from "@/components/CampaignsTable";
 import DashboardCharts from "@/components/DashboardCharts";
 import DateRangePicker from "@/components/DateRangePicker";
 import AppLayout from "@/components/AppLayout";
-import { DollarSign, TrendingUp, Target, BarChart3, Loader2, AlertTriangle, RefreshCw, Eye, MousePointerClick, ShoppingBag, ShieldCheck } from "lucide-react";
+import { DollarSign, TrendingUp, Target, BarChart3, Loader2, AlertTriangle, RefreshCw, Eye, MousePointerClick, ShoppingBag, ShieldCheck, OctagonAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const defaultRange: DateRange = {
@@ -24,7 +24,7 @@ function calcDelta(current: number, previous: number): number | null {
 
 export default function Dashboard() {
   const [dateRange, setDateRange] = useState<DateRange>(defaultRange);
-  const { adAccountId, cpaMeta, ticketMedio, activeProfile } = useClientProfiles();
+  const { adAccountId, cpaMeta, ticketMedio, budgetMaximo, activeProfile } = useClientProfiles();
   const { campaigns, daily, previous, isLoading, isUsingMock, forceRefetch, fetchedAt, dataVerified } = useMetaAds(dateRange, { adAccountId, cpaMeta, ticketMedio });
 
   const totalSpend = campaigns.reduce((s, c) => s + c.spend, 0);
@@ -84,6 +84,13 @@ export default function Dashboard() {
         <div className="mb-4 flex items-center gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-sm text-amber-400">
           <AlertTriangle className="w-4 h-4 shrink-0" />
           Exibindo dados de demonstração. Configure o Ad Account ID em <strong className="mx-1">Configurações</strong> para ver dados reais.
+        </div>
+      )}
+
+      {budgetMaximo > 0 && totalSpend >= budgetMaximo && !isLoading && (
+        <div className="mb-4 flex items-center gap-2 p-4 rounded-lg bg-destructive/15 border border-destructive/30 text-sm font-semibold text-destructive">
+          <OctagonAlert className="w-5 h-5 shrink-0" />
+          🚨 TETO DE GASTOS ATINGIDO — Gasto atual {formatCurrency(totalSpend)} ≥ Budget Máximo {formatCurrency(budgetMaximo)}. Escala automática desabilitada.
         </div>
       )}
 
@@ -172,7 +179,7 @@ export default function Dashboard() {
 
           <DashboardCharts daily={daily} cpaMeta={200} />
 
-          <CampaignsTable campaigns={campaigns} />
+          <CampaignsTable campaigns={campaigns} disableScale={budgetMaximo > 0 && totalSpend >= budgetMaximo} />
 
           {/* Verification seal */}
           {!isUsingMock && dataVerified && (
