@@ -12,11 +12,11 @@ function buildUrl(adAccountId: string, fields: string, accessToken: string, opts
   const base = `https://graph.facebook.com/v21.0/${adAccountId}/insights?fields=${fields}&limit=50&access_token=${accessToken}`;
   const level = opts.level || "campaign";
   let url = `${base}&level=${level}`;
-  url += `&action_attribution_windows=["7d_click","1d_view"]`;
+  url += `&action_attribution_windows=[\"7d_click\",\"1d_view\"]`;
   url += `&time_zone=America/Sao_Paulo`;
 
   if (opts.since && opts.until) {
-    url += `&time_range={"since":"${opts.since}","until":"${opts.until}"}`;
+    url += `&time_range={\"since\":\"${opts.since}\",\"until\":\"${opts.until}\"}`;
     if (level === "account") {
       url += `&time_increment=1`;
     }
@@ -115,7 +115,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { adAccountId, datePreset, since, until, testConnection } = await req.json();
+    const { adAccountId, datePreset, since, until, testConnection, accessToken: perProfileToken } = await req.json();
 
     if (!adAccountId) {
       return new Response(
@@ -124,10 +124,11 @@ Deno.serve(async (req) => {
       );
     }
 
-    const accessToken = Deno.env.get("META_ACCESS_TOKEN");
+    // Use per-profile token if provided, otherwise fall back to global secret
+    const accessToken = perProfileToken || Deno.env.get("META_ACCESS_TOKEN");
     if (!accessToken) {
       return new Response(
-        JSON.stringify({ error: "META_ACCESS_TOKEN não configurado" }),
+        JSON.stringify({ error: "META_ACCESS_TOKEN não configurado. Adicione um token nas Configurações do perfil ou configure o secret global." }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -202,7 +203,6 @@ Deno.serve(async (req) => {
     const responses = await Promise.all(fetches);
     const results = await Promise.all(responses.map((r) => r.json()));
 
-    // Check ALL results for rate limit errors first
     for (const result of results) {
       if (result?.error) {
         const msg = typeof result.error === "string" ? result.error : result.error?.message || "";
@@ -218,7 +218,6 @@ Deno.serve(async (req) => {
     const campaignData = results[0];
     const statusData = results[1];
 
-    // If primary campaign fetch failed with a non-rate-limit error, return it
     if (campaignData?.error) {
       return new Response(
         JSON.stringify({ error: campaignData.error?.message || campaignData.error, type: campaignData.error?.type }),
@@ -226,7 +225,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Build status map (null-safe — statusData might have failed)
     const statusMap: Record<string, string> = {};
     if (statusData?.data && Array.isArray(statusData.data)) {
       for (const c of statusData.data) {
@@ -234,7 +232,6 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Merge effective_status (null-safe)
     const campaignRows = campaignData?.data && Array.isArray(campaignData.data) ? campaignData.data : [];
     const campaigns = campaignRows.map((r: Record<string, unknown>) => {
       const cid = r?.campaign_id as string;
@@ -246,14 +243,12 @@ Deno.serve(async (req) => {
 
     const dataVerified = campaigns.length > 0 && campaigns.every((c: { verified: boolean }) => c.verified);
 
-    // Daily data (null-safe)
     let daily: unknown[] = [];
     const dailyIdx = dailyUrl ? 2 : -1;
     if (dailyIdx > 0 && results[dailyIdx]?.data && Array.isArray(results[dailyIdx].data)) {
       daily = results[dailyIdx].data.map((r: Record<string, unknown>) => parseCampaignRow(r));
     }
 
-    // Previous period (null-safe)
     let previous: Record<string, number> | null = null;
     const prevIdx = dailyUrl ? 3 : 2;
     if (prevUrl && results[prevIdx]?.data && Array.isArray(results[prevIdx].data)) {
@@ -275,7 +270,6 @@ Deno.serve(async (req) => {
       previous.roas = previous.spend > 0 ? previous.purchaseValue / previous.spend : 0;
     }
 
-    // Creatives (null-safe)
     const adIdx = fetches.length - 1;
     let creatives: unknown[] = [];
     if (results[adIdx]?.data && Array.isArray(results[adIdx].data)) {

@@ -31,8 +31,8 @@ interface LogEntry {
 
 export default function Dashboard() {
   const [dateRange, setDateRange] = useState<DateRange>(defaultRange);
-  const { adAccountId, cpaMeta, ticketMedio, budgetMaximo, budgetFrequency, activeProfile } = useClientProfiles();
-  const { campaigns, daily, previous, isLoading, isUsingMock, forceRefetch, fetchedAt, dataVerified, isRateLimited, isPermissionError } = useMetaAds(dateRange, { adAccountId, cpaMeta, ticketMedio });
+  const { adAccountId, cpaMeta, ticketMedio, budgetMaximo, budgetFrequency, activeProfile, metaAccessToken } = useClientProfiles();
+  const { campaigns, daily, previous, isLoading, isUsingMock, forceRefetch, fetchedAt, dataVerified, isRateLimited, isPermissionError, isCached } = useMetaAds(dateRange, { adAccountId, cpaMeta, ticketMedio, accessToken: metaAccessToken });
 
   const [logs, setLogs] = useState<LogEntry[]>([]);
 

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Shield, Save, Loader2, CheckCircle } from "lucide-react";
+import { Shield, Save, Loader2, CheckCircle, KeyRound } from "lucide-react";
 import { z } from "zod";
 import AppLayout from "@/components/AppLayout";
 import { useClientProfiles } from "@/hooks/useClientProfiles";
@@ -23,6 +23,12 @@ const configSchema = z.object({
   budgetFrequency: z.enum(["daily", "weekly", "monthly"]),
 });
 
+function maskToken(token: string | null | undefined): string {
+  if (!token) return "";
+  if (token.length <= 10) return "••••••";
+  return "••••••" + token.slice(-6);
+}
+
 export default function Configuracoes() {
   const { toast } = useToast();
   const { activeProfile, updateProfile, isLoading: profilesLoading } = useClientProfiles();
@@ -30,7 +36,9 @@ export default function Configuracoes() {
     name: "", adAccountId: "act_", pixelId: "",
     cpaMeta: "45", ticketMedio: "697", limiteEscala: "15",
     budgetMaximo: "0", budgetFrequency: "monthly" as "daily" | "weekly" | "monthly",
+    metaAccessToken: "",
   });
+  const [tokenEditing, setTokenEditing] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [testResult, setTestResult] = useState<"idle" | "loading" | "success" | "error">("idle");
@@ -44,9 +52,11 @@ export default function Configuracoes() {
         cpaMeta: String(activeProfile.cpa_meta ?? 45),
         ticketMedio: String(activeProfile.ticket_medio ?? 697),
         limiteEscala: String(activeProfile.limite_escala ?? 15),
-        budgetMaximo: String((activeProfile as any).budget_maximo ?? 0),
-        budgetFrequency: (activeProfile as any).budget_frequency ?? "monthly",
+        budgetMaximo: String(activeProfile.budget_maximo ?? 0),
+        budgetFrequency: (activeProfile.budget_frequency ?? "monthly") as "daily" | "weekly" | "monthly",
+        metaAccessToken: "",
       });
+      setTokenEditing(false);
     }
   }, [activeProfile?.id]);
 
@@ -68,12 +78,21 @@ export default function Configuracoes() {
     }
     setSaving(true);
     try {
-      await updateProfile({
+      const updateData: Record<string, unknown> = {
         id: activeProfile.id, name: parsed.data.name, ad_account_id: parsed.data.adAccountId,
         pixel_id: parsed.data.pixelId || "", cpa_meta: parsed.data.cpaMeta, ticket_medio: parsed.data.ticketMedio,
         limite_escala: parsed.data.limiteEscala, budget_maximo: parsed.data.budgetMaximo, budget_frequency: parsed.data.budgetFrequency,
-      } as any);
+      };
+      // Only update token if user explicitly edited it
+      if (tokenEditing && form.metaAccessToken) {
+        updateData.meta_access_token = form.metaAccessToken;
+      } else if (tokenEditing && !form.metaAccessToken) {
+        // User cleared the token field — remove per-profile token
+        updateData.meta_access_token = null;
+      }
+      await updateProfile(updateData as any);
       toast({ title: "✅ Configurações salvas", description: "Parâmetros atualizados com sucesso." });
+      setTokenEditing(false);
     } catch (err) {
       toast({ title: "Erro ao salvar", description: (err as Error).message, variant: "destructive" });
     } finally { setSaving(false); }
@@ -83,7 +102,12 @@ export default function Configuracoes() {
     if (!form.adAccountId || form.adAccountId === "act_") { toast({ title: "Erro", description: "Preencha o Ad Account ID.", variant: "destructive" }); return; }
     setTestResult("loading");
     try {
-      const { data, error } = await supabase.functions.invoke("meta-ads-sync", { body: { adAccountId: form.adAccountId, testConnection: true } });
+      const body: Record<string, unknown> = { adAccountId: form.adAccountId, testConnection: true };
+      // Use per-profile token if being edited, or existing profile token
+      const tokenToTest = tokenEditing ? form.metaAccessToken : activeProfile?.meta_access_token;
+      if (tokenToTest) body.accessToken = tokenToTest;
+
+      const { data, error } = await supabase.functions.invoke("meta-ads-sync", { body });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       setTestResult("success");
@@ -96,6 +120,8 @@ export default function Configuracoes() {
 
   if (profilesLoading) return <AppLayout><div className="flex items-center justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div></AppLayout>;
   if (!activeProfile) return <AppLayout><div className="space-y-4 text-center py-20"><h2 className="text-xl font-bold">Nenhum perfil encontrado</h2><p className="text-muted-foreground text-sm">Use o seletor no sidebar para criar seu primeiro perfil.</p></div></AppLayout>;
+
+  const hasProfileToken = !!activeProfile.meta_access_token;
 
   return (
     <AppLayout>
@@ -119,13 +145,55 @@ export default function Configuracoes() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg"><Shield className="w-5 h-5 text-primary" />Credenciais Meta Ads</CardTitle>
-            <CardDescription>O token de acesso está armazenado como secret seguro no Cloud.</CardDescription>
+            <CardDescription>Token global ou individual por perfil para suportar múltiplas contas.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-center gap-2 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
-              <CheckCircle className="w-4 h-4 text-emerald-500 shrink-0" />
-              <span className="text-sm text-emerald-400">Access Token configurado como secret seguro</span>
+            {/* Token status badge */}
+            <div className={`flex items-center gap-2 p-3 rounded-lg border ${hasProfileToken ? "bg-emerald-500/10 border-emerald-500/20" : "bg-amber-500/10 border-amber-500/20"}`}>
+              {hasProfileToken ? (
+                <>
+                  <CheckCircle className="w-4 h-4 text-emerald-500 shrink-0" />
+                  <span className="text-sm text-emerald-400">Token individual configurado para este perfil ({maskToken(activeProfile.meta_access_token)})</span>
+                </>
+              ) : (
+                <>
+                  <KeyRound className="w-4 h-4 text-amber-400 shrink-0" />
+                  <span className="text-sm text-amber-400">Usando token global do Cloud. Adicione um token individual abaixo para esta conta.</span>
+                </>
+              )}
             </div>
+
+            {/* Access Token input */}
+            <div className="space-y-2">
+              <Label htmlFor="metaAccessToken">Access Token (opcional — individual por perfil)</Label>
+              {!tokenEditing ? (
+                <div className="flex items-center gap-2">
+                  <Input
+                    id="metaAccessToken"
+                    value={hasProfileToken ? maskToken(activeProfile.meta_access_token) : ""}
+                    placeholder="Usando token global"
+                    disabled
+                    className="font-mono text-sm"
+                  />
+                  <Button variant="outline" size="sm" onClick={() => setTokenEditing(true)}>
+                    {hasProfileToken ? "Alterar" : "Adicionar"}
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  <Input
+                    id="metaAccessToken"
+                    type="password"
+                    value={form.metaAccessToken}
+                    onChange={(e) => handleChange("metaAccessToken", e.target.value)}
+                    placeholder="Cole aqui o Access Token da Meta"
+                    className="font-mono text-sm"
+                  />
+                  <p className="text-xs text-muted-foreground">Deixe vazio e salve para usar o token global. O token é salvo criptografado no banco.</p>
+                </div>
+              )}
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="adAccountId">Ad Account ID</Label>
