@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Check, ChevronDown, Plus, User } from "lucide-react";
+import { Check, ChevronDown, Plus, User, Trash2 } from "lucide-react";
 import { useClientProfiles, CreateProfileInput } from "@/hooks/useClientProfiles";
 import {
   DropdownMenu,
