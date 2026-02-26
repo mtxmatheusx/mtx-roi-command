@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { subDays, format } from "date-fns";
 import { formatCurrency } from "@/lib/mockData";
 import { useMetaAds, DateRange } from "@/hooks/useMetaAds";
+import { useClientProfiles } from "@/hooks/useClientProfiles";
 import MetricCard from "@/components/MetricCard";
 import CampaignsTable from "@/components/CampaignsTable";
 import DashboardCharts from "@/components/DashboardCharts";
@@ -23,7 +24,8 @@ function calcDelta(current: number, previous: number): number | null {
 
 export default function Dashboard() {
   const [dateRange, setDateRange] = useState<DateRange>(defaultRange);
-  const { campaigns, daily, previous, isLoading, isUsingMock, forceRefetch, fetchedAt, dataVerified } = useMetaAds(dateRange);
+  const { adAccountId, cpaMeta, ticketMedio, activeProfile } = useClientProfiles();
+  const { campaigns, daily, previous, isLoading, isUsingMock, forceRefetch, fetchedAt, dataVerified } = useMetaAds(dateRange, { adAccountId, cpaMeta, ticketMedio });
 
   const totalSpend = campaigns.reduce((s, c) => s + c.spend, 0);
   const totalRevenue = campaigns.reduce((s, c) => s + c.revenue, 0);
@@ -35,7 +37,7 @@ export default function Dashboard() {
   const roas = totalSpend > 0 ? totalRevenue / totalSpend : 0;
   const avgCPM = totalImpressions > 0 ? (totalSpend / totalImpressions) * 1000 : 0;
   const avgCTR = totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0;
-  const ticketMedio = totalPurchases > 0 ? totalRevenue / totalPurchases : 0;
+  const calcTicketMedio = totalPurchases > 0 ? totalRevenue / totalPurchases : 0;
 
   const deltaProfit = previous ? calcDelta(totalProfit, previous.profit) : null;
   const deltaSpend = previous ? calcDelta(totalSpend, previous.spend) : null;
@@ -44,7 +46,7 @@ export default function Dashboard() {
   const deltaPurchases = previous ? calcDelta(totalPurchases, previous.purchases) : null;
   const deltaCPM = previous ? calcDelta(avgCPM, previous.cpm) : null;
   const deltaCTR = previous ? calcDelta(avgCTR, previous.ctr) : null;
-  const deltaTM = previous && previous.purchases > 0 ? calcDelta(ticketMedio, previous.purchaseValue / previous.purchases) : null;
+  const deltaTM = previous && previous.purchases > 0 ? calcDelta(calcTicketMedio, previous.purchaseValue / previous.purchases) : null;
 
   return (
     <AppLayout>
@@ -162,7 +164,7 @@ export default function Dashboard() {
             />
             <MetricCard
               title="Ticket Médio (AOV)"
-              value={formatCurrency(ticketMedio)}
+              value={formatCurrency(calcTicketMedio)}
               icon={<ShoppingBag className="w-4 h-4" />}
               delta={deltaTM}
             />

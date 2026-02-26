@@ -1,0 +1,121 @@
+import { useState, useEffect, useCallback } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+
+export interface ClientProfile {
+  id: string;
+  user_id: string;
+  name: string;
+  ad_account_id: string;
+  pixel_id: string;
+  cpa_meta: number;
+  ticket_medio: number;
+  limite_escala: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export type CreateProfileInput = {
+  name: string;
+  ad_account_id?: string;
+  pixel_id?: string;
+  cpa_meta?: number;
+  ticket_medio?: number;
+  limite_escala?: number;
+};
+
+export type UpdateProfileInput = Partial<CreateProfileInput> & { id: string };
+
+export function useClientProfiles() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  const { data: profiles = [], isLoading } = useQuery({
+    queryKey: ["client_profiles", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      const { data, error } = await supabase
+        .from("client_profiles" as any)
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: true });
+      if (error) throw error;
+      return (data || []) as unknown as ClientProfile[];
+    },
+    enabled: !!user?.id,
+  });
+
+  const activeProfile = profiles.find((p) => p.is_active) || profiles[0] || null;
+
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ["client_profiles", user?.id] });
+
+  const setActiveProfile = useCallback(async (profileId: string) => {
+    if (!user?.id) return;
+    // Deactivate all
+    await supabase
+      .from("client_profiles" as any)
+      .update({ is_active: false } as any)
+      .eq("user_id", user.id);
+    // Activate selected
+    await supabase
+      .from("client_profiles" as any)
+      .update({ is_active: true } as any)
+      .eq("id", profileId);
+    invalidate();
+  }, [user?.id]);
+
+  const createProfile = useCallback(async (input: CreateProfileInput) => {
+    if (!user?.id) return;
+    const isFirst = profiles.length === 0;
+    const { error } = await supabase
+      .from("client_profiles" as any)
+      .insert({
+        user_id: user.id,
+        name: input.name,
+        ad_account_id: input.ad_account_id || "act_",
+        pixel_id: input.pixel_id || "",
+        cpa_meta: input.cpa_meta ?? 45,
+        ticket_medio: input.ticket_medio ?? 697,
+        limite_escala: input.limite_escala ?? 15,
+        is_active: isFirst,
+      } as any);
+    if (error) throw error;
+    invalidate();
+  }, [user?.id, profiles.length]);
+
+  const updateProfile = useCallback(async (input: UpdateProfileInput) => {
+    const { id, ...fields } = input;
+    const { error } = await supabase
+      .from("client_profiles" as any)
+      .update(fields as any)
+      .eq("id", id);
+    if (error) throw error;
+    invalidate();
+  }, []);
+
+  const deleteProfile = useCallback(async (profileId: string) => {
+    const { error } = await supabase
+      .from("client_profiles" as any)
+      .delete()
+      .eq("id", profileId);
+    if (error) throw error;
+    invalidate();
+  }, []);
+
+  return {
+    profiles,
+    activeProfile,
+    isLoading,
+    setActiveProfile,
+    createProfile,
+    updateProfile,
+    deleteProfile,
+    // Convenience getters from active profile
+    adAccountId: activeProfile?.ad_account_id || "act_",
+    cpaMeta: activeProfile?.cpa_meta ?? 45,
+    ticketMedio: activeProfile?.ticket_medio ?? 697,
+    limiteEscala: activeProfile?.limite_escala ?? 15,
+  };
+}
