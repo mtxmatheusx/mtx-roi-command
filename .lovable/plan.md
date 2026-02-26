@@ -1,40 +1,72 @@
 
 
-## Plano: Budget Máximo + Alertas + Badges de Status nos Perfis
+## Plano: Limite de Orçamento com Frequência + Barra de Progresso + Sincronização de Criativos
 
-### 1. Migração SQL — adicionar coluna `budget_maximo`
+### 1. Migração SQL — adicionar colunas de frequência do limite
+
 ```sql
-ALTER TABLE public.client_profiles ADD COLUMN budget_maximo NUMERIC NOT NULL DEFAULT 0;
+ALTER TABLE public.client_profiles 
+  ADD COLUMN budget_frequency TEXT NOT NULL DEFAULT 'monthly';
+-- budget_frequency: 'daily', 'weekly', 'monthly'
+-- budget_maximo já existe (valor do limite)
 ```
-Valor 0 = sem limite (desativado).
 
-### 2. `useClientProfiles.ts`
-- Expor `budgetMaximo` do perfil ativo
-- Incluir `budget_maximo` nos types e no `updateProfile`
+### 2. `useClientProfiles.ts` — expor `budgetFrequency`
+- Adicionar `budgetFrequency` ao retorno do hook
+- Incluir no `updateProfile`
 
-### 3. `Configuracoes.tsx`
-- Adicionar campo "Budget Máximo (R$)" na seção Parâmetros de Automação (grid 3→4 colunas)
-- Incluir no schema Zod e no `handleSave`
+### 3. `Configuracoes.tsx` — UI do Limite de Orçamento
+- Substituir campo simples de "Budget Máximo" por um grupo com:
+  - Input "Valor do Limite (R$)" (já existe como `budgetMaximo`)
+  - Select dropdown "Frequência" com opções: Diário, Semanal, Mensal
+- Incluir `budgetFrequency` no schema Zod e no `handleSave`
 
-### 4. `Index.tsx` — Alerta de teto de gastos
-- Comparar `totalSpend >= budgetMaximo` (quando `budgetMaximo > 0`)
-- Exibir banner vermelho "TETO DE GASTOS ATINGIDO" acima do grid de métricas
-- Passar flag `budgetExceeded` para `CampaignsTable`
+### 4. `Index.tsx` — Lógica de cálculo por período + barra de progresso
+- Calcular `totalSpend` baseado no período que corresponde à frequência:
+  - **Diário**: spend do dia atual (filtrar `daily` pelo dia de hoje)
+  - **Semanal**: spend dos últimos 7 dias (soma de `daily`)
+  - **Mensal**: spend do mês atual (soma de `daily` filtrado pelo mês)
+- Comparar com `budgetMaximo`; se atingido, exibir alerta com texto dinâmico: "Limite [Diário/Semanal/Mensal] de R$ X atingido"
+- Adicionar `Progress` bar abaixo do alerta mostrando `(spendNoPeriodo / budgetMaximo) * 100`%
+- Passar `budgetExceeded` para `CampaignsTable`
 
-### 5. `CampaignsTable.tsx` — Desabilitar escala
-- Receber prop `disableScale?: boolean`
-- Quando `true`, desabilitar botão "Escalar" com tooltip explicativo
+### 5. `meta-ads-sync/index.ts` — Buscar dados por Ad (criativos reais)
+- Adicionar novo fetch com `level=ad` incluindo campos extras: `ad_name`, `adcreatives{thumbnail_url}`
+- Retornar array `creatives` no response com: nome, thumbnail, spend, purchases, roas, ctr
+- Manter fetches existentes (campaign, daily, previous) inalterados
 
-### 6. `ProfileSelector.tsx` — Badges de status por perfil
-- Para cada perfil no dropdown, mostrar badge colorido:
-  - Verde: perfil com `is_active` (indica selecionado)
-  - Sem badge extra por enquanto (ROAS real requer fetch por perfil, complexidade alta)
-- Manter design atual com indicador de check no ativo
+### 6. `useMetaAds.ts` — Expor `creatives` do response
+- Mapear `data.creatives` para um tipo `MetaCreative`
+- Retornar no hook junto com campaigns/daily
+
+### 7. `Criativos.tsx` — Renderizar criativos reais
+- Consumir `useMetaAds` + `useClientProfiles` em vez de `mockCreatives`
+- Exibir thumbnail real do criativo (se disponível)
+- Mostrar ROI individual, spend, CTR por criativo
+- Fallback para mock se `isUsingMock`
 
 ### Arquivos modificados
-- **Migração SQL**: `budget_maximo` column
-- `src/hooks/useClientProfiles.ts` — expor budgetMaximo
-- `src/pages/Configuracoes.tsx` — campo Budget Máximo
-- `src/pages/Index.tsx` — alerta teto de gastos
-- `src/components/CampaignsTable.tsx` — desabilitar escala quando budget excedido
+- **Migração SQL**: coluna `budget_frequency`
+- `src/hooks/useClientProfiles.ts` — expor budgetFrequency
+- `src/pages/Configuracoes.tsx` — dropdown de frequência
+- `src/pages/Index.tsx` — lógica por período + Progress bar
+- `supabase/functions/meta-ads-sync/index.ts` — fetch level=ad
+- `src/hooks/useMetaAds.ts` — expor creatives
+- `src/pages/Criativos.tsx` — renderizar criativos reais
+
+### Fluxo de dados
+
+```text
+client_profiles.budget_frequency + budget_maximo
+  ↓
+Index.tsx → calcula spend no período (daily/weekly/monthly)
+  ↓
+  spend >= limite? → alerta vermelho + Progress bar + disableScale
+  
+meta-ads-sync (level=ad) → creatives[]
+  ↓
+useMetaAds → { creatives }
+  ↓
+Criativos.tsx → cards com thumbnail + ROI individual
+```
 
