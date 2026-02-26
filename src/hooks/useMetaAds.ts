@@ -147,6 +147,7 @@ export function useMetaAds(dateRange?: DateRange, profileConfig?: { adAccountId?
   const [forceKey, setForceKey] = useState(0);
   const [fetchedAt, setFetchedAt] = useState<string | null>(null);
   const [dataVerified, setDataVerified] = useState(false);
+  const [isRateLimited, setIsRateLimited] = useState(false);
 
   const shortRange = isShortRange(dateRange);
 
@@ -173,6 +174,21 @@ export function useMetaAds(dateRange?: DateRange, profileConfig?: { adAccountId?
       }
 
       const { data, error } = await supabase.functions.invoke("meta-ads-sync", { body });
+
+      // Check for rate limit or permission errors — return mock data instead of crashing
+      const errorMsg = data?.error || (error as Error)?.message || "";
+      const isRateOrPermission = typeof errorMsg === "string" && (
+        errorMsg.includes("Limite de requisições") ||
+        errorMsg.includes("Application request limit reached") ||
+        errorMsg.includes("rate limit") ||
+        errorMsg.includes("permission")
+      );
+      if (isRateOrPermission) {
+        setIsRateLimited(true);
+        return { campaigns: mockCampaigns, daily: generateMockDaily(), previous: mockPrevious, creatives: [], fetchedAt: null, dataVerified: false };
+      }
+      setIsRateLimited(false);
+
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
@@ -198,7 +214,11 @@ export function useMetaAds(dateRange?: DateRange, profileConfig?: { adAccountId?
       };
     },
     staleTime: shortRange ? 0 : 5 * 60 * 1000,
-    retry: 1,
+    retry: (failureCount, error) => {
+      const msg = (error as Error)?.message || "";
+      if (msg.includes("rate limit") || msg.includes("Limite") || msg.includes("permission")) return false;
+      return failureCount < 1;
+    },
   });
 
   useEffect(() => {
@@ -226,5 +246,6 @@ export function useMetaAds(dateRange?: DateRange, profileConfig?: { adAccountId?
     forceRefetch,
     fetchedAt,
     dataVerified,
+    isRateLimited,
   };
 }
