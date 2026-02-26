@@ -1,5 +1,6 @@
 import { NavLink as RouterNavLink } from "react-router-dom";
-import { BarChart3, Zap, Target, ImageIcon, Settings } from "lucide-react";
+import { BarChart3, Zap, Target, ImageIcon, Settings, LogOut } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
 const navItems = [
   { to: "/", label: "Dashboard", icon: BarChart3 },
@@ -9,6 +10,8 @@ const navItems = [
 ];
 
 export default function AppSidebar() {
+  const { signOut } = useAuth();
+
   return (
     <aside className="fixed left-0 top-0 h-screen w-64 bg-card border-r border-border flex flex-col z-50">
       <div className="p-6 border-b border-border">
@@ -37,7 +40,7 @@ export default function AppSidebar() {
           </RouterNavLink>
         ))}
       </nav>
-    <div className="p-4 border-t border-border">
+      <div className="p-4 border-t border-border space-y-1">
         <RouterNavLink
           to="/configuracoes"
           className={({ isActive }) =>
@@ -51,6 +54,13 @@ export default function AppSidebar() {
           <Settings className="w-4 h-4" />
           Configurações
         </RouterNavLink>
+        <button
+          onClick={signOut}
+          className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 w-full text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+        >
+          <LogOut className="w-4 h-4" />
+          Sair
+        </button>
       </div>
     </aside>
   );
