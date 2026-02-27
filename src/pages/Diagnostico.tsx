@@ -131,8 +131,8 @@ export default function Diagnostico() {
           </Button>
         </div>
 
-        {isMockData && (
-          <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3 text-sm text-yellow-400">
+        {isUsingMock && (
+          <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-3 text-sm text-destructive">
             ⚠️ Dados mock detectados. Conecte sua conta Meta Ads em Configurações para análise real.
           </div>
         )}
