@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
-import { Shield, Save, Loader2, CheckCircle, KeyRound, Globe, Brain, X, ExternalLink } from "lucide-react";
+import { Shield, Save, Loader2, CheckCircle, KeyRound, Globe, Brain, X, ExternalLink, Trash2 } from "lucide-react";
 import { z } from "zod";
+import { useNavigate } from "react-router-dom";
 import AppLayout from "@/components/AppLayout";
 import { useClientProfiles } from "@/hooks/useClientProfiles";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,7 +9,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import ReactMarkdown from "react-markdown";
@@ -32,7 +38,8 @@ function maskToken(token: string | null | undefined): string {
 
 export default function Configuracoes() {
   const { toast } = useToast();
-  const { activeProfile, updateProfile, isLoading: profilesLoading, productContext, productUrls } = useClientProfiles();
+  const navigate = useNavigate();
+  const { activeProfile, updateProfile, deleteProfile, profiles, isLoading: profilesLoading, productContext, productUrls } = useClientProfiles();
   const [form, setForm] = useState({
     name: "", adAccountId: "act_", pixelId: "",
     cpaMeta: "45", ticketMedio: "697", limiteEscala: "15",
@@ -48,6 +55,9 @@ export default function Configuracoes() {
   const [productUrl, setProductUrl] = useState("");
   const [isAbsorbing, setIsAbsorbing] = useState(false);
   const [absorbResult, setAbsorbResult] = useState<any>(null);
+  const [showManualInput, setShowManualInput] = useState(false);
+  const [manualText, setManualText] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     if (activeProfile) {
@@ -64,6 +74,8 @@ export default function Configuracoes() {
       });
       setTokenEditing(false);
       setAbsorbResult(null);
+      setShowManualInput(false);
+      setManualText("");
     }
   }, [activeProfile?.id]);
 
@@ -131,17 +143,45 @@ export default function Configuracoes() {
     }
     setIsAbsorbing(true);
     setAbsorbResult(null);
+    setShowManualInput(false);
     try {
       const { data, error } = await supabase.functions.invoke("absorb-product-context", {
         body: { url: productUrl, profileId: activeProfile.id },
       });
       if (error) throw error;
+      if (data?.scrape_failed) {
+        setShowManualInput(true);
+        toast({ title: "⚠️ Scraping falhou", description: data.error || "Use a inserção manual abaixo.", variant: "destructive" });
+        return;
+      }
       if (data?.error) throw new Error(data.error);
       setAbsorbResult(data);
       setProductUrl("");
-      toast({ title: "✅ Contexto absorvido!", description: "A IA analisou o conteúdo do site com sucesso." });
+      toast({ title: "✅ Contexto absorvido!", description: "A IA analisou o conteúdo com sucesso." });
     } catch (err) {
-      toast({ title: "Erro ao absorver contexto", description: (err as Error).message, variant: "destructive" });
+      setShowManualInput(true);
+      toast({ title: "Erro ao absorver contexto", description: (err as Error).message + ". Use a inserção manual.", variant: "destructive" });
+    } finally {
+      setIsAbsorbing(false);
+    }
+  };
+
+  const handleManualAbsorb = async () => {
+    if (!manualText.trim() || !activeProfile) return;
+    setIsAbsorbing(true);
+    setAbsorbResult(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("absorb-product-context", {
+        body: { manualText: manualText.trim(), profileId: activeProfile.id },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      setAbsorbResult(data);
+      setManualText("");
+      setShowManualInput(false);
+      toast({ title: "✅ Contexto absorvido!", description: "A IA processou o texto colado." });
+    } catch (err) {
+      toast({ title: "Erro", description: (err as Error).message, variant: "destructive" });
     } finally {
       setIsAbsorbing(false);
     }
@@ -158,6 +198,20 @@ export default function Configuracoes() {
     }
   };
 
+  const handleDeleteProfile = async () => {
+    if (!activeProfile) return;
+    setIsDeleting(true);
+    try {
+      await deleteProfile(activeProfile.id);
+      toast({ title: "Perfil excluído", description: `"${activeProfile.name}" foi removido permanentemente.` });
+      navigate("/");
+    } catch (err) {
+      toast({ title: "Erro ao excluir", description: (err as Error).message, variant: "destructive" });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   if (profilesLoading) return <AppLayout><div className="flex items-center justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div></AppLayout>;
   if (!activeProfile) return <AppLayout><div className="space-y-4 text-center py-20"><h2 className="text-xl font-bold">Nenhum perfil encontrado</h2><p className="text-muted-foreground text-sm">Use o seletor no sidebar para criar seu primeiro perfil.</p></div></AppLayout>;
 
@@ -166,9 +220,17 @@ export default function Configuracoes() {
   return (
     <AppLayout>
       <div className="space-y-6">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">Configurações — {activeProfile.name}</h2>
-          <p className="text-muted-foreground text-sm mt-1">Configure a conexão com a Meta Ads e as regras de automação.</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight">Configurações — {activeProfile.name}</h2>
+            <p className="text-muted-foreground text-sm mt-1">Configure a conexão com a Meta Ads e as regras de automação.</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+              <Brain className="w-3.5 h-3.5 text-emerald-400" />
+              <span className="text-xs font-semibold text-emerald-400">IA Ativa</span>
+            </div>
+          </div>
         </div>
 
         <Card>
@@ -242,7 +304,7 @@ export default function Configuracoes() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg"><Brain className="w-5 h-5 text-primary" />Contexto do Produto</CardTitle>
-            <CardDescription>Insira a URL do seu site ou landing page para a IA absorver o contexto e gerar copies alinhadas à marca.</CardDescription>
+            <CardDescription>Insira URLs ou cole texto manualmente para a IA absorver o contexto e gerar copies alinhadas. Múltiplos links são consolidados automaticamente.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex gap-2">
@@ -260,10 +322,44 @@ export default function Configuracoes() {
               </Button>
             </div>
 
+            {/* Manual input toggle */}
+            {!showManualInput && (
+              <button
+                onClick={() => setShowManualInput(true)}
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors underline"
+              >
+                Ou cole o texto manualmente →
+              </button>
+            )}
+
+            {/* Manual text fallback */}
+            {showManualInput && (
+              <div className="space-y-2 p-4 rounded-lg border border-amber-500/20 bg-amber-500/5">
+                <p className="text-xs text-amber-400 font-medium">📋 Inserção Manual de Contexto</p>
+                <p className="text-xs text-muted-foreground">Cole aqui o texto do site, landing page, VSL ou perfil do Instagram que não conseguiu ser acessado automaticamente.</p>
+                <Textarea
+                  value={manualText}
+                  onChange={(e) => setManualText(e.target.value)}
+                  placeholder="Cole aqui todo o conteúdo textual do site, incluindo headlines, descrições de produto, depoimentos, etc..."
+                  rows={6}
+                  className="text-sm"
+                />
+                <div className="flex gap-2">
+                  <Button onClick={handleManualAbsorb} disabled={isAbsorbing || !manualText.trim()} size="sm" className="gap-2">
+                    {isAbsorbing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Brain className="w-4 h-4" />}
+                    Processar Texto
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => { setShowManualInput(false); setManualText(""); }}>
+                    Cancelar
+                  </Button>
+                </div>
+              </div>
+            )}
+
             {/* Stored URLs */}
             {productUrls && productUrls.length > 0 && (
               <div className="space-y-2">
-                <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">URLs absorvidas</p>
+                <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">URLs absorvidas ({productUrls.length})</p>
                 <div className="flex flex-wrap gap-2">
                   {productUrls.map((u) => (
                     <span key={u} className="inline-flex items-center gap-1.5 text-xs bg-secondary px-3 py-1.5 rounded-full">
@@ -385,6 +481,48 @@ export default function Configuracoes() {
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}Salvar Configurações
           </Button>
         </div>
+
+        {/* Delete Profile */}
+        {profiles.length > 1 && (
+          <>
+            <Separator />
+            <Card className="border-destructive/30">
+              <CardHeader>
+                <CardTitle className="text-lg text-destructive flex items-center gap-2">
+                  <Trash2 className="w-5 h-5" />
+                  Zona de Perigo
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Excluir permanentemente o perfil "{activeProfile.name}" e todos os dados associados (rascunhos, criativos, contexto). Esta ação é irreversível.
+                </p>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive" className="gap-2" disabled={isDeleting}>
+                      {isDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                      Excluir Perfil
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Excluir perfil "{activeProfile.name}"?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Todos os dados deste perfil serão excluídos permanentemente, incluindo rascunhos de campanha, criativos e contexto do produto. Esta ação não pode ser desfeita.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleDeleteProfile} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                        Excluir Permanentemente
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </CardContent>
+            </Card>
+          </>
+        )}
       </div>
     </AppLayout>
   );

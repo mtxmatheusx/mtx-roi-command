@@ -28,14 +28,22 @@ serve(async (req) => {
       { global: { headers: { Authorization: authHeader } } }
     );
 
-    const token = authHeader.replace("Bearer ", "");
-    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims) {
-      return new Response(JSON.stringify({ error: "Não autorizado" }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    // Try getClaims first, fallback to getUser
+    let userId: string;
+    try {
+      const token = authHeader.replace("Bearer ", "");
+      const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
+      if (claimsError || !claimsData?.claims) throw new Error("getClaims failed");
+      userId = claimsData.claims.sub;
+    } catch {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) {
+        return new Response(JSON.stringify({ error: "Não autorizado" }), {
+          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      userId = user.id;
     }
-    const userId = claimsData.claims.sub;
 
     const { draftId } = await req.json();
     if (!draftId) {

@@ -191,9 +191,12 @@ export default function LancarCampanha() {
       if (publishError) throw publishError;
 
       if (result?.error) {
-        setPublishStep(`Erro: ${result.error}`);
+        const stepLabels: Record<string, string> = { campaign: "Criação da Campanha", adset: "Criação do Conjunto de Anúncios", ad: "Criação do Anúncio" };
+        const failedStep = result.step ? stepLabels[result.step] || result.step : "";
+        const partialInfo = result.steps?.length ? `\nEtapas concluídas: ${result.steps.join(", ")}` : "";
+        setPublishStep(`Falha em: ${failedStep || "Meta API"}`);
         setPublishProgress(100);
-        setPublishResult({ success: false, error: result.error });
+        setPublishResult({ success: false, error: `${result.error}${partialInfo}`, meta_campaign_id: result.meta_campaign_id });
       } else {
         setPublishStep("Campanha publicada com sucesso!");
         setPublishProgress(100);
@@ -494,11 +497,14 @@ export default function LancarCampanha() {
                 )}
 
                 {publishResult && !publishResult.success && (
-                  <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-4">
+                  <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-4 space-y-2">
                     <p className="text-destructive font-semibold flex items-center gap-2">
                       <XCircle className="w-4 h-4" /> Erro na publicação
                     </p>
-                    <p className="text-xs text-muted-foreground mt-1">{publishResult.error}</p>
+                    <p className="text-xs text-muted-foreground whitespace-pre-line">{publishResult.error}</p>
+                    {publishResult.meta_campaign_id && (
+                      <p className="text-xs text-amber-400">⚠️ Campanha parcialmente criada (ID: {publishResult.meta_campaign_id}). Verifique no Gerenciador de Anúncios.</p>
+                    )}
                   </div>
                 )}
               </CardContent>

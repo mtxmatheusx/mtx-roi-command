@@ -7,43 +7,134 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const USER_AGENTS = [
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_5) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15",
+  "Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0",
+];
+
+const SOCIAL_MEDIA_DOMAINS = ["instagram.com", "facebook.com", "tiktok.com", "twitter.com", "x.com", "threads.net"];
+
+function isSocialMediaUrl(url: string): boolean {
+  try {
+    const hostname = new URL(url).hostname.replace("www.", "");
+    return SOCIAL_MEDIA_DOMAINS.some((d) => hostname.includes(d));
+  } catch {
+    return false;
+  }
+}
+
+async function fetchWithRetry(url: string, maxRetries = 3): Promise<string> {
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    const ua = USER_AGENTS[attempt % USER_AGENTS.length];
+    try {
+      const resp = await fetch(url, {
+        headers: {
+          "User-Agent": ua,
+          "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+          "Accept-Language": "pt-BR,pt;q=0.9,en;q=0.8",
+        },
+      });
+      if (resp.status === 429) {
+        const wait = Math.pow(2, attempt) * 1000 + Math.random() * 1000;
+        console.log(`429 received, waiting ${Math.round(wait)}ms before retry ${attempt + 1}/${maxRetries}`);
+        await new Promise((r) => setTimeout(r, wait));
+        continue;
+      }
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      return await resp.text();
+    } catch (e) {
+      if (attempt === maxRetries - 1) throw e;
+      await new Promise((r) => setTimeout(r, Math.pow(2, attempt) * 1000));
+    }
+  }
+  throw new Error("Máximo de tentativas excedido");
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { url, profileId } = await req.json();
-    if (!url || !profileId) throw new Error("url e profileId são obrigatórios");
+    const { url, profileId, manualText } = await req.json();
+    if (!profileId) throw new Error("profileId é obrigatório");
+    if (!url && !manualText) throw new Error("url ou manualText é obrigatório");
 
-    // Get user from auth header
     const authHeader = req.headers.get("authorization") || "";
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Fetch the URL content
-    const pageResp = await fetch(url, {
-      headers: { "User-Agent": "Mozilla/5.0 (compatible; MTXBot/1.0)" },
-    });
-    if (!pageResp.ok) throw new Error(`Não foi possível acessar a URL: ${pageResp.status}`);
+    let textContent: string;
 
-    const html = await pageResp.text();
+    if (manualText) {
+      // Manual text input — skip scraping
+      textContent = manualText.trim().slice(0, 8000);
+      if (textContent.length < 20) {
+        throw new Error("Texto muito curto. Cole pelo menos um parágrafo.");
+      }
+    } else {
+      // Check for social media URLs
+      if (isSocialMediaUrl(url!)) {
+        return new Response(JSON.stringify({
+          error: "Redes sociais bloqueiam scraping automático. Use o campo de 'Inserção Manual' para colar o conteúdo.",
+          scrape_failed: true,
+        }), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
 
-    // Extract text from HTML (simple approach)
-    const textContent = html
-      .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
-      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
-      .replace(/<[^>]+>/g, " ")
-      .replace(/\s+/g, " ")
-      .trim()
-      .slice(0, 8000); // Limit context size
+      // Fetch with retry
+      let html: string;
+      try {
+        html = await fetchWithRetry(url!);
+      } catch (e) {
+        return new Response(JSON.stringify({
+          error: `Não foi possível acessar a URL. Use o campo de 'Inserção Manual' para colar o conteúdo.`,
+          scrape_failed: true,
+        }), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
 
-    if (!textContent || textContent.length < 50) {
-      throw new Error("Não foi possível extrair conteúdo suficiente da URL.");
+      textContent = html
+        .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
+        .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
+        .replace(/<[^>]+>/g, " ")
+        .replace(/\s+/g, " ")
+        .trim()
+        .slice(0, 8000);
+
+      if (!textContent || textContent.length < 50) {
+        return new Response(JSON.stringify({
+          error: "Não foi possível extrair conteúdo suficiente. Use o campo de 'Inserção Manual'.",
+          scrape_failed: true,
+        }), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
 
-    // Send to AI for structured extraction
+    // Get existing context for cumulative merge
+    const { data: profile } = await supabase
+      .from("client_profiles")
+      .select("product_context, product_urls")
+      .eq("id", profileId)
+      .single();
+
+    const existingContext = profile?.product_context || "";
+    const existingUrls = (profile?.product_urls as string[]) || [];
+    const totalLinksAfter = url ? (existingUrls.includes(url) ? existingUrls.length : existingUrls.length + 1) : existingUrls.length;
+
+    // Build AI prompt — cumulative if 2+ links
+    const consolidationInstruction = (existingContext && totalLinksAfter >= 2)
+      ? `\n\nCONTEXTO EXISTENTE DO PERFIL (de URLs anteriores):\n${existingContext}\n\nVocê deve CONSOLIDAR as informações do novo conteúdo com o contexto existente acima, criando um perfil unificado. Identifique padrões consistentes e dores/objeções negligenciadas.`
+      : "";
+
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
@@ -58,21 +149,22 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: `Você é um analista estratégico sênior. Extraia do conteúdo do site as informações estratégicas no framework Hormozi.
-Use a function tool "extract_product_context" para retornar dados estruturados.`,
+            content: `Você é um analista estratégico sênior especializado em Hormozi. Extraia do conteúdo as informações estratégicas.
+Use a function tool "extract_product_context" para retornar dados estruturados.${consolidationInstruction ? "\nQuando houver contexto existente, CONSOLIDE as informações em vez de substituir." : ""}`,
           },
           {
             role: "user",
-            content: `Analise o conteúdo abaixo de um site/landing page e extraia:
+            content: `Analise o conteúdo abaixo e extraia:
 
 1. **Promessa Principal**: O que o produto/serviço promete entregar
 2. **Dores do Avatar**: As dores específicas do público-alvo (mínimo 3)
 3. **Objeções Comuns**: O que impede o avatar de comprar (mínimo 3)
 4. **Oferta (Hormozi Style)**: Como a oferta é estruturada (preço, bônus, garantia, escassez)
-5. **Tom de Marca**: Como a marca se comunica (formal, casual, técnico, emocional)
-6. **Resumo Estratégico**: Parágrafo resumindo o posicionamento para usar em campanhas
+5. **Tom de Marca**: Como a marca se comunica
+6. **Resumo Estratégico**: Parágrafo resumindo o posicionamento para campanhas
+${consolidationInstruction}
 
-CONTEÚDO DO SITE:
+CONTEÚDO:
 ${textContent}`,
           },
         ],
@@ -81,7 +173,7 @@ ${textContent}`,
             type: "function",
             function: {
               name: "extract_product_context",
-              description: "Structured extraction of product context from website content",
+              description: "Structured extraction of product context",
               parameters: {
                 type: "object",
                 properties: {
@@ -125,19 +217,10 @@ ${textContent}`,
 
     const extracted = JSON.parse(toolCall.function.arguments);
 
-    // Build full context string for storage
     const contextString = `## Promessa Principal\n${extracted.main_promise}\n\n## Dores do Avatar\n${extracted.avatar_pains.map((p: string) => `- ${p}`).join("\n")}\n\n## Objeções\n${extracted.objections.map((o: string) => `- ${o}`).join("\n")}\n\n## Estrutura da Oferta\n${extracted.offer_structure}\n\n## Tom de Marca\n${extracted.brand_tone}\n\n## Resumo Estratégico\n${extracted.strategic_summary}`;
 
-    // Update profile with product context
-    // First get existing URLs
-    const { data: profile } = await supabase
-      .from("client_profiles")
-      .select("product_urls")
-      .eq("id", profileId)
-      .single();
-
-    const existingUrls = (profile?.product_urls as string[]) || [];
-    const updatedUrls = existingUrls.includes(url) ? existingUrls : [...existingUrls, url];
+    // Update profile
+    const updatedUrls = url ? (existingUrls.includes(url) ? existingUrls : [...existingUrls, url]) : existingUrls;
 
     const { error: updateError } = await supabase
       .from("client_profiles")
