@@ -14,7 +14,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Rocket, Brain, ChevronDown, CheckCircle2, XCircle, Clock, Loader2, ExternalLink, AlertTriangle, Sparkles, Image as ImageIcon, Video } from "lucide-react";
+import { Rocket, Brain, ChevronDown, CheckCircle2, XCircle, Clock, Loader2, ExternalLink, AlertTriangle, Sparkles, Image as ImageIcon, Video, Trash2, Copy } from "lucide-react";
 import { useClientProfiles } from "@/hooks/useClientProfiles";
 import { useMetaAds } from "@/hooks/useMetaAds";
 import { supabase } from "@/integrations/supabase/client";
