@@ -44,3 +44,9 @@ verify_jwt = false
 
 [functions.ai-campaign-draft]
 verify_jwt = false
+
+[functions.delete-meta-campaign]
+verify_jwt = false
+
+[functions.clone-scale-campaign]
+verify_jwt = false
