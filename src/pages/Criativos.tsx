@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import DateRangePicker from "@/components/DateRangePicker";
+import CreativeFactory from "@/components/CreativeFactory";
 
 const typeIcon = { video: Video, image: Image, carousel: LayoutGrid };
 const statusConfig = {
@@ -295,6 +296,13 @@ export default function CriativosPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Creative Factory */}
+      <CreativeFactory
+        winners={displayCreatives
+          .filter((c) => c.status === "winner" && c.roas >= 3 && c.spend > 100)
+          .map((c) => ({ id: c.id, name: c.name, roas: c.roas, spend: c.spend, thumbnailUrl: c.thumbnailUrl }))}
+      />
 
       {isUsingMock && (
         <div className="mb-4 flex items-center gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-sm text-amber-400">
