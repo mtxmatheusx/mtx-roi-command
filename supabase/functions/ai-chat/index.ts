@@ -71,7 +71,9 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
-    const systemPrompt = mode === "diagnostico" ? DIAGNOSTICO_SYSTEM_PROMPT : CHAT_SYSTEM_PROMPT;
+    const today = new Date().toISOString().slice(0, 10);
+    const basePrompt = mode === "diagnostico" ? DIAGNOSTICO_SYSTEM_PROMPT : CHAT_SYSTEM_PROMPT;
+    const systemPrompt = `**Data de hoje: ${today}**\n\n` + basePrompt;
 
     // Inject campaign context if available
     let contextMessage = "";
