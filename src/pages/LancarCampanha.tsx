@@ -805,8 +805,11 @@ export default function LancarCampanha() {
                     {publishResult.step && (
                       <p className="text-xs text-amber-400">Etapa com falha: {publishResult.step === "campaign" ? "Campanha" : publishResult.step === "adset" ? "Conjunto de Anúncios" : publishResult.step === "ad" ? "Anúncio" : publishResult.step}</p>
                     )}
-                    {publishResult.meta_campaign_id && (
+                    {publishResult.meta_campaign_id && !publishResult.rollback && (
                       <p className="text-xs text-amber-400">⚠️ Campanha parcialmente criada (ID: {publishResult.meta_campaign_id}). Verifique no Gerenciador de Anúncios.</p>
+                    )}
+                    {publishResult.rollback && (
+                      <p className="text-xs text-muted-foreground">🧹 Campanha parcial apagada automaticamente para manter o gerenciador limpo.</p>
                     )}
                     {publishResult.fbtrace_id && (
                       <p className="text-xs text-muted-foreground/60 font-mono">fbtrace_id: {publishResult.fbtrace_id}</p>
