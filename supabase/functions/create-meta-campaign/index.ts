@@ -132,10 +132,40 @@ serve(async (req) => {
     steps.push(`Campanha criada: ${metaCampaignId}`);
     await supabase.from("campaign_drafts").update({ meta_campaign_id: metaCampaignId }).eq("id", draftId);
 
-    // Step 2: Create Ad Set — with pixel injection for conversion objectives
+    // Step 2: Create Ad Set — with pixel injection for conversion objectives + Andromeda targeting
     const dailyBudgetCents = Math.round((draft.daily_budget || 50) * 100);
     const isConversion = ["OUTCOME_SALES", "OUTCOME_LEADS"].includes(draft.objective);
     const pixelId = profile?.pixel_id;
+    const andromedaTargeting = draft.andromeda_targeting as { age_min?: number; age_max?: number; genders?: number[]; semantic_seeds?: string[]; andromeda_exclusion?: string[] } | null;
+
+    // Resolve semantic_seeds to real Meta interest IDs if Andromeda targeting is present
+    let resolvedInterests: { id: string; name: string }[] = [];
+    if (andromedaTargeting?.semantic_seeds?.length) {
+      for (const seed of andromedaTargeting.semantic_seeds) {
+        try {
+          const searchRes = await fetch(`${META_API}/search?type=adinterest&q=${encodeURIComponent(seed)}&limit=1&access_token=${accessToken}`);
+          const searchData = await searchRes.json();
+          if (searchData.data?.[0]) {
+            resolvedInterests.push({ id: searchData.data[0].id, name: searchData.data[0].name });
+          }
+        } catch (e) {
+          console.warn(`Failed to resolve interest "${seed}":`, e);
+        }
+      }
+    }
+
+    // Build targeting object
+    const targetingObj: Record<string, unknown> = { geo_locations: { countries: ["BR"] } };
+    if (andromedaTargeting) {
+      if (andromedaTargeting.age_min) targetingObj.age_min = andromedaTargeting.age_min;
+      if (andromedaTargeting.age_max) targetingObj.age_max = andromedaTargeting.age_max;
+      if (andromedaTargeting.genders?.length && !andromedaTargeting.genders.includes(0)) {
+        targetingObj.genders = andromedaTargeting.genders;
+      }
+      if (resolvedInterests.length > 0) {
+        targetingObj.flexible_spec = [{ interests: resolvedInterests }];
+      }
+    }
 
     const adSetBody: Record<string, unknown> = {
       name: `${draft.campaign_name} - Conjunto 01`,
@@ -148,10 +178,15 @@ serve(async (req) => {
           ? "OFFSITE_CONVERSIONS"
           : "LINK_CLICKS",
       bid_strategy: "LOWEST_COST_WITHOUT_CAP",
-      targeting: { geo_locations: { countries: ["BR"] } },
+      targeting: targetingObj,
       status: "PAUSED",
       access_token: accessToken,
     };
+
+    // Enable Andromeda/Advantage+ audience expansion
+    if (andromedaTargeting) {
+      adSetBody.targeting_optimization = "expansion_all";
+    }
 
     // Inject pixel_id as promoted_object for conversion campaigns
     if (isConversion && pixelId && pixelId.trim() !== "") {

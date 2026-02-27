@@ -175,6 +175,7 @@ export default function LancarCampanha() {
       copy_options: draft.copy_options as any,
       targeting_suggestion: draft.targeting_suggestion as any,
       ai_reasoning: draft.ai_reasoning,
+      andromeda_targeting: draft.andromeda_targeting ? draft.andromeda_targeting as any : null,
     });
     if (error) {
       toast({ title: "Erro ao salvar rascunho", description: error.message, variant: "destructive" });
