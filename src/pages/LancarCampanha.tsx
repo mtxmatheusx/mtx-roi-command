@@ -211,6 +211,7 @@ export default function LancarCampanha() {
         copy_options: [draft.copy_options[selectedCopyIdx]] as any,
         targeting_suggestion: draft.targeting_suggestion as any,
         ai_reasoning: draft.ai_reasoning,
+        andromeda_targeting: useAndromeda && draft.andromeda_targeting ? draft.andromeda_targeting as any : null,
       }).select("id").single();
 
       if (insertErr || !inserted) throw new Error(insertErr?.message || "Erro ao salvar");
