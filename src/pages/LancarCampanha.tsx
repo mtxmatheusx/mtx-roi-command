@@ -71,7 +71,8 @@ export default function LancarCampanha() {
   const [isPublishing, setIsPublishing] = useState(false);
   const [publishStep, setPublishStep] = useState("");
   const [publishProgress, setPublishProgress] = useState(0);
-  const [publishResult, setPublishResult] = useState<{ success: boolean; meta_campaign_id?: string; ads_manager_url?: string; error?: string } | null>(null);
+  const [publishResult, setPublishResult] = useState<{ success: boolean; meta_campaign_id?: string; ads_manager_url?: string; error?: string; error_user_title?: string; error_user_msg?: string; fbtrace_id?: string; step?: string; steps?: string[] } | null>(null);
+  const [publishLogs, setPublishLogs] = useState<{ time: string; message: string; status: "done" | "pending" | "error" }[]>([]);
   const [drafts, setDrafts] = useState<DraftRecord[]>([]);
   const [reasoningOpen, setReasoningOpen] = useState(false);
 
@@ -161,9 +162,16 @@ export default function LancarCampanha() {
     if (!user?.id || !activeProfile || !draft) return;
     setIsPublishing(true);
     setPublishResult(null);
+    setPublishLogs([]);
+
+    const addLog = (message: string, status: "done" | "pending" | "error" = "pending") => {
+      const time = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+      setPublishLogs((prev) => [...prev, { time, message, status }]);
+    };
 
     try {
       // Save draft first
+      addLog("Salvando rascunho...", "pending");
       setPublishStep("Salvando rascunho...");
       setPublishProgress(10);
 
@@ -180,9 +188,12 @@ export default function LancarCampanha() {
       }).select("id").single();
 
       if (insertErr || !inserted) throw new Error(insertErr?.message || "Erro ao salvar");
+      addLog("Rascunho salvo", "done");
 
+      addLog("Validando token e act_ID...", "pending");
       setPublishStep("Criando Campanha na Meta...");
       setPublishProgress(30);
+      addLog("Enviando payload para Meta API...", "pending");
 
       const { data: result, error: publishError } = await supabase.functions.invoke("create-meta-campaign", {
         body: { draftId: inserted.id },
@@ -202,11 +213,25 @@ export default function LancarCampanha() {
       if (result?.error) {
         const stepLabels: Record<string, string> = { campaign: "Criação da Campanha", adset: "Criação do Conjunto de Anúncios", ad: "Criação do Anúncio" };
         const failedStep = result.step ? stepLabels[result.step] || result.step : "";
-        const partialInfo = result.steps?.length ? `\nEtapas concluídas: ${result.steps.join(", ")}` : "";
+        addLog(`Falha em: ${failedStep || "Meta API"}`, "error");
+        if (result.steps?.length) {
+          result.steps.forEach((s: string) => addLog(`${stepLabels[s] || s} concluída`, "done"));
+        }
         setPublishStep(`Falha em: ${failedStep || "Meta API"}`);
         setPublishProgress(100);
-        setPublishResult({ success: false, error: `${result.error}${partialInfo}`, meta_campaign_id: result.meta_campaign_id });
+        setPublishResult({
+          success: false,
+          error: result.error,
+          error_user_title: result.error_user_title,
+          error_user_msg: result.error_user_msg,
+          fbtrace_id: result.fbtrace_id,
+          step: result.step,
+          steps: result.steps,
+          meta_campaign_id: result.meta_campaign_id,
+        });
       } else {
+        addLog("Campanha criada com sucesso!", "done");
+        if (result.meta_campaign_id) addLog(`ID: ${result.meta_campaign_id}`, "done");
         setPublishStep("Campanha publicada com sucesso!");
         setPublishProgress(100);
         setPublishResult({
@@ -218,6 +243,7 @@ export default function LancarCampanha() {
 
       loadDrafts();
     } catch (e: any) {
+      addLog(`Erro: ${e.message}`, "error");
       setPublishStep(`Erro: ${e.message}`);
       setPublishProgress(100);
       setPublishResult({ success: false, error: e.message });
@@ -514,14 +540,39 @@ export default function LancarCampanha() {
                 )}
 
                 {publishResult && !publishResult.success && (
-                  <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-4 space-y-2">
+                  <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-4 space-y-3">
                     <p className="text-destructive font-semibold flex items-center gap-2">
-                      <XCircle className="w-4 h-4" /> Erro na publicação
+                      <XCircle className="w-4 h-4" /> {publishResult.error_user_title || "Erro na publicação"}
                     </p>
+                    {publishResult.error_user_msg && (
+                      <p className="text-sm text-muted-foreground">{publishResult.error_user_msg}</p>
+                    )}
                     <p className="text-xs text-muted-foreground whitespace-pre-line">{publishResult.error}</p>
+                    {publishResult.step && (
+                      <p className="text-xs text-amber-400">Etapa com falha: {publishResult.step === "campaign" ? "Campanha" : publishResult.step === "adset" ? "Conjunto de Anúncios" : publishResult.step === "ad" ? "Anúncio" : publishResult.step}</p>
+                    )}
                     {publishResult.meta_campaign_id && (
                       <p className="text-xs text-amber-400">⚠️ Campanha parcialmente criada (ID: {publishResult.meta_campaign_id}). Verifique no Gerenciador de Anúncios.</p>
                     )}
+                    {publishResult.fbtrace_id && (
+                      <p className="text-xs text-muted-foreground/60 font-mono">fbtrace_id: {publishResult.fbtrace_id}</p>
+                    )}
+                  </div>
+                )}
+
+                {/* Publish step log */}
+                {publishLogs.length > 0 && (
+                  <div className="border border-border rounded-lg p-3 space-y-1 bg-secondary/30">
+                    <p className="text-xs font-semibold text-muted-foreground mb-2">Log de Publicação</p>
+                    {publishLogs.map((log, i) => (
+                      <div key={i} className="flex items-center gap-2 text-xs">
+                        <span className="text-muted-foreground/60 font-mono w-16 shrink-0">{log.time}</span>
+                        {log.status === "done" && <CheckCircle2 className="w-3 h-3 text-emerald-400 shrink-0" />}
+                        {log.status === "pending" && <Loader2 className="w-3 h-3 text-muted-foreground animate-spin shrink-0" />}
+                        {log.status === "error" && <XCircle className="w-3 h-3 text-destructive shrink-0" />}
+                        <span className={log.status === "error" ? "text-destructive" : "text-muted-foreground"}>{log.message}</span>
+                      </div>
+                    ))}
                   </div>
                 )}
               </CardContent>

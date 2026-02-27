@@ -52,6 +52,7 @@ export default function Configuracoes() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [testResult, setTestResult] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [tokenPermissions, setTokenPermissions] = useState<string[] | null>(null);
 
   // Product context state
   const [productUrl, setProductUrl] = useState("");
@@ -136,9 +137,14 @@ export default function Configuracoes() {
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       setTestResult("success");
-      toast({ title: "✅ Conexão OK", description: `${data.total} campanhas encontradas.` });
+      setTokenPermissions(data.permissions || []);
+      const hasAdsRead = (data.permissions || []).includes("ads_read");
+      const hasAdsMgmt = (data.permissions || []).includes("ads_management");
+      const permMsg = !hasAdsMgmt ? " ⚠️ Sem permissão ads_management (publicação bloqueada)." : "";
+      toast({ title: "✅ Conexão OK", description: `${data.total} campanhas encontradas.${permMsg}` });
     } catch (err) {
       setTestResult("error");
+      setTokenPermissions(null);
       toast({ title: "❌ Falha na conexão", description: (err as Error).message, variant: "destructive" });
     }
   };
@@ -308,6 +314,24 @@ export default function Configuracoes() {
               {testResult === "success" && <span className="text-sm text-emerald-400">✓ Conectado</span>}
               {testResult === "error" && <span className="text-sm text-destructive">✗ Falha</span>}
             </div>
+            {tokenPermissions !== null && testResult === "success" && (
+              <div className="flex flex-wrap items-center gap-2 mt-3">
+                {["ads_read", "ads_management"].map((perm) => {
+                  const granted = tokenPermissions.includes(perm);
+                  return (
+                    <span key={perm} className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${
+                      granted ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" : "bg-destructive/10 border-destructive/30 text-destructive"
+                    }`}>
+                      {granted ? <CheckCircle className="w-3 h-3" /> : <X className="w-3 h-3" />}
+                      {perm}
+                    </span>
+                  );
+                })}
+                {!tokenPermissions.includes("ads_management") && (
+                  <span className="text-xs text-amber-400 ml-1">⚠️ Sem ads_management — publicação de campanhas bloqueada.</span>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
 

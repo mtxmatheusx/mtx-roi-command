@@ -1,46 +1,63 @@
 
 
-## Plano: Gemini API Key Editável + Diagnóstico de Permissões Meta + Melhoria de Erros de Publicação
+## Plano: Status de Campanhas + Log de Automação + Sync Global + Correções
 
-### Contexto
-O campo Gemini API Key já funciona corretamente — o botão "Adicionar" ativa o modo de edição e o "Salvar" persiste no banco. O fluxo é: clicar "Adicionar" → colar a chave → clicar "Salvar Configurações". Não há bug de read-only.
+### 1. Edge Function — Adicionar `campaign_id`, `effective_status` ao fetch
 
-O erro de publicação de campanhas já foi corrigido na iteração anterior (status 200 + extração de erro detalhado). Os erros reais da Meta agora aparecem no frontend.
+**`supabase/functions/meta-ads-sync/index.ts`**
+- Adicionar `campaign_id` e `effective_status` aos fields do fetch de campanhas
+- Retornar esses campos no response para cada campaign row
+- O campo `effective_status` da Meta API retorna: `ACTIVE`, `PAUSED`, `DELETED`, `ARCHIVED`, etc.
 
-### Implementações
+### 2. `useMetaAds.ts` — Expor status real + invalidar cache ao trocar perfil
 
-#### 1. Diagnóstico de Permissões do Token Meta (`src/pages/Configuracoes.tsx`)
-- Após o "Testar Conexão" retornar sucesso, fazer uma segunda chamada para `GET /me/permissions` na edge function `meta-ads-sync` (modo `testConnection`)
-- Retornar a lista de permissões concedidas no response
-- Exibir badges visuais na UI:
-  - `✅ ads_read` / `❌ ads_read`  
-  - `✅ ads_management` / `❌ ads_management`
-- Se `ads_management` estiver ausente, mostrar alerta amarelo e bloquear publicação
+- Adicionar `effectiveStatus` ao `MetaAdsCampaign` e mapear para `Campaign.status` baseado no valor da API:
+  - `ACTIVE` → `active`
+  - `PAUSED` → `paused`
+  - Outros → `paused`
+- Remover lógica atual que infere status a partir de spend/ROAS
+- `queryKey` já inclui `adAccountId`, portanto trocar perfil já invalida cache automaticamente
 
-#### 2. Atualizar Edge Function `meta-ads-sync` para retornar permissões (`supabase/functions/meta-ads-sync/index.ts`)
-- No modo `testConnection`, adicionar fetch a `GET /me/permissions?access_token=...`
-- Incluir array `permissions` no response: `{ total: N, permissions: ["ads_read", "ads_management", ...] }`
+### 3. `mockData.ts` — Adicionar campo `effectiveStatus` ao Campaign type
 
-#### 3. Log de Etapas na Publicação (`src/pages/LancarCampanha.tsx`)
-- Mostrar um log visual com as etapas durante a publicação:
-  - `✓ Token e act_ID validados`
-  - `⏳ Enviando payload para /campaigns...`
-  - `✓ Campanha criada: 12345`
-  - etc.
-- Em caso de erro, mostrar card vermelho com `error_user_title`, `error_user_msg` e `fbtrace_id` (já parcialmente implementado)
+- Adicionar `effectiveStatus?: string` ao type `Campaign`
 
-#### 4. Card de Erro Detalhado (`src/pages/LancarCampanha.tsx`)
-- Atualizar o `publishResult` de erro para exibir um card estruturado com:
-  - Etapa que falhou (já existe `result.step`)
-  - Etapas concluídas (já existe `result.steps`)
-  - Mensagem da Meta formatada
-  - Sugestão de ação baseada no tipo de erro
+### 4. `CampaignsTable.tsx` — Coluna Status com badges + Toggle de filtro
 
-### Arquivos Modificados
+- Adicionar coluna "Status" com badges: `[ATIVO]` verde neon, `[PAUSADO]` cinza
+- Adicionar `Switch` toggle "Mostrar apenas ativas" acima da tabela
+- Filtrar campanhas com base no toggle
 
-| Arquivo | Mudança |
-|---|---|
-| `supabase/functions/meta-ads-sync/index.ts` | Retornar permissões do token no modo testConnection |
-| `src/pages/Configuracoes.tsx` | Exibir badges de permissões após teste de conexão |
-| `src/pages/LancarCampanha.tsx` | Log visual de etapas + card de erro detalhado |
+### 5. Campanhas, Criativos, Simulador — Botão "Forçar Atualização" replicado
+
+- **`Campanhas.tsx`**: Adicionar `useClientProfiles` + `DateRangePicker` + botão Refresh com `forceRefetch()` e timestamp independente
+- **`Criativos.tsx`**: Adicionar botão Refresh com `forceRefetch()` e timestamp independente
+- **`Simulador.tsx`**: Consumir `useMetaAds` para pegar CPA e Ticket Médio reais; adicionar botão Refresh
+
+### 6. `Configuracoes.tsx` — Limpar campos duplicados
+
+- A seção "Controle de Teto Financeiro" tem campos CPA Meta, Ticket Médio e Limite Escala duplicados. Remover a duplicação, mantendo apenas Budget Máximo + Frequência nessa seção.
+
+### 7. `Index.tsx` — Indicador "Monitoramento Ativo" + Log de Automação
+
+- Adicionar pill pulsante no topo: `"● Monitoramento Ativo em Tempo Real"` com animação pulse neon
+- Criar seção "Log de Automação" abaixo das campanhas com entries geradas client-side:
+  - A cada renderização/refetch, gerar entry: `"Check realizado às HH:MM — ROI atual: X.XX — Nenhuma ação necessária"`
+  - Se alguma campanha tiver CPA > 2× meta com 0 vendas: `"AÇÃO: Campanha [Nome] sinalizada por CPA alto"`
+  - Armazenar últimos 20 logs em state local
+
+### 8. Não necessita migração SQL
+
+Budget frequency e budget_maximo já existem no schema. Nenhuma alteração de banco necessária.
+
+### Arquivos modificados
+- `supabase/functions/meta-ads-sync/index.ts` — campos effective_status
+- `src/lib/mockData.ts` — type Campaign atualizado  
+- `src/hooks/useMetaAds.ts` — mapear status real
+- `src/components/CampaignsTable.tsx` — badges status + toggle filtro
+- `src/pages/Campanhas.tsx` — botão refresh + profiles
+- `src/pages/Criativos.tsx` — botão refresh
+- `src/pages/Simulador.tsx` — dados reais + botão refresh
+- `src/pages/Index.tsx` — indicador pulse + log de automação
+- `src/pages/Configuracoes.tsx` — remover campos duplicados
 
