@@ -52,6 +52,7 @@ export default function Configuracoes() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [testResult, setTestResult] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [tokenPermissions, setTokenPermissions] = useState<string[] | null>(null);
 
   // Product context state
   const [productUrl, setProductUrl] = useState("");
