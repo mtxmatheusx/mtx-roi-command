@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { fetchMasterContext } from "../_shared/fetch_master_context.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -6,18 +7,14 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const SYSTEM_PROMPT = `Você é o Auditor de Tráfego Sênior da MTX Estratégias. Sua função é analisar as recomendações automáticas da Meta (Facebook) e decidir se elas são seguras para o cliente.
+const AUDIT_PROMPT = `Você é o Auditor de Tráfego Sênior da MTX Estratégias. Sua função é analisar as recomendações automáticas da Meta (Facebook) e decidir se elas são seguras para o cliente.
 
 ## REGRAS DE AUDITORIA
 
 1. **Proteção do ROI:** Qualquer sugestão que possa aumentar o custo em mais de 15% sem garantia de retorno proporcional deve ser REJEITADA.
-
 2. **Proteção do Público-Alvo:** Se a Meta sugere expandir o público, cruze com o perfil do avatar no dossiê do produto. Se a expansão pode incluir pessoas fora do ICP, REJEITE.
-
 3. **Respeito ao Budget:** Se a sugestão implica aumento de budget além do limite configurado, REJEITE.
-
 4. **Advantage+ Audience:** Aceite apenas se o histórico mostra ROAS consistente com públicos amplos. Caso contrário, COM RESSALVAS.
-
 5. **Unificação de Campanhas:** Geralmente REJEITADO para contas que dependem de segmentação granular.
 
 ## FORMATO DO VEREDITO
@@ -34,15 +31,24 @@ serve(async (req) => {
   }
 
   try {
-    const { recommendation, profileSummary, productContext } = await req.json();
+    const { recommendation, profileSummary, profileId } = await req.json();
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
-    let contextBlock = "";
-    if (productContext) {
-      contextBlock = `\n\n**Dossiê do Produto:**\n${productContext}`;
+    // Fetch master context if profileId provided
+    let masterBlock = "";
+    if (profileId) {
+      const ctx = await fetchMasterContext(profileId);
+      if (ctx.blocked) {
+        return new Response(JSON.stringify({ error: ctx.details || ctx.error, blocked: true }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      masterBlock = ctx.systemPromptBlock;
     }
+
+    const systemPrompt = masterBlock ? `${masterBlock}\n\n${AUDIT_PROMPT}` : AUDIT_PROMPT;
 
     const userPrompt = `Analise esta recomendação da Meta e dê seu veredito:
 
@@ -54,10 +60,10 @@ serve(async (req) => {
 - Código: ${recommendation.code || "N/A"}
 
 **Perfil do Cliente:**
-- Nome: ${profileSummary.name}
-- CPA Meta: R$ ${profileSummary.cpa_meta}
-- Budget Máximo: R$ ${profileSummary.budget_maximo} (${profileSummary.budget_frequency})
-- Ticket Médio: R$ ${profileSummary.ticket_medio}${contextBlock}
+- Nome: ${profileSummary?.name || "N/A"}
+- CPA Meta: R$ ${profileSummary?.cpa_meta || "N/A"}
+- Budget Máximo: R$ ${profileSummary?.budget_maximo || "N/A"} (${profileSummary?.budget_frequency || "N/A"})
+- Ticket Médio: R$ ${profileSummary?.ticket_medio || "N/A"}
 
 Dê seu veredito como Auditor Sênior.`;
 
@@ -70,7 +76,7 @@ Dê seu veredito como Auditor Sênior.`;
       body: JSON.stringify({
         model: "google/gemini-3-flash-preview",
         messages: [
-          { role: "system", content: SYSTEM_PROMPT },
+          { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
         ],
         tools: [

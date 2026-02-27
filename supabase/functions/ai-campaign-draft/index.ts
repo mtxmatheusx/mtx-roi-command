@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { fetchMasterContext } from "../_shared/fetch_master_context.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -7,39 +7,18 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-function buildSystemPrompt(profileName: string, avatarDossier: string | null, productContext: string | null): string {
+function buildSystemPrompt(masterBlock: string, profileName: string): string {
   const today = new Date().toISOString().slice(0, 10);
 
-  // Step 1: Contamination Block
-  let prompt = `**Data de hoje: ${today}**
+  return `**Data de hoje: ${today}**
+
+${masterBlock}
 
 ## BLOQUEIO DE CONTAMINAÇÃO (REGRA ABSOLUTA)
 
 Você é o Gestor de Tráfego Sênior EXCLUSIVO da empresa "${profileName}". Esqueça qualquer outro nicho, produto ou cliente. Você está PROIBIDO de sugerir copys de marketing digital, mentorias ou infoprodutos se a empresa for de produtos físicos, e vice-versa. Toda sugestão DEVE estar 100% alinhada ao nicho e produto desta empresa.
 
-`;
-
-  // Step 2: Context Injection
-  if (avatarDossier) {
-    prompt += `## DOSSIÊ DO AVATAR (VERDADE ABSOLUTA — APROVADO PELO GESTOR)
-
-Leia este Dossiê da Empresa. Este é o ÚNICO contexto que você deve usar para gerar campanhas:
-
-${avatarDossier}
-
-IMPORTANTE: Baseie-se ESTRITAMENTE neste dossiê. NÃO invente dores, objeções ou promessas que não estejam aqui.
-
-`;
-  } else if (productContext) {
-    prompt += `## CONTEXTO DO PRODUTO (FALLBACK)
-
-${productContext}
-
-`;
-  }
-
-  // Step 3: Generation Framework
-  prompt += `## FRAMEWORKS OBRIGATÓRIOS
+## FRAMEWORKS OBRIGATÓRIOS
 
 ### 1. StoryBrand (Donald Miller)
 O cliente é o HERÓI. A empresa "${profileName}" é o GUIA.
@@ -62,13 +41,8 @@ Value = (Resultado dos Sonhos × Probabilidade Percebida) / (Tempo × Esforço &
 Você DEVE gerar exatamente 3 variações de copy, cada uma com um copy_type específico:
 
 1. **copy_type: "direct_response"** — DIRECT RESPONSE (Agressiva)
-   Foco imediato na DOR e na OFERTA. Urgência real. Números concretos. CTA imperativo.
-
 2. **copy_type: "storytelling"** — STORYTELLING (Conexão)
-   Narrativa sobre a TRANSFORMAÇÃO que o produto/método proporciona. Jornada do herói compacta. Emocional mas sofisticada.
-
 3. **copy_type: "social_proof"** — SOCIAL PROOF (Autoridade)
-   Baseada em RESULTADOS e lógica inegável. Dados, métricas, casos de sucesso. Prova social implícita.
 
 ## AJUSTES POR CONTEXTO
 
@@ -85,22 +59,18 @@ Você DEVE gerar exatamente 3 variações de copy, cada uma com um copy_type esp
 
 ## REGRAS DE NOMENCLATURA MTX
 - Padrão: "[OBJETIVO] | [PRODUTO/OFERTA] | [PÚBLICO] | [DATA]"
-- Exemplo: "VENDAS | Curso Excel Pro | Lookalike 1% | 2026-03"
 
 ## MOTOR DE SEGMENTAÇÃO ANDROMEDA (OBRIGATÓRIO)
 
-Atuando como Estrategista Sênior em 2026, traduza o Dossiê do Avatar para os parâmetros do algoritmo Andromeda da Meta Ads. Retorne o campo "andromeda_targeting" contendo:
+Retorne o campo "andromeda_targeting" contendo:
+- **age_min / age_max:** Faixa etária central do comprador.
+- **genders:** [0] = todos, [1] = masculino, [2] = feminino.
+- **semantic_seeds:** Máximo 3 interesses ultradirecionados como semente para o Andromeda.
+- **andromeda_exclusion:** Lista do que o algoritmo DEVE evitar.
 
-- **age_min / age_max:** A faixa etária central do comprador (ex: 25 a 45). Números inteiros.
-- **genders:** O gênero predominante como array de inteiros ([0] = todos, [1] = masculino, [2] = feminino). Use [0] se não houver indicação clara.
-- **semantic_seeds:** No máximo 3 interesses ultradirecionados que sirvam como semente para o Andromeda (ex: "Alfaiataria", "Marcas de Luxo"). Devem ser termos reconhecidos pela Meta como interesses de segmentação.
-- **andromeda_exclusion:** Lista do que o algoritmo DEVE evitar (ex: "Caçadores de cupom", "Público infantil").
-
-IMPORTANTE: Baseie as sementes semânticas ESTRITAMENTE no Dossiê do Avatar e no nicho da empresa. NUNCA sugira interesses genéricos de marketing digital.
+IMPORTANTE: Baseie as sementes semânticas ESTRITAMENTE no Dossiê do Avatar e no nicho da empresa.
 
 Ao gerar, use a function tool "suggest_campaign" para retornar dados estruturados.`;
-
-  return prompt;
 }
 
 serve(async (req) => {
@@ -109,47 +79,37 @@ serve(async (req) => {
   }
 
   try {
-    const { objective, profileConfig, campaignData, productContext, profileId } = await req.json();
+    const { objective, profileConfig, campaignData, profileId } = await req.json();
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
-    // Fetch avatar_dossier from DB if profileId provided
-    let avatarDossier: string | null = null;
-    let profileName = profileConfig?.name || "Empresa";
-
-    if (profileId) {
-      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-      const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-      const sb = createClient(supabaseUrl, supabaseKey);
-
-      const { data: profile } = await sb
-        .from("client_profiles")
-        .select("name, avatar_dossier, product_context")
-        .eq("id", profileId)
-        .single();
-
-      if (profile) {
-        profileName = profile.name || profileName;
-        avatarDossier = profile.avatar_dossier || null;
-        // Use DB product_context as fallback if not passed
-        if (!productContext && profile.product_context) {
-          // Will be used in buildSystemPrompt
-        }
-      }
+    if (!profileId) {
+      return new Response(JSON.stringify({ error: "profileId é obrigatório", blocked: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    const finalSystemPrompt = buildSystemPrompt(profileName, avatarDossier, productContext);
+    // Fetch master context via middleware
+    const ctx = await fetchMasterContext(profileId);
+
+    if (ctx.blocked) {
+      return new Response(JSON.stringify({ error: ctx.details || ctx.error, blocked: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const finalSystemPrompt = buildSystemPrompt(ctx.systemPromptBlock, ctx.profile.name);
 
     const userPrompt = `Gere uma sugestão de campanha Meta Ads com os seguintes parâmetros:
 
 **Objetivo:** ${objective}
 **Configuração do Perfil:**
-- CPA Meta: R$ ${profileConfig.cpa_meta}
-- Ticket Médio: R$ ${profileConfig.ticket_medio}
-- Budget Máximo: R$ ${profileConfig.budget_maximo}
-- Frequência: ${profileConfig.budget_frequency}
-- Limite de Escala: ${profileConfig.limite_escala}%
+- CPA Meta: R$ ${profileConfig?.cpa_meta || ctx.profile.cpa_meta}
+- Ticket Médio: R$ ${profileConfig?.ticket_medio || ctx.profile.ticket_medio}
+- Budget Máximo: R$ ${profileConfig?.budget_maximo || ctx.profile.budget_maximo}
+- Frequência: ${profileConfig?.budget_frequency || ctx.profile.budget_frequency}
+- Limite de Escala: ${profileConfig?.limite_escala || ctx.profile.limite_escala}%
 
 ${campaignData ? `**Dados atuais de performance:**\n${JSON.stringify(campaignData, null, 2)}` : "Sem dados de performance disponíveis."}
 
@@ -209,11 +169,11 @@ Gere EXATAMENTE 3 copies (direct_response, storytelling, social_proof), nome no 
                     type: "object",
                     description: "Parâmetros de segmentação para o algoritmo Andromeda da Meta Ads",
                     properties: {
-                      age_min: { type: "number", description: "Idade mínima do público-alvo" },
-                      age_max: { type: "number", description: "Idade máxima do público-alvo" },
-                      genders: { type: "array", items: { type: "number" }, description: "Gêneros: [0]=todos, [1]=masculino, [2]=feminino" },
-                      semantic_seeds: { type: "array", items: { type: "string" }, description: "Máximo 3 interesses ultradirecionados como sementes" },
-                      andromeda_exclusion: { type: "array", items: { type: "string" }, description: "O que o algoritmo deve evitar" },
+                      age_min: { type: "number" },
+                      age_max: { type: "number" },
+                      genders: { type: "array", items: { type: "number" } },
+                      semantic_seeds: { type: "array", items: { type: "string" } },
+                      andromeda_exclusion: { type: "array", items: { type: "string" } },
                     },
                     required: ["age_min", "age_max", "genders", "semantic_seeds", "andromeda_exclusion"],
                     additionalProperties: false,

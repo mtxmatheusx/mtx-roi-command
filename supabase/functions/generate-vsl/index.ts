@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { fetchMasterContext } from "../_shared/fetch_master_context.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -13,27 +14,33 @@ serve(async (req) => {
     const { profileId, angle, duration, tone } = await req.json();
     if (!profileId) throw new Error("profileId is required");
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const sb = createClient(supabaseUrl, supabaseKey);
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
-    // Get profile + context
-    const { data: profile, error: pErr } = await sb.from("client_profiles").select("*").eq("id", profileId).single();
-    if (pErr || !profile) throw new Error("Profile not found");
+    // Fetch master context
+    const ctx = await fetchMasterContext(profileId);
+    if (ctx.blocked) {
+      return new Response(JSON.stringify({ error: ctx.details || ctx.error, blocked: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const sb = createClient(supabaseUrl, supabaseKey);
 
     // Get creative assets for this profile
     const { data: assets } = await sb.from("creative_assets").select("file_name, file_type, description").eq("profile_id", profileId).limit(20);
-
     const assetList = (assets || []).map((a: any) => `- ${a.file_name} (${a.file_type})${a.description ? `: ${a.description}` : ""}`).join("\n");
 
-    const systemPrompt = `Você é um roteirista de alta conversão especializado em VSL (Video Sales Letters) e copies para Meta Ads. Use os frameworks Storybrand e Hook-Story-Offer (Alex Hormozi).
+    const systemPrompt = `${ctx.systemPromptBlock}
+
+Você é um roteirista de alta conversão especializado em VSL (Video Sales Letters) e copies para Meta Ads. Use os frameworks Storybrand e Hook-Story-Offer (Alex Hormozi).
 
 REGRAS ESTRITAS DE FORMATO:
 - O output DEVE ser uma tabela Markdown com DUAS colunas:
-  - Coluna 1: 🎥 VISUAL (B-Roll/Câmera) — Instruções exatas do que aparece na tela
-  - Coluna 2: 🎙️ ÁUDIO (Locução) — Texto exato que o locutor vai ler, com **ênfases** e [PAUSA 1s]
+  - Coluna 1: 🎥 VISUAL (B-Roll/Câmera)
+  - Coluna 2: 🎙️ ÁUDIO (Locução)
 - NÃO escreva texto corrido. Apenas tabela.
 - Se houver ativos disponíveis no banco, REFERENCIE-OS na coluna VISUAL pelo nome do arquivo.
 
@@ -43,10 +50,7 @@ CADEIA DE RACIOCÍNIO:
 3. STORY: Agite a dor e introduza o mecanismo único do produto
 4. OFFER (Hormozi): Maximize Valor Percebido, minimize Esforço/Tempo`;
 
-    const userPrompt = `## Contexto do Produto
-${profile.product_context || "Sem contexto registrado."}
-
-## Ativos Visuais Disponíveis
+    const userPrompt = `## Ativos Visuais Disponíveis
 ${assetList || "Nenhum ativo cadastrado."}
 
 ## Direção Criativa
@@ -56,7 +60,6 @@ ${assetList || "Nenhum ativo cadastrado."}
 
 Gere o roteiro completo agora.`;
 
-    // Stream from Lovable AI
     const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -89,7 +92,7 @@ Gere o roteiro completo agora.`;
       throw new Error("AI gateway error");
     }
 
-    // Collect full content for saving to DB, but stream to client
+    // Stream to client and save to DB after
     const reader = aiResp.body!.getReader();
     const decoder = new TextDecoder();
     let fullContent = "";
@@ -103,7 +106,6 @@ Gere o roteiro completo agora.`;
             const chunk = decoder.decode(value, { stream: true });
             controller.enqueue(new TextEncoder().encode(chunk));
 
-            // Extract content for DB save
             for (const line of chunk.split("\n")) {
               if (!line.startsWith("data: ")) continue;
               const json = line.slice(6).trim();
@@ -118,14 +120,17 @@ Gere o roteiro completo agora.`;
 
           // Save to DB after streaming completes
           if (fullContent) {
-            await sb.from("vsl_scripts").insert({
-              profile_id: profileId,
-              user_id: profile.user_id,
-              angle: angle || "",
-              duration: duration || "",
-              tone: tone || "",
-              script_content: fullContent,
-            });
+            const { data: profile } = await sb.from("client_profiles").select("user_id").eq("id", profileId).single();
+            if (profile) {
+              await sb.from("vsl_scripts").insert({
+                profile_id: profileId,
+                user_id: profile.user_id,
+                angle: angle || "",
+                duration: duration || "",
+                tone: tone || "",
+                script_content: fullContent,
+              });
+            }
           }
 
           controller.close();
