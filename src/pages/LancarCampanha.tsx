@@ -300,6 +300,48 @@ export default function LancarCampanha() {
     setPublishStep("");
   };
 
+  const handleDeleteDraft = async (d: DraftRecord) => {
+    setIsDeleting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("delete-meta-campaign", {
+        body: { draftId: d.id },
+      });
+      if (error) throw error;
+      if (data?.error) {
+        toast({ title: "Erro ao apagar", description: data.error, variant: "destructive" });
+      } else {
+        setDrafts((prev) => prev.filter((x) => x.id !== d.id));
+        toast({ title: "✅ Sujeira apagada com sucesso do Meta Ads e do painel." });
+      }
+    } catch (e: any) {
+      toast({ title: "Erro", description: e.message, variant: "destructive" });
+    } finally {
+      setIsDeleting(false);
+      setDeleteTarget(null);
+    }
+  };
+
+  const handleCloneScale = async (d: DraftRecord) => {
+    setIsScaling(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("clone-scale-campaign", {
+        body: { draftId: d.id },
+      });
+      if (error) throw error;
+      if (data?.error) {
+        toast({ title: "Erro ao clonar", description: data.error, variant: "destructive" });
+      } else {
+        toast({ title: "💸 Campanha clonada com sucesso! Orçamento escalado em 20% e injetado na Meta Ads." });
+        loadDrafts();
+      }
+    } catch (e: any) {
+      toast({ title: "Erro", description: e.message, variant: "destructive" });
+    } finally {
+      setIsScaling(false);
+      setScaleTarget(null);
+    }
+  };
+
   return (
     <AppLayout>
       <ActiveProfileHeader />
