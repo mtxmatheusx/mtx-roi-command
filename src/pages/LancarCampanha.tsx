@@ -102,11 +102,24 @@ export default function LancarCampanha() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [scaleTarget, setScaleTarget] = useState<DraftRecord | null>(null);
   const [isScaling, setIsScaling] = useState(false);
+  const [uploadOpen, setUploadOpen] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [recentAssets, setRecentAssets] = useState<{ id: string; file_name: string; file_url: string; file_type: string; description: string | null }[]>([]);
+  const [selectedAssetUrl, setSelectedAssetUrl] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Load draft history filtered by profile
   useEffect(() => {
     if (!user?.id) return;
     loadDrafts();
+  }, [user?.id, activeProfile?.id]);
+
+  // Load recent assets
+  useEffect(() => {
+    if (!user?.id || !activeProfile?.id) return;
+    loadRecentAssets();
   }, [user?.id, activeProfile?.id]);
 
   const loadDrafts = async () => {
