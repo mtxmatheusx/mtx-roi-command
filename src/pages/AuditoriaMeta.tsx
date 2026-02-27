@@ -112,6 +112,7 @@ export default function AuditoriaMeta() {
 
   return (
     <AppLayout>
+      <ActiveProfileHeader />
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>

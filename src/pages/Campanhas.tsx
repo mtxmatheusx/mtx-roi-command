@@ -23,6 +23,7 @@ export default function CampanhasPage() {
 
   return (
     <AppLayout>
+      <ActiveProfileHeader />
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <motion.h1 initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-3xl font-bold tracking-tight">

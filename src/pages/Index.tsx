@@ -8,10 +8,38 @@ import MetricCard from "@/components/MetricCard";
 import CampaignsTable from "@/components/CampaignsTable";
 import DashboardCharts from "@/components/DashboardCharts";
 import DateRangePicker from "@/components/DateRangePicker";
+import ActiveProfileHeader from "@/components/ActiveProfileHeader";
 import AppLayout from "@/components/AppLayout";
 import { Progress } from "@/components/ui/progress";
 import { DollarSign, TrendingUp, Target, BarChart3, Loader2, AlertTriangle, RefreshCw, Eye, MousePointerClick, ShoppingBag, ShieldCheck, OctagonAlert, Activity } from "lucide-react";
 import { Button } from "@/components/ui/button";
+
+interface Campaign {
+  id: string;
+  name: string;
+  objective: string;
+  spend: number;
+  revenue: number;
+  roas: number;
+  purchases: number;
+  costPerPurchase: number;
+  clicks: number;
+  ctr: number;
+}
+
+interface DailyData {
+  date: string;
+  spend: number;
+  revenue: number;
+  profit: number;
+  cpa: number;
+  roas: number;
+  purchases: number;
+  purchaseValue: number;
+  impressions: number;
+  clicks: number;
+  ctr: number;
+}
 
 const defaultRange: DateRange = {
   since: format(subDays(new Date(), 6), "yyyy-MM-dd"),
@@ -36,7 +64,6 @@ export default function Dashboard() {
 
   const [logs, setLogs] = useState<LogEntry[]>([]);
 
-  // Generate log entries on data changes
   const generateLogs = useCallback(() => {
     if (isLoading || campaigns.length === 0) return;
     const now = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
@@ -81,6 +108,8 @@ export default function Dashboard() {
 
   return (
     <AppLayout>
+      <ActiveProfileHeader />
+
       {/* Monitoring Indicator */}
       <div className="mb-4 flex items-center gap-2">
         <span className="relative flex h-3 w-3">
@@ -132,13 +161,6 @@ export default function Dashboard() {
         <div className="mb-4 flex items-center gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-sm text-amber-400">
           <AlertTriangle className="w-4 h-4 shrink-0" />
           Limite de requisições da Meta atingido. Exibindo dados de demonstração. Aguarde alguns minutos e clique em <strong className="mx-1">Forçar Atualização</strong>.
-        </div>
-      )}
-
-      {isPermissionError && !isCached && (
-        <div className="mb-4 flex items-center gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-sm text-amber-400">
-          <AlertTriangle className="w-4 h-4 shrink-0" />
-          Conecte seu Token com permissão <strong className="mx-1">ads_read</strong> na Meta para visualizar dados reais. Atualize o token em <strong className="mx-1">Configurações</strong>.
         </div>
       )}
 
