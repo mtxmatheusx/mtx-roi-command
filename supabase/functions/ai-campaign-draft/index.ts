@@ -205,7 +205,6 @@ Gere EXATAMENTE 3 copies (direct_response, storytelling, social_proof), nome no 
                   },
                   daily_budget: { type: "number" },
                   ai_reasoning: { type: "string" },
-                },
                   andromeda_targeting: {
                     type: "object",
                     description: "Parâmetros de segmentação para o algoritmo Andromeda da Meta Ads",
@@ -219,6 +218,7 @@ Gere EXATAMENTE 3 copies (direct_response, storytelling, social_proof), nome no 
                     required: ["age_min", "age_max", "genders", "semantic_seeds", "andromeda_exclusion"],
                     additionalProperties: false,
                   },
+                },
                 required: ["campaign_name", "copy_options", "targeting_suggestion", "daily_budget", "ai_reasoning", "andromeda_targeting"],
                 additionalProperties: false,
               },
