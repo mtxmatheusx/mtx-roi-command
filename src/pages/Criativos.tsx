@@ -7,7 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { motion } from "framer-motion";
 import { subDays, format } from "date-fns";
-import { Star, Video, Image, LayoutGrid, Loader2, AlertTriangle, RefreshCw, Upload, Trash2, FileText } from "lucide-react";
+import { Star, Video, Image, LayoutGrid, Loader2, AlertTriangle, RefreshCw, Upload, Trash2, FileText, ScanSearch, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
