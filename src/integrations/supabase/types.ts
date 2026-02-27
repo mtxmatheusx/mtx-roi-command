@@ -14,6 +14,71 @@ export type Database = {
   }
   public: {
     Tables: {
+      campaign_drafts: {
+        Row: {
+          ai_reasoning: string | null
+          campaign_name: string
+          copy_options: Json | null
+          created_at: string
+          daily_budget: number
+          error_message: string | null
+          id: string
+          meta_ad_id: string | null
+          meta_adset_id: string | null
+          meta_campaign_id: string | null
+          objective: string
+          profile_id: string | null
+          status: string
+          targeting_suggestion: Json | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          ai_reasoning?: string | null
+          campaign_name: string
+          copy_options?: Json | null
+          created_at?: string
+          daily_budget?: number
+          error_message?: string | null
+          id?: string
+          meta_ad_id?: string | null
+          meta_adset_id?: string | null
+          meta_campaign_id?: string | null
+          objective: string
+          profile_id?: string | null
+          status?: string
+          targeting_suggestion?: Json | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          ai_reasoning?: string | null
+          campaign_name?: string
+          copy_options?: Json | null
+          created_at?: string
+          daily_budget?: number
+          error_message?: string | null
+          id?: string
+          meta_ad_id?: string | null
+          meta_adset_id?: string | null
+          meta_campaign_id?: string | null
+          objective?: string
+          profile_id?: string | null
+          status?: string
+          targeting_suggestion?: Json | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_drafts_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "client_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_profiles: {
         Row: {
           ad_account_id: string
