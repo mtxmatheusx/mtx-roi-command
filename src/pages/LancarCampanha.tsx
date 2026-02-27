@@ -471,6 +471,88 @@ export default function LancarCampanha() {
               </Collapsible>
             )}
 
+            {/* Creative Brain */}
+            <Card className="border-dashed border-primary/30">
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-primary" />
+                  🧠 Cérebro de Criativos
+                </CardTitle>
+                <CardDescription>A IA analisa seus ativos e recomenda o melhor criativo para esta campanha.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Button
+                  onClick={async () => {
+                    if (!activeProfile) return;
+                    setIsChoosingCreative(true);
+                    setCreativeBrain(null);
+                    try {
+                      const { data, error } = await supabase.functions.invoke("ai-creative-brain", {
+                        body: {
+                          profileId: activeProfile.id,
+                          objective,
+                          campaignContext: draft?.campaign_name,
+                        },
+                      });
+                      if (error) throw error;
+                      if (data?.error) throw new Error(data.error);
+                      setCreativeBrain(data);
+                      toast({ title: "🧠 Criativo recomendado!", description: data.recommendation?.recommended_asset_name });
+                    } catch (e: any) {
+                      toast({ title: "Erro no Cérebro de Criativos", description: e.message, variant: "destructive" });
+                    } finally {
+                      setIsChoosingCreative(false);
+                    }
+                  }}
+                  disabled={isChoosingCreative}
+                  variant="outline"
+                  className="gap-2"
+                >
+                  {isChoosingCreative ? <Loader2 className="w-4 h-4 animate-spin" /> : <Brain className="w-4 h-4" />}
+                  {isChoosingCreative ? "Analisando criativos..." : "Escolher Criativo com IA"}
+                </Button>
+
+                {creativeBrain?.recommendation && (
+                  <div className="rounded-lg border bg-card p-4 space-y-3">
+                    <div className="flex items-start gap-3">
+                      {creativeBrain.recommendation.recommended_asset_url ? (
+                        creativeBrain.recommendation.recommended_asset_type === "video" ? (
+                          <div className="w-20 h-20 rounded-lg bg-secondary flex items-center justify-center shrink-0">
+                            <Video className="w-8 h-8 text-muted-foreground/50" />
+                          </div>
+                        ) : (
+                          <img
+                            src={creativeBrain.recommendation.recommended_asset_url}
+                            alt="Criativo recomendado"
+                            className="w-20 h-20 rounded-lg object-cover shrink-0"
+                          />
+                        )
+                      ) : (
+                        <div className="w-20 h-20 rounded-lg bg-secondary flex items-center justify-center shrink-0">
+                          <ImageIcon className="w-8 h-8 text-muted-foreground/50" />
+                        </div>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="font-semibold text-sm truncate">{creativeBrain.recommendation.recommended_asset_name}</p>
+                          <Badge className="bg-primary/15 text-primary shrink-0">
+                            {creativeBrain.recommendation.confidence_score}% confiança
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground">{creativeBrain.recommendation.justification}</p>
+                        {creativeBrain.recommendation.creative_angle && (
+                          <p className="text-xs text-primary mt-1">💡 Ângulo: {creativeBrain.recommendation.creative_angle}</p>
+                        )}
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Analisados: {creativeBrain.total_assets} ativos · {creativeBrain.total_campaigns_analyzed || 0} campanhas
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
             <div className="flex gap-3">
               <Button onClick={() => setStep(3)}>Revisar e Aprovar</Button>
               <Button variant="outline" onClick={handleSaveDraft}>Salvar como Rascunho</Button>
