@@ -183,10 +183,9 @@ serve(async (req) => {
       access_token: accessToken,
     };
 
-    // Enable Andromeda/Advantage+ audience expansion
+    // Enable Andromeda/Advantage+ audience expansion (inside targeting object, strict integer)
     if (andromedaTargeting) {
-      adSetBody.targeting_optimization = "expansion_all";
-      adSetBody.targeting_automation = { advantage_audience: 1 };
+      targetingObj.targeting_automation = { advantage_audience: Number(1) };
     }
 
     // Inject pixel_id as promoted_object for conversion campaigns
