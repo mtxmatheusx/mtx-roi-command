@@ -36,6 +36,7 @@ export type UpdateProfileInput = Partial<CreateProfileInput & {
   budget_maximo?: number;
   budget_frequency?: string;
   meta_access_token?: string | null;
+  gemini_api_key?: string | null;
 }> & { id: string };
 
 export function useClientProfiles() {
