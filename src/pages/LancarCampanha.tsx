@@ -162,9 +162,16 @@ export default function LancarCampanha() {
     if (!user?.id || !activeProfile || !draft) return;
     setIsPublishing(true);
     setPublishResult(null);
+    setPublishLogs([]);
+
+    const addLog = (message: string, status: "done" | "pending" | "error" = "pending") => {
+      const time = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+      setPublishLogs((prev) => [...prev, { time, message, status }]);
+    };
 
     try {
       // Save draft first
+      addLog("Salvando rascunho...", "pending");
       setPublishStep("Salvando rascunho...");
       setPublishProgress(10);
 
