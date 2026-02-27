@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.absorb-product-context]
 verify_jwt = false
+
+[functions.ai-creative-brain]
+verify_jwt = false
