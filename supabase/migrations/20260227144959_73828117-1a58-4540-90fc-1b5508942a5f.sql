@@ -1,0 +1,1 @@
+ALTER TABLE public.campaign_drafts ADD COLUMN andromeda_targeting jsonb DEFAULT NULL;
