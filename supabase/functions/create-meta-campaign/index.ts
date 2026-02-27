@@ -164,7 +164,7 @@ serve(async (req) => {
       const errorMsg = metaError(adSetData);
       await supabase.from("campaign_drafts").update({ status: "failed", error_message: errorMsg, meta_campaign_id: metaCampaignId }).eq("id", draftId);
       return new Response(JSON.stringify({ error: errorMsg, step: "adset", meta_campaign_id: metaCampaignId, steps }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
