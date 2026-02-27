@@ -75,6 +75,8 @@ export default function LancarCampanha() {
   const [publishLogs, setPublishLogs] = useState<{ time: string; message: string; status: "done" | "pending" | "error" }[]>([]);
   const [drafts, setDrafts] = useState<DraftRecord[]>([]);
   const [reasoningOpen, setReasoningOpen] = useState(false);
+  const [creativeBrain, setCreativeBrain] = useState<{ recommendation: any; total_assets: number } | null>(null);
+  const [isChoosingCreative, setIsChoosingCreative] = useState(false);
 
   // Load draft history
   useEffect(() => {
