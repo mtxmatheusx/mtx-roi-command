@@ -142,7 +142,11 @@ serve(async (req) => {
       campaign_id: metaCampaignId,
       daily_budget: dailyBudgetCents,
       billing_event: "IMPRESSIONS",
-      optimization_goal: draft.objective === "OUTCOME_LEADS" ? "LEAD_GENERATION" : "OFFSITE_CONVERSIONS",
+      optimization_goal: draft.objective === "OUTCOME_LEADS"
+        ? "LEAD_GENERATION"
+        : draft.objective === "OUTCOME_SALES"
+          ? "OFFSITE_CONVERSIONS"
+          : "LINK_CLICKS",
       bid_strategy: "LOWEST_COST_WITHOUT_CAP",
       targeting: { geo_locations: { countries: ["BR"] } },
       status: "PAUSED",
