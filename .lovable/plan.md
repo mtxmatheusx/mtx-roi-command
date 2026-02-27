@@ -1,63 +1,62 @@
 
 
-## Plano: Status de Campanhas + Log de Automação + Sync Global + Correções
+## Plano: Motor de Segmentação Andromeda
 
-### 1. Edge Function — Adicionar `campaign_id`, `effective_status` ao fetch
+### 1. Atualizar Edge Function `ai-campaign-draft`
 
-**`supabase/functions/meta-ads-sync/index.ts`**
-- Adicionar `campaign_id` e `effective_status` aos fields do fetch de campanhas
-- Retornar esses campos no response para cada campaign row
-- O campo `effective_status` da Meta API retorna: `ACTIVE`, `PAUSED`, `DELETED`, `ARCHIVED`, etc.
+Expandir o tool schema `suggest_campaign` para incluir novo campo `andromeda_targeting`:
 
-### 2. `useMetaAds.ts` — Expor status real + invalidar cache ao trocar perfil
+```json
+{
+  "age_min": number,
+  "age_max": number, 
+  "genders": [number],
+  "semantic_seeds": [string] (max 3),
+  "andromeda_exclusion": [string]
+}
+```
 
-- Adicionar `effectiveStatus` ao `MetaAdsCampaign` e mapear para `Campaign.status` baseado no valor da API:
-  - `ACTIVE` → `active`
-  - `PAUSED` → `paused`
-  - Outros → `paused`
-- Remover lógica atual que infere status a partir de spend/ROAS
-- `queryKey` já inclui `adAccountId`, portanto trocar perfil já invalida cache automaticamente
+Adicionar instrução no system prompt após os frameworks existentes: "Traduza o Dossiê do Avatar para parâmetros Andromeda da Meta Ads..."
 
-### 3. `mockData.ts` — Adicionar campo `effectiveStatus` ao Campaign type
+### 2. Atualizar tipos no frontend (`LancarCampanha.tsx`)
 
-- Adicionar `effectiveStatus?: string` ao type `Campaign`
+- Novo tipo `AndromedaTargeting` com `age_min`, `age_max`, `genders`, `semantic_seeds`, `andromeda_exclusion`
+- Extender `DraftData` para incluir `andromeda_targeting`
 
-### 4. `CampaignsTable.tsx` — Coluna Status com badges + Toggle de filtro
+### 3. UI: Card "🌌 Segmentação Andromeda Sugerida" (Step 2)
 
-- Adicionar coluna "Status" com badges: `[ATIVO]` verde neon, `[PAUSADO]` cinza
-- Adicionar `Switch` toggle "Mostrar apenas ativas" acima da tabela
-- Filtrar campanhas com base no toggle
+Novo card após "Segmentação Sugerida" mostrando:
+- 🎯 Idade: [min] a [max]
+- 🚻 Gênero: Feminino/Masculino/Todos
+- 🌱 Sementes Semânticas: tags visuais
+- 🚫 Exclusões Andromeda: lista
+- Botão "Injetar no Conjunto de Anúncios" que ativa flag `useAndromeda`
 
-### 5. Campanhas, Criativos, Simulador — Botão "Forçar Atualização" replicado
+### 4. Atualizar `create-meta-campaign` Edge Function
 
-- **`Campanhas.tsx`**: Adicionar `useClientProfiles` + `DateRangePicker` + botão Refresh com `forceRefetch()` e timestamp independente
-- **`Criativos.tsx`**: Adicionar botão Refresh com `forceRefetch()` e timestamp independente
-- **`Simulador.tsx`**: Consumir `useMetaAds` para pegar CPA e Ticket Médio reais; adicionar botão Refresh
+Quando `andromeda_targeting` presente no draft:
+1. Resolver `semantic_seeds` via Meta `/search?type=adinterest` para obter IDs reais
+2. Construir `targeting` do AdSet com `age_min`, `age_max`, `genders`, `flexible_spec: [{ interests: [IDs] }]`
+3. Ativar `targeting_optimization: "expansion_all"` para Andromeda/Advantage+
 
-### 6. `Configuracoes.tsx` — Limpar campos duplicados
+### 5. Persistência
 
-- A seção "Controle de Teto Financeiro" tem campos CPA Meta, Ticket Médio e Limite Escala duplicados. Remover a duplicação, mantendo apenas Budget Máximo + Frequência nessa seção.
+Adicionar campo `andromeda_targeting` (jsonb, nullable) à tabela `campaign_drafts` via migration.
 
-### 7. `Index.tsx` — Indicador "Monitoramento Ativo" + Log de Automação
+Salvar dados Andromeda junto com o draft no `handleSaveDraft` e `handlePublish`.
 
-- Adicionar pill pulsante no topo: `"● Monitoramento Ativo em Tempo Real"` com animação pulse neon
-- Criar seção "Log de Automação" abaixo das campanhas com entries geradas client-side:
-  - A cada renderização/refetch, gerar entry: `"Check realizado às HH:MM — ROI atual: X.XX — Nenhuma ação necessária"`
-  - Se alguma campanha tiver CPA > 2× meta com 0 vendas: `"AÇÃO: Campanha [Nome] sinalizada por CPA alto"`
-  - Armazenar últimos 20 logs em state local
+### 6. Isolamento Multi-Tenant
 
-### 8. Não necessita migração SQL
+Já garantido: `ai-campaign-draft` busca `avatar_dossier` estritamente por `profileId`. O `setActiveProfile` invalida cache de `campaign_drafts`. Nenhuma mudança extra necessária.
 
-Budget frequency e budget_maximo já existem no schema. Nenhuma alteração de banco necessária.
+---
 
-### Arquivos modificados
-- `supabase/functions/meta-ads-sync/index.ts` — campos effective_status
-- `src/lib/mockData.ts` — type Campaign atualizado  
-- `src/hooks/useMetaAds.ts` — mapear status real
-- `src/components/CampaignsTable.tsx` — badges status + toggle filtro
-- `src/pages/Campanhas.tsx` — botão refresh + profiles
-- `src/pages/Criativos.tsx` — botão refresh
-- `src/pages/Simulador.tsx` — dados reais + botão refresh
-- `src/pages/Index.tsx` — indicador pulse + log de automação
-- `src/pages/Configuracoes.tsx` — remover campos duplicados
+### Arquivos
+
+| Arquivo | Mudança |
+|---|---|
+| Migration SQL | `andromeda_targeting` jsonb em `campaign_drafts` |
+| `supabase/functions/ai-campaign-draft/index.ts` | Prompt Andromeda + campo no tool schema |
+| `supabase/functions/create-meta-campaign/index.ts` | Resolver interests via `/search`, montar targeting, expansion |
+| `src/pages/LancarCampanha.tsx` | Tipo AndromedaTargeting + card visual + botão injetar |
 
