@@ -1,5 +1,5 @@
 import { NavLink as RouterNavLink } from "react-router-dom";
-import { BarChart3, Zap, Target, ImageIcon, Settings, LogOut } from "lucide-react";
+import { BarChart3, Zap, Target, ImageIcon, Settings, LogOut, Brain } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import ProfileSelector from "@/components/ProfileSelector";
 
