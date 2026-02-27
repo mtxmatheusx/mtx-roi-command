@@ -136,6 +136,27 @@ export default function CriativosPage() {
     }
   };
 
+  const handleScrapeMedia = async () => {
+    if (!scrapeUrl || !user?.id || !activeProfile?.id) return;
+    setIsScraping(true);
+    setScrapeResult(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("scrape-media", {
+        body: { url: scrapeUrl, profileId: activeProfile.id },
+      });
+      if (error) throw error;
+      if (data.error) throw new Error(data.error);
+      setScrapeResult({ total_found: data.total_found, total_saved: data.total_saved });
+      toast({ title: `✅ ${data.total_saved} mídias extraídas!`, description: `${data.total_found} encontradas, ${data.total_saved} salvas.` });
+      queryClient.invalidateQueries({ queryKey: ["creative_assets", activeProfile.id] });
+      setScrapeUrl("");
+    } catch (err) {
+      toast({ title: "Erro na extração", description: (err as Error).message, variant: "destructive" });
+    } finally {
+      setIsScraping(false);
+    }
+  };
+
   // Compute average ROAS from previous period for fatigue detection
   const prevAvgRoas = previous && previous.roas ? previous.roas : null;
 
