@@ -244,6 +244,9 @@ export default function CriativosPage() {
                   <div className="p-2">
                     <p className="text-xs truncate font-medium">{asset.file_name}</p>
                     {asset.description && <p className="text-xs text-muted-foreground truncate">{asset.description}</p>}
+                    <Badge variant="outline" className="text-[10px] mt-1 px-1 py-0">
+                      {(asset as any).source_tag?.startsWith("scraped:") ? "🌐 Scraped" : "📤 Upload"}
+                    </Badge>
                   </div>
                   <button
                     onClick={() => handleDeleteAsset(asset)}
