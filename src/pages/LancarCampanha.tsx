@@ -191,9 +191,12 @@ export default function LancarCampanha() {
       if (publishError) throw publishError;
 
       if (result?.error) {
-        setPublishStep(`Erro: ${result.error}`);
+        const stepLabels: Record<string, string> = { campaign: "Criação da Campanha", adset: "Criação do Conjunto de Anúncios", ad: "Criação do Anúncio" };
+        const failedStep = result.step ? stepLabels[result.step] || result.step : "";
+        const partialInfo = result.steps?.length ? `\nEtapas concluídas: ${result.steps.join(", ")}` : "";
+        setPublishStep(`Falha em: ${failedStep || "Meta API"}`);
         setPublishProgress(100);
-        setPublishResult({ success: false, error: result.error });
+        setPublishResult({ success: false, error: `${result.error}${partialInfo}`, meta_campaign_id: result.meta_campaign_id });
       } else {
         setPublishStep("Campanha publicada com sucesso!");
         setPublishProgress(100);
