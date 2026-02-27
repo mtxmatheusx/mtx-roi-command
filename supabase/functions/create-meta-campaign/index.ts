@@ -158,15 +158,19 @@ serve(async (req) => {
     const targetingObj: Record<string, unknown> = { geo_locations: { countries: ["BR"] } };
     if (andromedaTargeting) {
       if (andromedaTargeting.age_min) targetingObj.age_min = andromedaTargeting.age_min;
-      // Force age_max=65 when Advantage+ is active (Meta API constraint)
-      targetingObj.age_max = 65;
+      // Do NOT set age_max when Advantage+ is active — Meta rejects age_max < 65
+      // Omitting age_max entirely lets the algorithm optimize freely
       if (andromedaTargeting.genders?.length && !andromedaTargeting.genders.includes(0)) {
         targetingObj.genders = andromedaTargeting.genders;
       }
       if (resolvedInterests.length > 0) {
         targetingObj.flexible_spec = [{ interests: resolvedInterests }];
       }
+      // Advantage+ audience expansion — MUST be inside targeting, strict integer
+      targetingObj.targeting_automation = { advantage_audience: Number(1) };
     }
+
+    console.log("Final targeting payload:", JSON.stringify(targetingObj));
 
     const adSetBody: Record<string, unknown> = {
       name: `${draft.campaign_name} - Conjunto 01`,
@@ -183,11 +187,6 @@ serve(async (req) => {
       status: "PAUSED",
       access_token: accessToken,
     };
-
-    // Enable Andromeda/Advantage+ audience expansion (inside targeting object, strict integer)
-    if (andromedaTargeting) {
-      targetingObj.targeting_automation = { advantage_audience: Number(1) };
-    }
 
     // Inject pixel_id as promoted_object for conversion campaigns
     if (isConversion && pixelId && pixelId.trim() !== "") {
