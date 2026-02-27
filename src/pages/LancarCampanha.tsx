@@ -112,6 +112,7 @@ export default function LancarCampanha() {
             roas: c.roas,
             status: c.status,
           })),
+          productContext: productContext || undefined,
         },
       });
 
