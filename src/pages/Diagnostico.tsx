@@ -42,10 +42,10 @@ export default function Diagnostico() {
         cliques: c.clicks,
         compras: c.purchases,
       })),
-      resumo_periodo_anterior: previousPeriod
-        ? { gasto: previousPeriod.spend, receita: previousPeriod.revenue, cpa: previousPeriod.cpa, roas: previousPeriod.roas }
+      resumo_periodo_anterior: previous
+        ? { gasto: previous.spend, receita: previous.revenue, cpa: previous.cpa, roas: previous.roas }
         : null,
-      dados_diarios_recentes: dailyData?.slice(-7) || [],
+      dados_diarios_recentes: daily?.slice(-7) || [],
     };
 
     const userMessage = isMockData
