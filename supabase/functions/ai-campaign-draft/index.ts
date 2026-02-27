@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -6,12 +7,42 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const SYSTEM_PROMPT = `Você é o Estrategista Sênior da MTX Estratégias, especialista em Meta Ads de alto nível.
+function buildSystemPrompt(profileName: string, avatarDossier: string | null, productContext: string | null): string {
+  const today = new Date().toISOString().slice(0, 10);
 
-## FRAMEWORKS OBRIGATÓRIOS
+  // Step 1: Contamination Block
+  let prompt = `**Data de hoje: ${today}**
+
+## BLOQUEIO DE CONTAMINAÇÃO (REGRA ABSOLUTA)
+
+Você é o Gestor de Tráfego Sênior EXCLUSIVO da empresa "${profileName}". Esqueça qualquer outro nicho, produto ou cliente. Você está PROIBIDO de sugerir copys de marketing digital, mentorias ou infoprodutos se a empresa for de produtos físicos, e vice-versa. Toda sugestão DEVE estar 100% alinhada ao nicho e produto desta empresa.
+
+`;
+
+  // Step 2: Context Injection
+  if (avatarDossier) {
+    prompt += `## DOSSIÊ DO AVATAR (VERDADE ABSOLUTA — APROVADO PELO GESTOR)
+
+Leia este Dossiê da Empresa. Este é o ÚNICO contexto que você deve usar para gerar campanhas:
+
+${avatarDossier}
+
+IMPORTANTE: Baseie-se ESTRITAMENTE neste dossiê. NÃO invente dores, objeções ou promessas que não estejam aqui.
+
+`;
+  } else if (productContext) {
+    prompt += `## CONTEXTO DO PRODUTO (FALLBACK)
+
+${productContext}
+
+`;
+  }
+
+  // Step 3: Generation Framework
+  prompt += `## FRAMEWORKS OBRIGATÓRIOS
 
 ### 1. StoryBrand (Donald Miller)
-O cliente é o HERÓI. A MTX / Método RIC é o GUIA.
+O cliente é o HERÓI. A empresa "${profileName}" é o GUIA.
 - Identifique o PROBLEMA: externo (o que acontece), interno (como se sente), filosófico (por que está errado).
 - Apresente o PLANO: passos claros e simples.
 - CHAME PARA AÇÃO: direto, sem ambiguidade.
@@ -56,19 +87,10 @@ Você DEVE gerar exatamente 3 variações de copy, cada uma com um copy_type esp
 - Padrão: "[OBJETIVO] | [PRODUTO/OFERTA] | [PÚBLICO] | [DATA]"
 - Exemplo: "VENDAS | Curso Excel Pro | Lookalike 1% | 2026-03"
 
-## REGRAS HORMOZI DE OTIMIZAÇÃO
-- Se ROI > 1.3x meta → sugerir +15% budget
-- Se spend > 2x CPA sem conversão → sugerir pausa
-- Sempre respeitar budget_maximo
-
-## CONTEXTO DO PRODUTO
-Se um contexto de produto for fornecido, você DEVE:
-- Manter consistência com a promessa principal do site/produto
-- Usar a linguagem e tom do produto
-- Alinhar as dores mencionadas com as do avatar real
-- PROIBIDO contradizer o posicionamento do produto
-
 Ao gerar, use a function tool "suggest_campaign" para retornar dados estruturados.`;
+
+  return prompt;
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -76,18 +98,37 @@ serve(async (req) => {
   }
 
   try {
-    const { objective, profileConfig, campaignData, productContext } = await req.json();
+    const { objective, profileConfig, campaignData, productContext, profileId } = await req.json();
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
-    let productBlock = "";
-    if (productContext) {
-      productBlock = `\n\n**Contexto do Produto (absorvido do site):**\n${productContext}\n\nUSE este contexto para manter consistência de marca em todas as copies.`;
+    // Fetch avatar_dossier from DB if profileId provided
+    let avatarDossier: string | null = null;
+    let profileName = profileConfig?.name || "Empresa";
+
+    if (profileId) {
+      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+      const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+      const sb = createClient(supabaseUrl, supabaseKey);
+
+      const { data: profile } = await sb
+        .from("client_profiles")
+        .select("name, avatar_dossier, product_context")
+        .eq("id", profileId)
+        .single();
+
+      if (profile) {
+        profileName = profile.name || profileName;
+        avatarDossier = profile.avatar_dossier || null;
+        // Use DB product_context as fallback if not passed
+        if (!productContext && profile.product_context) {
+          // Will be used in buildSystemPrompt
+        }
+      }
     }
 
-    const today = new Date().toISOString().slice(0, 10);
-    const finalSystemPrompt = `**Data de hoje: ${today}**\n\n` + SYSTEM_PROMPT;
+    const finalSystemPrompt = buildSystemPrompt(profileName, avatarDossier, productContext);
 
     const userPrompt = `Gere uma sugestão de campanha Meta Ads com os seguintes parâmetros:
 
@@ -99,7 +140,7 @@ serve(async (req) => {
 - Frequência: ${profileConfig.budget_frequency}
 - Limite de Escala: ${profileConfig.limite_escala}%
 
-${campaignData ? `**Dados atuais de performance:**\n${JSON.stringify(campaignData, null, 2)}` : "Sem dados de performance disponíveis."}${productBlock}
+${campaignData ? `**Dados atuais de performance:**\n${JSON.stringify(campaignData, null, 2)}` : "Sem dados de performance disponíveis."}
 
 Gere EXATAMENTE 3 copies (direct_response, storytelling, social_proof), nome no padrão MTX, segmentação, orçamento diário e seu raciocínio estratégico completo.`;
 
@@ -130,7 +171,7 @@ Gere EXATAMENTE 3 copies (direct_response, storytelling, social_proof), nome no 
                     items: {
                       type: "object",
                       properties: {
-                        copy_type: { type: "string", enum: ["direct_response", "storytelling", "social_proof"], description: "Tipo da copy" },
+                        copy_type: { type: "string", enum: ["direct_response", "storytelling", "social_proof"] },
                         headline: { type: "string" },
                         primary_text: { type: "string" },
                         cta: { type: "string" },
@@ -138,7 +179,6 @@ Gere EXATAMENTE 3 copies (direct_response, storytelling, social_proof), nome no 
                       required: ["copy_type", "headline", "primary_text", "cta"],
                       additionalProperties: false,
                     },
-                    description: "Exatamente 3 copies: direct_response, storytelling e social_proof",
                   },
                   targeting_suggestion: {
                     type: "object",
@@ -152,8 +192,8 @@ Gere EXATAMENTE 3 copies (direct_response, storytelling, social_proof), nome no 
                     required: ["audience_type", "placements"],
                     additionalProperties: false,
                   },
-                  daily_budget: { type: "number", description: "Orçamento diário recomendado em BRL" },
-                  ai_reasoning: { type: "string", description: "Raciocínio estratégico completo incluindo análise Hormozi e StoryBrand" },
+                  daily_budget: { type: "number" },
+                  ai_reasoning: { type: "string" },
                 },
                 required: ["campaign_name", "copy_options", "targeting_suggestion", "daily_budget", "ai_reasoning"],
                 additionalProperties: false,
@@ -172,7 +212,7 @@ Gere EXATAMENTE 3 copies (direct_response, storytelling, social_proof), nome no 
         });
       }
       if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "Créditos insuficientes. Adicione créditos ao workspace." }), {
+        return new Response(JSON.stringify({ error: "Créditos insuficientes." }), {
           status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }

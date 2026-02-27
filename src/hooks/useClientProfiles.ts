@@ -81,6 +81,7 @@ export function useClientProfiles() {
     queryClient.invalidateQueries({ queryKey: ["meta-ads"] });
     queryClient.invalidateQueries({ queryKey: ["creative_assets"] });
     queryClient.invalidateQueries({ queryKey: ["campaign_drafts"] });
+    queryClient.invalidateQueries({ queryKey: ["knowledge_base"] });
   }, [user?.id, queryClient]);
 
   const createProfile = useCallback(async (input: CreateProfileInput) => {
