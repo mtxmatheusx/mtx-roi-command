@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import DateRangePicker from "@/components/DateRangePicker";
+import CreativeFactory from "@/components/CreativeFactory";
 
 const typeIcon = { video: Video, image: Image, carousel: LayoutGrid };
 const statusConfig = {
