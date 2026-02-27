@@ -188,7 +188,16 @@ export default function LancarCampanha() {
         body: { draftId: inserted.id },
       });
 
-      if (publishError) throw publishError;
+      if (publishError) {
+        let detailedError = publishError.message;
+        try {
+          if ((publishError as any).context) {
+            const errBody = await (publishError as any).context.json();
+            detailedError = errBody?.error || detailedError;
+          }
+        } catch {}
+        throw new Error(detailedError);
+      }
 
       if (result?.error) {
         const stepLabels: Record<string, string> = { campaign: "Criação da Campanha", adset: "Criação do Conjunto de Anúncios", ad: "Criação do Anúncio" };

@@ -203,7 +203,7 @@ serve(async (req) => {
         error_message: `Campanha e conjunto criados, mas erro no anúncio: ${errorMsg}`,
       }).eq("id", draftId);
       return new Response(JSON.stringify({ error: errorMsg, step: "ad", meta_campaign_id: metaCampaignId, meta_adset_id: metaAdSetId, steps }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
