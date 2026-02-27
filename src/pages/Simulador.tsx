@@ -1,5 +1,6 @@
 import { useState } from "react";
 import AppLayout from "@/components/AppLayout";
+import ActiveProfileHeader from "@/components/ActiveProfileHeader";
 import ScaleSimulator from "@/components/ScaleSimulator";
 import { useMetaAds, DateRange } from "@/hooks/useMetaAds";
 import { useClientProfiles } from "@/hooks/useClientProfiles";
