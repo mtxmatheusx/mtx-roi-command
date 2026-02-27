@@ -309,9 +309,17 @@ export default function Configuracoes() {
               </div>
             </div>
             <div className="space-y-2 max-w-md">
-              <Label htmlFor="pageId">Facebook Page ID</Label>
+              <div className="flex items-center gap-2">
+                <Label htmlFor="pageId">Facebook Page ID</Label>
+                <span className="relative group">
+                  <span className="text-muted-foreground cursor-help text-xs border border-border rounded-full w-4 h-4 inline-flex items-center justify-center">?</span>
+                  <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 text-xs bg-popover text-popover-foreground border rounded-md shadow-md w-64 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                    Este ID é obrigatório para vincular seus anúncios ao perfil do Instagram e à Página do Facebook. Sem ele, a criação de anúncios falhará.
+                  </span>
+                </span>
+              </div>
               <Input id="pageId" placeholder="123456789012345" value={form.pageId} onChange={(e) => handleChange("pageId", e.target.value)} className="font-mono text-sm" />
-              <p className="text-xs text-muted-foreground">ID da Página do Facebook vinculada à conta de anúncios. Obrigatório para criar anúncios.</p>
+              <p className="text-xs text-muted-foreground">Obrigatório para vincular anúncios ao Instagram e Página do Facebook.</p>
             </div>
             <div className="flex items-center gap-3">
               <Button variant="outline" onClick={handleTestConnection} disabled={testResult === "loading"} className="gap-2">
