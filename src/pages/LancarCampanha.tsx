@@ -59,7 +59,7 @@ const statusConfig: Record<string, { label: string; className: string; icon: typ
 export default function LancarCampanha() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const { activeProfile, budgetMaximo, cpaMeta, ticketMedio, limiteEscala, budgetFrequency } = useClientProfiles();
+  const { activeProfile, budgetMaximo, cpaMeta, ticketMedio, limiteEscala, budgetFrequency, productContext } = useClientProfiles();
   const { campaigns } = useMetaAds();
 
   const [step, setStep] = useState(1);
