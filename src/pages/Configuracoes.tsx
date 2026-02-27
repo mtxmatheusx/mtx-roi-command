@@ -45,8 +45,10 @@ export default function Configuracoes() {
     cpaMeta: "45", ticketMedio: "697", limiteEscala: "15",
     budgetMaximo: "0", budgetFrequency: "monthly" as "daily" | "weekly" | "monthly",
     metaAccessToken: "",
+    geminiApiKey: "",
   });
   const [tokenEditing, setTokenEditing] = useState(false);
+  const [geminiEditing, setGeminiEditing] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [testResult, setTestResult] = useState<"idle" | "loading" | "success" | "error">("idle");
