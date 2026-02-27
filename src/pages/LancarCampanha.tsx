@@ -268,6 +268,7 @@ export default function LancarCampanha() {
           step: result.step,
           steps: result.steps,
           meta_campaign_id: result.meta_campaign_id,
+          rollback: result.rollback || false,
         });
       } else {
         addLog("Campanha criada com sucesso!", "done");
