@@ -226,6 +226,7 @@ export default function Configuracoes() {
   if (!activeProfile) return <AppLayout><div className="space-y-4 text-center py-20"><h2 className="text-xl font-bold">Nenhum perfil encontrado</h2><p className="text-muted-foreground text-sm">Use o seletor no sidebar para criar seu primeiro perfil.</p></div></AppLayout>;
 
   const hasProfileToken = !!activeProfile.meta_access_token;
+  const hasGeminiKey = !!activeProfile.gemini_api_key;
 
   return (
     <AppLayout>
