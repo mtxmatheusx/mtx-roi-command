@@ -17,6 +17,7 @@ export type Database = {
       campaign_drafts: {
         Row: {
           ai_reasoning: string | null
+          andromeda_targeting: Json | null
           campaign_name: string
           copy_options: Json | null
           created_at: string
@@ -35,6 +36,7 @@ export type Database = {
         }
         Insert: {
           ai_reasoning?: string | null
+          andromeda_targeting?: Json | null
           campaign_name: string
           copy_options?: Json | null
           created_at?: string
@@ -53,6 +55,7 @@ export type Database = {
         }
         Update: {
           ai_reasoning?: string | null
+          andromeda_targeting?: Json | null
           campaign_name?: string
           copy_options?: Json | null
           created_at?: string

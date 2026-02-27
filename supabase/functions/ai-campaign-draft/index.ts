@@ -87,6 +87,17 @@ Você DEVE gerar exatamente 3 variações de copy, cada uma com um copy_type esp
 - Padrão: "[OBJETIVO] | [PRODUTO/OFERTA] | [PÚBLICO] | [DATA]"
 - Exemplo: "VENDAS | Curso Excel Pro | Lookalike 1% | 2026-03"
 
+## MOTOR DE SEGMENTAÇÃO ANDROMEDA (OBRIGATÓRIO)
+
+Atuando como Estrategista Sênior em 2026, traduza o Dossiê do Avatar para os parâmetros do algoritmo Andromeda da Meta Ads. Retorne o campo "andromeda_targeting" contendo:
+
+- **age_min / age_max:** A faixa etária central do comprador (ex: 25 a 45). Números inteiros.
+- **genders:** O gênero predominante como array de inteiros ([0] = todos, [1] = masculino, [2] = feminino). Use [0] se não houver indicação clara.
+- **semantic_seeds:** No máximo 3 interesses ultradirecionados que sirvam como semente para o Andromeda (ex: "Alfaiataria", "Marcas de Luxo"). Devem ser termos reconhecidos pela Meta como interesses de segmentação.
+- **andromeda_exclusion:** Lista do que o algoritmo DEVE evitar (ex: "Caçadores de cupom", "Público infantil").
+
+IMPORTANTE: Baseie as sementes semânticas ESTRITAMENTE no Dossiê do Avatar e no nicho da empresa. NUNCA sugira interesses genéricos de marketing digital.
+
 Ao gerar, use a function tool "suggest_campaign" para retornar dados estruturados.`;
 
   return prompt;
@@ -195,7 +206,20 @@ Gere EXATAMENTE 3 copies (direct_response, storytelling, social_proof), nome no 
                   daily_budget: { type: "number" },
                   ai_reasoning: { type: "string" },
                 },
-                required: ["campaign_name", "copy_options", "targeting_suggestion", "daily_budget", "ai_reasoning"],
+                  andromeda_targeting: {
+                    type: "object",
+                    description: "Parâmetros de segmentação para o algoritmo Andromeda da Meta Ads",
+                    properties: {
+                      age_min: { type: "number", description: "Idade mínima do público-alvo" },
+                      age_max: { type: "number", description: "Idade máxima do público-alvo" },
+                      genders: { type: "array", items: { type: "number" }, description: "Gêneros: [0]=todos, [1]=masculino, [2]=feminino" },
+                      semantic_seeds: { type: "array", items: { type: "string" }, description: "Máximo 3 interesses ultradirecionados como sementes" },
+                      andromeda_exclusion: { type: "array", items: { type: "string" }, description: "O que o algoritmo deve evitar" },
+                    },
+                    required: ["age_min", "age_max", "genders", "semantic_seeds", "andromeda_exclusion"],
+                    additionalProperties: false,
+                  },
+                required: ["campaign_name", "copy_options", "targeting_suggestion", "daily_budget", "ai_reasoning", "andromeda_targeting"],
                 additionalProperties: false,
               },
             },

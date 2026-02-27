@@ -25,12 +25,21 @@ import ReactMarkdown from "react-markdown";
 type CopyOption = { copy_type?: "direct_response" | "storytelling" | "social_proof"; headline: string; primary_text: string; cta: string };
 type TargetingSuggestion = { audience_type?: string; age_range?: string; interests?: string[]; lookalike_source?: string; placements?: string };
 
+interface AndromedaTargeting {
+  age_min: number;
+  age_max: number;
+  genders: number[];
+  semantic_seeds: string[];
+  andromeda_exclusion: string[];
+}
+
 interface DraftData {
   campaign_name: string;
   copy_options: CopyOption[];
   targeting_suggestion: TargetingSuggestion;
   daily_budget: number;
   ai_reasoning: string;
+  andromeda_targeting?: AndromedaTargeting;
 }
 
 type DraftRecord = {
@@ -83,6 +92,7 @@ export default function LancarCampanha() {
   const [creativeBrain, setCreativeBrain] = useState<{ recommendation: any; total_assets: number; total_campaigns_analyzed?: number } | null>(null);
   const [isChoosingCreative, setIsChoosingCreative] = useState(false);
   const [confirmPublishOpen, setConfirmPublishOpen] = useState(false);
+  const [useAndromeda, setUseAndromeda] = useState(false);
 
   // Load draft history filtered by profile
   useEffect(() => {
@@ -139,7 +149,9 @@ export default function LancarCampanha() {
         targeting_suggestion: data.targeting_suggestion || {},
         daily_budget: data.daily_budget || dailyBudget,
         ai_reasoning: data.ai_reasoning || "",
+        andromeda_targeting: data.andromeda_targeting || undefined,
       });
+      setUseAndromeda(!!data.andromeda_targeting);
       setDailyBudget(data.daily_budget || dailyBudget);
       setSelectedCopyIdx(0);
       setStep(2);
@@ -163,6 +175,7 @@ export default function LancarCampanha() {
       copy_options: draft.copy_options as any,
       targeting_suggestion: draft.targeting_suggestion as any,
       ai_reasoning: draft.ai_reasoning,
+      andromeda_targeting: draft.andromeda_targeting ? draft.andromeda_targeting as any : null,
     });
     if (error) {
       toast({ title: "Erro ao salvar rascunho", description: error.message, variant: "destructive" });
@@ -199,6 +212,7 @@ export default function LancarCampanha() {
         copy_options: [draft.copy_options[selectedCopyIdx]] as any,
         targeting_suggestion: draft.targeting_suggestion as any,
         ai_reasoning: draft.ai_reasoning,
+        andromeda_targeting: useAndromeda && draft.andromeda_targeting ? draft.andromeda_targeting as any : null,
       }).select("id").single();
 
       if (insertErr || !inserted) throw new Error(insertErr?.message || "Erro ao salvar");
@@ -471,6 +485,82 @@ export default function LancarCampanha() {
               </CardContent>
             </Card>
 
+            {/* Andromeda Targeting Card */}
+            {draft.andromeda_targeting && (
+              <Card className={`border-dashed ${useAndromeda ? "border-primary/50 bg-primary/5" : "border-border"}`}>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      🌌 Segmentação Andromeda Sugerida
+                    </CardTitle>
+                    <Badge className={useAndromeda ? "bg-primary/15 text-primary" : "bg-secondary text-muted-foreground"}>
+                      {useAndromeda ? "Ativa" : "Inativa"}
+                    </Badge>
+                  </div>
+                  <CardDescription>Parâmetros gerados pela IA para o algoritmo Andromeda da Meta</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div className="flex items-center gap-2">
+                      <span className="text-base">🎯</span>
+                      <div>
+                        <span className="text-muted-foreground">Idade:</span>
+                        <p className="font-medium">{draft.andromeda_targeting.age_min} a {draft.andromeda_targeting.age_max} anos</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-base">🚻</span>
+                      <div>
+                        <span className="text-muted-foreground">Gênero:</span>
+                        <p className="font-medium">
+                          {draft.andromeda_targeting.genders.includes(0) ? "Todos" :
+                           draft.andromeda_targeting.genders.includes(2) ? "Feminino" :
+                           draft.andromeda_targeting.genders.includes(1) ? "Masculino" : "Todos"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-base">🌱</span>
+                      <span className="text-sm text-muted-foreground">Sementes Semânticas:</span>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {draft.andromeda_targeting.semantic_seeds.map((seed, i) => (
+                        <Badge key={i} variant="outline" className="bg-primary/10 text-primary border-primary/30">
+                          {seed}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+
+                  {draft.andromeda_targeting.andromeda_exclusion.length > 0 && (
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-base">🚫</span>
+                        <span className="text-sm text-muted-foreground">Exclusões Andromeda:</span>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {draft.andromeda_targeting.andromeda_exclusion.map((exc, i) => (
+                          <Badge key={i} variant="outline" className="bg-destructive/10 text-destructive border-destructive/30">
+                            {exc}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <Button
+                    variant={useAndromeda ? "secondary" : "default"}
+                    className="gap-2 w-full"
+                    onClick={() => setUseAndromeda(!useAndromeda)}
+                  >
+                    {useAndromeda ? "✅ Injetado no Conjunto de Anúncios" : "🌌 Injetar no Conjunto de Anúncios"}
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Orçamento Diário (R$)</Label>
