@@ -35,6 +35,7 @@ const App = () => (
             <Route path="/lancar-campanha" element={<ProtectedRoute><LancarCampanha /></ProtectedRoute>} />
             <Route path="/simulador" element={<ProtectedRoute><Simulador /></ProtectedRoute>} />
             <Route path="/criativos" element={<ProtectedRoute><Criativos /></ProtectedRoute>} />
+            <Route path="/auditoria-meta" element={<ProtectedRoute><AuditoriaMeta /></ProtectedRoute>} />
             <Route path="/configuracoes" element={<ProtectedRoute><Configuracoes /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>

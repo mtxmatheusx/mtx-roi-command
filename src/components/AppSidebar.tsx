@@ -10,6 +10,7 @@ const navItems = [
   { to: "/lancar-campanha", label: "Lançar Campanha", icon: Rocket },
   { to: "/simulador", label: "Simulador", icon: Zap },
   { to: "/criativos", label: "Criativos", icon: ImageIcon },
+  { to: "/auditoria-meta", label: "Auditoria Meta AI", icon: Shield },
 ];
 
 export default function AppSidebar() {
