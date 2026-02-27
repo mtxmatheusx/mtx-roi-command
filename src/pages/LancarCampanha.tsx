@@ -52,6 +52,8 @@ type DraftRecord = {
   targeting_suggestion: TargetingSuggestion;
   ai_reasoning: string | null;
   meta_campaign_id: string | null;
+  meta_adset_id: string | null;
+  meta_ad_id: string | null;
   error_message: string | null;
   created_at: string;
 };
