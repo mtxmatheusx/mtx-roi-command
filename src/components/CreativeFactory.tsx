@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback, useRef } from "react";
 import { useClientProfiles } from "@/hooks/useClientProfiles";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,13 +7,14 @@ import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Loader2, Sparkles, Rocket, Trophy, ImageOff } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Loader2, Sparkles, Rocket, Trophy, ImageOff, Brain, Upload, X } from "lucide-react";
 import { motion } from "framer-motion";
 import { formatCurrency } from "@/lib/mockData";
-import type { Creative } from "@/lib/mockData";
 
 type GeneratedAsset = { url: string; file_name: string; asset_id: string };
 
@@ -34,27 +35,100 @@ export default function CreativeFactory({ winners }: CreativeFactoryProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Stage 1: Art Direction
+  const [rawIdea, setRawIdea] = useState("");
+  const [isElaborating, setIsElaborating] = useState(false);
+
+  // Reference image
+  const [referenceImageUrl, setReferenceImageUrl] = useState<string | null>(null);
+  const [referencePreview, setReferencePreview] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
+
+  // Stage 2: Generation
+  const [masterPrompt, setMasterPrompt] = useState("");
   const [quantity, setQuantity] = useState(2);
-  const [context, setContext] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
   const [generated, setGenerated] = useState<GeneratedAsset[]>([]);
 
-  const handleGenerate = async () => {
+  const uploadReferenceImage = useCallback(async (file: File) => {
     if (!activeProfile?.id || !user?.id) return;
+    const validTypes = ["image/jpeg", "image/png", "image/webp"];
+    if (!validTypes.includes(file.type)) {
+      toast({ title: "Formato inválido", description: "Use JPG, PNG ou WEBP.", variant: "destructive" });
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast({ title: "Arquivo muito grande", description: "Máximo 10MB.", variant: "destructive" });
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      const ext = file.name.split(".").pop() || "png";
+      const path = `references/${activeProfile.id}/${Date.now()}.${ext}`;
+      const { error } = await supabase.storage.from("creative-assets").upload(path, file, { contentType: file.type, upsert: true });
+      if (error) throw error;
+      const { data: { publicUrl } } = supabase.storage.from("creative-assets").getPublicUrl(path);
+      setReferenceImageUrl(publicUrl);
+      setReferencePreview(URL.createObjectURL(file));
+    } catch (err) {
+      toast({ title: "Erro no upload", description: (err as Error).message, variant: "destructive" });
+    } finally {
+      setIsUploading(false);
+    }
+  }, [activeProfile, user, toast]);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) uploadReferenceImage(file);
+  }, [uploadReferenceImage]);
+
+  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) uploadReferenceImage(file);
+  }, [uploadReferenceImage]);
+
+  const removeReference = () => {
+    setReferenceImageUrl(null);
+    setReferencePreview(null);
+  };
+
+  // Stage 1: Elaborate Art Direction
+  const handleElaborate = async () => {
+    if (!activeProfile?.id || !rawIdea.trim()) return;
+    setIsElaborating(true);
+    setMasterPrompt("");
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-master-prompt", {
+        body: { profileId: activeProfile.id, rawIdea: rawIdea.trim(), referenceImageUrl },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      setMasterPrompt(data.masterPrompt || "");
+    } catch (err) {
+      toast({ title: "Erro na direção de arte", description: (err as Error).message, variant: "destructive" });
+    } finally {
+      setIsElaborating(false);
+    }
+  };
+
+  // Stage 2: Forge Creative
+  const handleForge = async () => {
+    if (!activeProfile?.id || !user?.id || !masterPrompt.trim()) return;
     setIsGenerating(true);
     setProgress(10);
     setGenerated([]);
-
     try {
-      // Simulate progress while waiting
-      const progressInterval = setInterval(() => {
-        setProgress((p) => Math.min(p + 8, 85));
-      }, 2000);
+      const progressInterval = setInterval(() => setProgress((p) => Math.min(p + 6, 88)), 2500);
 
       const { data, error } = await supabase.functions.invoke("generate-hyper-creative", {
-        body: { profileId: activeProfile.id, quantity, context },
+        body: { profileId: activeProfile.id, quantity, masterPrompt: masterPrompt.trim(), referenceImageUrl },
       });
 
       clearInterval(progressInterval);
@@ -64,7 +138,7 @@ export default function CreativeFactory({ winners }: CreativeFactoryProps) {
       if (data?.error) throw new Error(data.error);
 
       setGenerated(data.generated || []);
-      toast({ title: `🎨 ${data.total} criativo(s) gerado(s)!`, description: data.prompt_used?.substring(0, 100) + "..." });
+      toast({ title: `🎨 ${data.total} criativo(s) forjado(s)!` });
       queryClient.invalidateQueries({ queryKey: ["creative_assets", activeProfile.id] });
     } catch (err) {
       toast({ title: "Erro na geração", description: (err as Error).message, variant: "destructive" });
@@ -125,80 +199,154 @@ export default function CreativeFactory({ winners }: CreativeFactoryProps) {
         </CardContent>
       </Card>
 
-      {/* Right: Autonomous Generator */}
+      {/* Right: Visual Forge */}
       <Card className="lg:col-span-3">
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-primary" />
-            Gerador Autônomo
+            ⚒️ Visual Forge
+            <span className="text-sm font-normal text-muted-foreground">(Diretor de Arte IA)</span>
           </CardTitle>
-          <CardDescription>IA gera criativos baseados no dossiê do avatar e direção de arte profissional</CardDescription>
+          <CardDescription>Fluxo de 2 etapas com human-in-the-loop para criativos de alta conversão</CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
+          {/* Drop Zone */}
           <div>
-            <label className="text-sm font-medium mb-2 block">Quantidade: {quantity} imagem(ns)</label>
-            <Slider value={[quantity]} onValueChange={(v) => setQuantity(v[0])} min={1} max={4} step={1} className="w-full" />
+            <label className="text-sm font-medium mb-2 block">Imagem de referência (opcional)</label>
+            {referencePreview ? (
+              <div className="relative inline-block">
+                <img src={referencePreview} alt="Referência" className="h-24 rounded-lg border border-border object-cover" />
+                <button
+                  onClick={removeReference}
+                  className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-0.5"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ) : (
+              <div
+                onDrop={handleDrop}
+                onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
+                onDragLeave={() => setIsDragOver(false)}
+                onClick={() => fileInputRef.current?.click()}
+                className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-all
+                  ${isDragOver ? "border-primary bg-primary/5" : "border-muted-foreground/20 bg-muted/10"}
+                  hover:border-muted-foreground/40`}
+              >
+                {isUploading ? (
+                  <Loader2 className="w-6 h-6 mx-auto animate-spin text-muted-foreground" />
+                ) : (
+                  <>
+                    <Upload className="w-6 h-6 mx-auto text-muted-foreground/50 mb-1" />
+                    <p className="text-xs text-muted-foreground">Arraste uma imagem JPG/PNG/WEBP ou clique</p>
+                  </>
+                )}
+              </div>
+            )}
+            <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleFileSelect} />
           </div>
 
+          {/* Stage 1: Raw Idea */}
           <div>
-            <label className="text-sm font-medium mb-2 block">Contexto da campanha</label>
+            <label className="text-sm font-medium mb-2 block">Qual é a ideia da campanha?</label>
             <Input
-              placeholder="Ex: Black Friday, Coleção de Inverno, Lançamento..."
-              value={context}
-              onChange={(e) => setContext(e.target.value)}
+              placeholder="Ex: Mulher usando blazer preto, coleção de inverno, transmitindo poder"
+              value={rawIdea}
+              onChange={(e) => setRawIdea(e.target.value)}
             />
           </div>
 
           <Button
-            onClick={handleGenerate}
-            disabled={isGenerating || !activeProfile?.id}
-            className="w-full gap-2 h-12 text-base"
-            size="lg"
+            onClick={handleElaborate}
+            disabled={isElaborating || !rawIdea.trim() || !activeProfile?.id}
+            className="w-full gap-2"
+            variant="secondary"
           >
-            {isGenerating ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
-            ) : (
-              <Sparkles className="w-5 h-5" />
-            )}
-            {isGenerating ? "Gerando..." : `🎨 Gerar ${quantity} Criativo(s) de Alta Conversão`}
+            {isElaborating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Brain className="w-4 h-4" />}
+            🧠 Elaborar Direção de Arte
           </Button>
 
-          {isGenerating && (
+          {/* Skeleton loader while elaborating */}
+          {isElaborating && (
             <div className="space-y-2">
-              <Progress value={progress} className="h-2" />
-              <p className="text-xs text-muted-foreground text-center">
-                {progress < 30 ? "Analisando dossiê do avatar..." : progress < 60 ? "Engenharia de prompt visual..." : progress < 85 ? "Gerando imagens com IA..." : "Salvando na biblioteca..."}
-              </p>
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-5/6" />
+              <Skeleton className="h-4 w-4/6" />
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-3/6" />
             </div>
           )}
 
-          {generated.length > 0 && (
-            <div className="grid grid-cols-2 gap-4 mt-4">
-              {generated.map((asset, i) => (
-                <motion.div
-                  key={asset.asset_id}
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: i * 0.15 }}
-                  className="bg-secondary rounded-xl overflow-hidden border border-border"
-                >
-                  <img src={asset.url} alt={asset.file_name} className="w-full aspect-[4/5] object-cover" />
-                  <div className="p-3 space-y-2">
-                    <p className="text-xs font-medium truncate">{asset.file_name}</p>
-                    <Badge variant="outline" className="text-[10px]">🤖 AI Generated</Badge>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="w-full gap-1 text-xs"
-                      onClick={() => handleInject(asset)}
+          {/* Stage 2: Master Prompt */}
+          {masterPrompt && !isElaborating && (
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+              <div>
+                <label className="text-sm font-medium mb-2 block">Prompt Mestre (editável)</label>
+                <Textarea
+                  value={masterPrompt}
+                  onChange={(e) => setMasterPrompt(e.target.value)}
+                  className="min-h-[200px] bg-[hsl(var(--card))] border-border font-mono text-xs leading-relaxed"
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium mb-2 block">Quantidade: {quantity} imagem(ns)</label>
+                <Slider value={[quantity]} onValueChange={(v) => setQuantity(v[0])} min={1} max={4} step={1} />
+              </div>
+
+              <Button
+                onClick={handleForge}
+                disabled={isGenerating || !masterPrompt.trim() || !activeProfile?.id}
+                className="w-full gap-2 h-12 text-base"
+                size="lg"
+              >
+                {isGenerating ? <Loader2 className="w-5 h-5 animate-spin" /> : <Sparkles className="w-5 h-5" />}
+                {isGenerating ? "Forjando..." : `🎨 Forjar Criativo (Gerar ${quantity} Imagem)`}
+              </Button>
+
+              {isGenerating && (
+                <div className="space-y-2">
+                  <Progress value={progress} className="h-2" />
+                  <p className="text-xs text-muted-foreground text-center">
+                    {progress < 30
+                      ? "Analisando referência visual..."
+                      : progress < 60
+                        ? "Renderizando fotorrealismo e aplicando paleta de alta conversão..."
+                        : progress < 88
+                          ? "Gerando imagens com IA..."
+                          : "Salvando na biblioteca..."}
+                  </p>
+                </div>
+              )}
+
+              {generated.length > 0 && (
+                <div className="grid grid-cols-2 gap-4 mt-4">
+                  {generated.map((asset, i) => (
+                    <motion.div
+                      key={asset.asset_id}
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: i * 0.15 }}
+                      className="bg-secondary rounded-xl overflow-hidden border border-border"
                     >
-                      <Rocket className="w-3 h-3" />
-                      Injetar no Meta Ads
-                    </Button>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
+                      <img src={asset.url} alt={asset.file_name} className="w-full aspect-[4/5] object-cover" />
+                      <div className="p-3 space-y-2">
+                        <p className="text-xs font-medium truncate">{asset.file_name}</p>
+                        <Badge variant="outline" className="text-[10px]">🤖 AI Generated</Badge>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="w-full gap-1 text-xs"
+                          onClick={() => handleInject(asset)}
+                        >
+                          <Rocket className="w-3 h-3" />
+                          Injetar no Meta Ads
+                        </Button>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              )}
+            </motion.div>
           )}
         </CardContent>
       </Card>

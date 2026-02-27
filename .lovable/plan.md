@@ -1,93 +1,63 @@
 
 
-## Plano: Visual Forge + Advantage+ Fix + Image Hash Pipeline
+## Plano: Status de Campanhas + Log de Automação + Sync Global + Correções
 
-### 7 tarefas independentes
+### 1. Edge Function — Adicionar `campaign_id`, `effective_status` ao fetch
 
----
+**`supabase/functions/meta-ads-sync/index.ts`**
+- Adicionar `campaign_id` e `effective_status` aos fields do fetch de campanhas
+- Retornar esses campos no response para cada campaign row
+- O campo `effective_status` da Meta API retorna: `ACTIVE`, `PAUSED`, `DELETED`, `ARCHIVED`, etc.
 
-### Task 1: Fix Advantage+ targeting no `create-meta-campaign`
+### 2. `useMetaAds.ts` — Expor status real + invalidar cache ao trocar perfil
 
-**Arquivo:** `supabase/functions/create-meta-campaign/index.ts` (linhas 186-190)
+- Adicionar `effectiveStatus` ao `MetaAdsCampaign` e mapear para `Campaign.status` baseado no valor da API:
+  - `ACTIVE` → `active`
+  - `PAUSED` → `paused`
+  - Outros → `paused`
+- Remover lógica atual que infere status a partir de spend/ROAS
+- `queryKey` já inclui `adAccountId`, portanto trocar perfil já invalida cache automaticamente
 
-- Remover `adSetBody.targeting_optimization` e `adSetBody.targeting_automation` (top-level)
-- Mover para dentro de `targetingObj`: `targetingObj.targeting_automation = { advantage_audience: Number(1) }`
-- Garantir integer estrito, não string
+### 3. `mockData.ts` — Adicionar campo `effectiveStatus` ao Campaign type
 
-### Task 2: Image Hash upload + injected creative no `create-meta-campaign`
+- Adicionar `effectiveStatus?: string` ao type `Campaign`
 
-**Arquivo:** `supabase/functions/create-meta-campaign/index.ts`
+### 4. `CampaignsTable.tsx` — Coluna Status com badges + Toggle de filtro
 
-- Adicionar migration: coluna `injected_creative_url TEXT` na tabela `campaign_drafts`
-- Entre Step 2 (AdSet) e Step 3 (Ad), verificar `draft.injected_creative_url`
-- Se presente: `POST /{adAccountId}/adimages` com `{ image_url, access_token }` → capturar `image_hash`
-- Usar `image_hash` no `link_data.image_hash` do `object_story_spec`
-- Adicionar `degrees_of_freedom_spec: { creative_features_spec: { standard_enhancements: { status: "OPT_IN" } } }` no creative
+- Adicionar coluna "Status" com badges: `[ATIVO]` verde neon, `[PAUSADO]` cinza
+- Adicionar `Switch` toggle "Mostrar apenas ativas" acima da tabela
+- Filtrar campanhas com base no toggle
 
-### Task 3: Nova Edge Function `generate-master-prompt`
+### 5. Campanhas, Criativos, Simulador — Botão "Forçar Atualização" replicado
 
-**Arquivo:** `supabase/functions/generate-master-prompt/index.ts`
+- **`Campanhas.tsx`**: Adicionar `useClientProfiles` + `DateRangePicker` + botão Refresh com `forceRefetch()` e timestamp independente
+- **`Criativos.tsx`**: Adicionar botão Refresh com `forceRefetch()` e timestamp independente
+- **`Simulador.tsx`**: Consumir `useMetaAds` para pegar CPA e Ticket Médio reais; adicionar botão Refresh
 
-- Recebe `{ profileId, rawIdea, referenceImageUrl? }`
-- `fetchMasterContext(profileId)` para dossiê do avatar
-- Se `referenceImageUrl` presente: modo multimodal (envia imagem + texto ao Gemini)
-- System prompt: Diretor de Arte Sênior com regras imutáveis (4:5, dark background, hyper-realistic, neon accents, cinematic lighting)
-- Retorna APENAS texto do prompt em inglês, sem markdown/aspas
+### 6. `Configuracoes.tsx` — Limpar campos duplicados
 
-### Task 4: Refatorar `generate-hyper-creative`
+- A seção "Controle de Teto Financeiro" tem campos CPA Meta, Ticket Médio e Limite Escala duplicados. Remover a duplicação, mantendo apenas Budget Máximo + Frequência nessa seção.
 
-**Arquivo:** `supabase/functions/generate-hyper-creative/index.ts`
+### 7. `Index.tsx` — Indicador "Monitoramento Ativo" + Log de Automação
 
-- Aceitar `masterPrompt` como alternativa a `context`
-- Aceitar `referenceImageUrl` opcional para enviar como referência visual na geração de imagem
-- Se `masterPrompt` presente, pular Step 2 (prompt engineering interno) e usar direto
-- Se `referenceImageUrl` presente, incluir como content multimodal na chamada de geração
+- Adicionar pill pulsante no topo: `"● Monitoramento Ativo em Tempo Real"` com animação pulse neon
+- Criar seção "Log de Automação" abaixo das campanhas com entries geradas client-side:
+  - A cada renderização/refetch, gerar entry: `"Check realizado às HH:MM — ROI atual: X.XX — Nenhuma ação necessária"`
+  - Se alguma campanha tiver CPA > 2× meta com 0 vendas: `"AÇÃO: Campanha [Nome] sinalizada por CPA alto"`
+  - Armazenar últimos 20 logs em state local
 
-### Task 5: Refatorar `CreativeFactory.tsx` → Visual Forge
+### 8. Não necessita migração SQL
 
-**Arquivo:** `src/components/CreativeFactory.tsx`
+Budget frequency e budget_maximo já existem no schema. Nenhuma alteração de banco necessária.
 
-Rebrand + fluxo de 2 etapas + drop zone:
-
-- Título: "⚒️ Visual Forge (Diretor de Arte IA)"
-- **Drop Zone**: Área drag & drop para imagem de referência (JPG/PNG/WEBP), borda `border-gray-700`, bg `bg-gray-900/30`, brilho neon ao arrastar. Upload ao bucket `creative-assets`, guarda URL no state.
-- **Campo 1**: Input "Qual é a ideia da campanha?"
-- **Botão 1**: "🧠 Elaborar Direção de Arte" → chama `generate-master-prompt` (com `referenceImageUrl` se existir)
-- **Campo 2**: Textarea editável (`bg-gray-900`, `min-h-[200px]`), prompt mestre em inglês. Skeleton loader pulsante enquanto elabora.
-- **Slider quantidade** mantido
-- **Botão 2**: "🎨 Forjar Criativo (Gerar Imagem)" → envia Campo 2 como `masterPrompt` + `referenceImageUrl` para `generate-hyper-creative`
-- Progress bar com "Renderizando fotorrealismo e aplicando paleta de alta conversão..."
-
-### Task 6: Frontend `LancarCampanha.tsx` — Ler criativo injetado
-
-**Arquivo:** `src/pages/LancarCampanha.tsx` (no `handlePublish`, linhas 217-228)
-
-- Antes do insert, ler `localStorage` key `mtx_injected_creative_{profileId}`
-- Se existir, extrair `url` e passar como `injected_creative_url` no insert do draft
-- Limpar localStorage após uso
-
-### Task 7: Config
-
-**Arquivo:** `supabase/config.toml` — Adicionar:
-```toml
-[functions.generate-master-prompt]
-verify_jwt = false
-
-[functions.generate-hyper-creative]
-verify_jwt = false
-```
-
----
-
-### Arquivos
-
-| Arquivo | Tipo |
-|---|---|
-| `supabase/functions/generate-master-prompt/index.ts` | Novo |
-| `supabase/functions/generate-hyper-creative/index.ts` | Editar |
-| `supabase/functions/create-meta-campaign/index.ts` | Editar |
-| `src/components/CreativeFactory.tsx` | Editar (rewrite) |
-| `src/pages/LancarCampanha.tsx` | Editar |
-| `supabase/config.toml` | Editar |
-| Migration SQL | Novo (`injected_creative_url` column) |
+### Arquivos modificados
+- `supabase/functions/meta-ads-sync/index.ts` — campos effective_status
+- `src/lib/mockData.ts` — type Campaign atualizado  
+- `src/hooks/useMetaAds.ts` — mapear status real
+- `src/components/CampaignsTable.tsx` — badges status + toggle filtro
+- `src/pages/Campanhas.tsx` — botão refresh + profiles
+- `src/pages/Criativos.tsx` — botão refresh
+- `src/pages/Simulador.tsx` — dados reais + botão refresh
+- `src/pages/Index.tsx` — indicador pulse + log de automação
+- `src/pages/Configuracoes.tsx` — remover campos duplicados
 

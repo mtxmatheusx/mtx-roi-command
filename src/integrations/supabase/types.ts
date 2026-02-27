@@ -24,6 +24,7 @@ export type Database = {
           daily_budget: number
           error_message: string | null
           id: string
+          injected_creative_url: string | null
           meta_ad_id: string | null
           meta_adset_id: string | null
           meta_campaign_id: string | null
@@ -43,6 +44,7 @@ export type Database = {
           daily_budget?: number
           error_message?: string | null
           id?: string
+          injected_creative_url?: string | null
           meta_ad_id?: string | null
           meta_adset_id?: string | null
           meta_campaign_id?: string | null
@@ -62,6 +64,7 @@ export type Database = {
           daily_budget?: number
           error_message?: string | null
           id?: string
+          injected_creative_url?: string | null
           meta_ad_id?: string | null
           meta_adset_id?: string | null
           meta_campaign_id?: string | null

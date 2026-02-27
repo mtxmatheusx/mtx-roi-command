@@ -1,0 +1,1 @@
+ALTER TABLE public.campaign_drafts ADD COLUMN injected_creative_url TEXT DEFAULT NULL;
