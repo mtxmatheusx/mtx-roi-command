@@ -227,6 +227,27 @@ serve(async (req) => {
     steps.push(`Conjunto criado: ${metaAdSetId}`);
     await supabase.from("campaign_drafts").update({ meta_adset_id: metaAdSetId }).eq("id", draftId);
 
+    // Step 2.5: Upload injected creative image to Meta (if present)
+    let imageHash: string | null = null;
+    const injectedUrl = draft.injected_creative_url;
+    if (injectedUrl) {
+      try {
+        const imgUploadRes = await fetch(`${META_API}/${adAccountId}/adimages`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url: injectedUrl, access_token: accessToken }),
+        });
+        const imgUploadData = await imgUploadRes.json();
+        if (imgUploadData.images) {
+          const firstKey = Object.keys(imgUploadData.images)[0];
+          imageHash = imgUploadData.images[firstKey]?.hash || null;
+          if (imageHash) steps.push(`Image hash obtido: ${imageHash.substring(0, 12)}...`);
+        }
+      } catch (imgErr) {
+        console.warn("Image hash upload failed:", imgErr);
+      }
+    }
+
     // Step 3: Create Ad (creative inline)
     const pageId = profile?.page_id;
     if (!pageId || pageId.trim() === "") {
@@ -240,22 +261,29 @@ serve(async (req) => {
     const ctaType = /compre|shop/i.test(ctaRaw) ? "SHOP_NOW" : "LEARN_MORE";
     const linkUrl = (Array.isArray(profile?.product_urls) && profile.product_urls.length > 0) ? profile.product_urls[0] : "https://example.com";
 
+    const linkData: Record<string, unknown> = {
+      message: selectedCopy?.primary_text || "Descubra como transformar seus resultados",
+      link: linkUrl,
+      name: selectedCopy?.headline || draft.campaign_name,
+      call_to_action: { type: ctaType, value: { link: linkUrl } },
+    };
+    if (imageHash) linkData.image_hash = imageHash;
+
+    const creativeSpec: Record<string, unknown> = {
+      object_story_spec: { page_id: pageId, link_data: linkData },
+    };
+    if (imageHash) {
+      creativeSpec.degrees_of_freedom_spec = {
+        creative_features_spec: { standard_enhancements: { enroll_status: "OPT_IN" } },
+      };
+    }
+
     const adBody: Record<string, unknown> = {
       name: `${draft.campaign_name} - Anúncio 01`,
       adset_id: metaAdSetId,
       status: "PAUSED",
       access_token: accessToken,
-      creative: {
-        object_story_spec: {
-          page_id: pageId,
-          link_data: {
-            message: selectedCopy?.primary_text || "Descubra como transformar seus resultados",
-            link: linkUrl,
-            name: selectedCopy?.headline || draft.campaign_name,
-            call_to_action: { type: ctaType, value: { link: linkUrl } },
-          },
-        },
-      },
+      creative: creativeSpec,
     };
 
     const adRes = await fetch(`${META_API}/${adAccountId}/ads`, {

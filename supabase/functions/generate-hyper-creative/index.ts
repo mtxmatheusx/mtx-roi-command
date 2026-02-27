@@ -90,12 +90,18 @@ Generate ONLY the image prompt, nothing else. Make it specific, vivid, and produ
     for (let i = 0; i < clampedQty; i++) {
       const variation = clampedQty > 1 ? ` Variation ${i + 1} of ${clampedQty} - slightly different angle, lighting, or composition.` : "";
 
+      // Build multimodal content if reference image provided
+      const messageContent: any[] = [{ type: "text", text: imagePrompt + variation }];
+      if (referenceImageUrl) {
+        messageContent.push({ type: "image_url", image_url: { url: referenceImageUrl } });
+      }
+
       const imgResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
         headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
         body: JSON.stringify({
           model: "google/gemini-2.5-flash-image",
-          messages: [{ role: "user", content: imagePrompt + variation }],
+          messages: [{ role: "user", content: referenceImageUrl ? messageContent : imagePrompt + variation }],
           modalities: ["image", "text"],
         }),
       });

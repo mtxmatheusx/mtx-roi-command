@@ -53,3 +53,9 @@ verify_jwt = false
 
 [functions.daily-closing]
 verify_jwt = false
+
+[functions.generate-master-prompt]
+verify_jwt = false
+
+[functions.generate-hyper-creative]
+verify_jwt = false
