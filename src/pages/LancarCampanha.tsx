@@ -283,7 +283,7 @@ export default function LancarCampanha() {
           rollback: result.rollback || false,
         });
       } else {
-        addLog("Campanha criada com sucesso!", "done");
+        addLog("🚀 Campanha Destravada: Público Advantage+ configurado e limites de idade ajustados.", "done");
         if (result.meta_campaign_id) addLog(`ID: ${result.meta_campaign_id}`, "done");
         setPublishStep("Campanha publicada com sucesso!");
         setPublishProgress(100);
