@@ -26,3 +26,15 @@ verify_jwt = false
 
 [functions.agency-alerts]
 verify_jwt = false
+
+[functions.kill-switch]
+verify_jwt = false
+
+[functions.auto-guardian]
+verify_jwt = false
+
+[functions.auto-scale]
+verify_jwt = false
+
+[functions.generate-vsl]
+verify_jwt = false

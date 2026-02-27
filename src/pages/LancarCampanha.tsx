@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import AppLayout from "@/components/AppLayout";
+import ActiveProfileHeader from "@/components/ActiveProfileHeader";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +10,10 @@ import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Rocket, Brain, ChevronDown, CheckCircle2, XCircle, Clock, Loader2, ExternalLink, AlertTriangle, Sparkles, Image as ImageIcon, Video } from "lucide-react";
 import { useClientProfiles } from "@/hooks/useClientProfiles";
 import { useMetaAds } from "@/hooks/useMetaAds";
@@ -77,6 +82,7 @@ export default function LancarCampanha() {
   const [reasoningOpen, setReasoningOpen] = useState(false);
   const [creativeBrain, setCreativeBrain] = useState<{ recommendation: any; total_assets: number; total_campaigns_analyzed?: number } | null>(null);
   const [isChoosingCreative, setIsChoosingCreative] = useState(false);
+  const [confirmPublishOpen, setConfirmPublishOpen] = useState(false);
 
   // Load draft history filtered by profile
   useEffect(() => {
@@ -268,7 +274,21 @@ export default function LancarCampanha() {
 
   return (
     <AppLayout>
+      <ActiveProfileHeader />
       <div className="space-y-6">
+        {/* Block if no profile */}
+        {!activeProfile && (
+          <div className="relative">
+            <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-10 flex items-center justify-center rounded-lg">
+              <div className="text-center p-8">
+                <AlertTriangle className="w-12 h-12 text-amber-400 mx-auto mb-3" />
+                <p className="text-lg font-semibold">⚠️ Selecione um cliente</p>
+                <p className="text-sm text-muted-foreground mt-1">Selecione um cliente no topo da página para carregar o contexto e as credenciais.</p>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold flex items-center gap-2">
@@ -668,7 +688,7 @@ export default function LancarCampanha() {
 
             {!publishResult && (
               <div className="flex gap-3">
-                <Button onClick={handlePublish} disabled={isPublishing} className="gap-2 bg-neon-green/90 hover:bg-neon-green text-background font-bold">
+                <Button onClick={() => setConfirmPublishOpen(true)} disabled={isPublishing || !activeProfile} className="gap-2 bg-neon-green/90 hover:bg-neon-green text-background font-bold">
                   {isPublishing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Rocket className="w-4 h-4" />}
                   Aprovar Execução
                 </Button>
@@ -676,6 +696,51 @@ export default function LancarCampanha() {
                 <Button variant="ghost" onClick={() => setStep(2)}>Voltar</Button>
               </div>
             )}
+
+            {/* Confirmation Modal */}
+            <AlertDialog open={confirmPublishOpen} onOpenChange={setConfirmPublishOpen}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle className="flex items-center gap-2">
+                    <Rocket className="w-5 h-5 text-primary" />
+                    🚀 Resumo da Execução
+                  </AlertDialogTitle>
+                  <AlertDialogDescription className="space-y-3 text-left">
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div>
+                        <p className="text-muted-foreground text-xs">Cliente</p>
+                        <p className="font-semibold text-foreground">{activeProfile?.name || "—"}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-xs">Conta Meta</p>
+                        <p className="font-semibold text-foreground font-mono">{activeProfile?.ad_account_id}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-xs">Orçamento Diário</p>
+                        <p className="font-semibold text-foreground">R$ {dailyBudget.toLocaleString("pt-BR")}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-xs">Objetivo</p>
+                        <p className="font-semibold text-foreground">{objectiveLabels[objective]}</p>
+                      </div>
+                    </div>
+                    {draft && (
+                      <div className="border-t border-border pt-3">
+                        <p className="text-muted-foreground text-xs mb-1">Copy Selecionada</p>
+                        <p className="text-sm font-semibold text-foreground">{draft.copy_options[selectedCopyIdx]?.headline}</p>
+                      </div>
+                    )}
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction onClick={() => { setConfirmPublishOpen(false); handlePublish(); }} className="gap-2 bg-neon-green/90 hover:bg-neon-green text-background font-bold">
+                    <Rocket className="w-4 h-4" />
+                    Confirmar e Subir
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
 
             {publishResult && (
               <Button onClick={resetWizard} variant="outline">Criar Nova Campanha</Button>

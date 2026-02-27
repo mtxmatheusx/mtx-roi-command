@@ -541,7 +541,7 @@ export default function Configuracoes() {
             </div>
 
             <h4 className="text-sm font-semibold mb-3 text-muted-foreground uppercase tracking-wide">Controle de Teto Financeiro</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
               <div className="space-y-2">
                 <Label htmlFor="budgetMaximo">Valor do Limite (R$)</Label>
                 <Input id="budgetMaximo" type="number" min="0" step="1" value={form.budgetMaximo} onChange={(e) => handleChange("budgetMaximo", e.target.value)} />
@@ -559,6 +559,36 @@ export default function Configuracoes() {
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-muted-foreground">Período de acumulação do teto</p>
+              </div>
+            </div>
+
+            <Separator className="my-4" />
+
+            <h4 className="text-sm font-semibold mb-3 text-muted-foreground uppercase tracking-wide">Guardião Autônomo & Auto-Scale</h4>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="cpaMaxToleravel">CPA Máximo Tolerável (R$)</Label>
+                <Input id="cpaMaxToleravel" type="number" min="0" step="1" value={(activeProfile as any)?.cpa_max_toleravel ?? 0} onChange={async (e) => {
+                  if (!activeProfile) return;
+                  await updateProfile({ id: activeProfile.id, cpa_max_toleravel: Number(e.target.value) } as any);
+                }} />
+                <p className="text-xs text-muted-foreground">0 = desativado. Pausa campanhas se CPA &gt; 115% deste valor</p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="roasMinEscala">ROAS Mínimo para Escala</Label>
+                <Input id="roasMinEscala" type="number" min="0" step="0.1" value={(activeProfile as any)?.roas_min_escala ?? 0} onChange={async (e) => {
+                  if (!activeProfile) return;
+                  await updateProfile({ id: activeProfile.id, roas_min_escala: Number(e.target.value) } as any);
+                }} />
+                <p className="text-xs text-muted-foreground">0 = desativado. Escala +20% se ROAS &gt; este valor em 48h</p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="tetoDiarioEscala">Teto Máximo Diário (R$)</Label>
+                <Input id="tetoDiarioEscala" type="number" min="0" step="1" value={(activeProfile as any)?.teto_diario_escala ?? 0} onChange={async (e) => {
+                  if (!activeProfile) return;
+                  await updateProfile({ id: activeProfile.id, teto_diario_escala: Number(e.target.value) } as any);
+                }} />
+                <p className="text-xs text-muted-foreground">Orçamento máximo por adset após escala automática</p>
               </div>
             </div>
           </CardContent>

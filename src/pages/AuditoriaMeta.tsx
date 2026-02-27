@@ -1,5 +1,6 @@
 import { useState } from "react";
 import AppLayout from "@/components/AppLayout";
+import ActiveProfileHeader from "@/components/ActiveProfileHeader";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -111,6 +112,7 @@ export default function AuditoriaMeta() {
 
   return (
     <AppLayout>
+      <ActiveProfileHeader />
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
