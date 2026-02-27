@@ -1,20 +1,22 @@
 import { NavLink as RouterNavLink } from "react-router-dom";
 import { BarChart3, Zap, Target, ImageIcon, Settings, LogOut, Brain, Rocket, Shield, Building2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useTranslation } from "react-i18next";
 import ProfileSelector from "@/components/ProfileSelector";
-
-const navItems = [
-  { to: "/", label: "Dashboard", icon: BarChart3 },
-  { to: "/campanhas", label: "Campanhas", icon: Target },
-  { to: "/diagnostico", label: "Diagnóstico IA", icon: Brain },
-  { to: "/lancar-campanha", label: "Lançar Campanha", icon: Rocket },
-  { to: "/simulador", label: "Simulador", icon: Zap },
-  { to: "/criativos", label: "Criativos", icon: ImageIcon },
-  { to: "/auditoria-meta", label: "Auditoria Meta AI", icon: Shield },
-];
 
 export default function AppSidebar() {
   const { signOut } = useAuth();
+  const { t } = useTranslation();
+
+  const navItems = [
+    { to: "/", label: t("nav.dashboard"), icon: BarChart3 },
+    { to: "/campanhas", label: t("nav.campaigns"), icon: Target },
+    { to: "/diagnostico", label: t("nav.diagnostic"), icon: Brain },
+    { to: "/lancar-campanha", label: t("nav.launchCampaign"), icon: Rocket },
+    { to: "/simulador", label: t("nav.simulator"), icon: Zap },
+    { to: "/criativos", label: t("nav.creatives"), icon: ImageIcon },
+    { to: "/auditoria-meta", label: t("nav.auditMeta"), icon: Shield },
+  ];
 
   return (
     <aside className="fixed left-0 top-0 h-screen w-64 bg-card border-r border-border flex flex-col z-50">
@@ -37,7 +39,7 @@ export default function AppSidebar() {
           }
         >
           <Building2 className="w-4 h-4" />
-          Visão da Agência
+          {t("nav.agencyView")}
         </RouterNavLink>
       </div>
       <ProfileSelector />
@@ -72,14 +74,14 @@ export default function AppSidebar() {
           }
         >
           <Settings className="w-4 h-4" />
-          Configurações
+          {t("nav.settings")}
         </RouterNavLink>
         <button
           onClick={signOut}
           className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 w-full text-muted-foreground hover:text-destructive hover:bg-destructive/10"
         >
           <LogOut className="w-4 h-4" />
-          Sair
+          {t("nav.logout")}
         </button>
       </div>
     </aside>

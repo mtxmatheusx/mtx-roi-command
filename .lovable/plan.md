@@ -1,98 +1,63 @@
 
 
-## Plano: VSL JSON + Notion Board + Script Vault + i18n
+## Plano: Status de Campanhas + Log de Automação + Sync Global + Correções
 
-Este plano cobre as 3 solicitações: reestruturação do VSL para JSON, Script Vault com auto-save, e internacionalização.
+### 1. Edge Function — Adicionar `campaign_id`, `effective_status` ao fetch
 
----
+**`supabase/functions/meta-ads-sync/index.ts`**
+- Adicionar `campaign_id` e `effective_status` aos fields do fetch de campanhas
+- Retornar esses campos no response para cada campaign row
+- O campo `effective_status` da Meta API retorna: `ACTIVE`, `PAUSED`, `DELETED`, `ARCHIVED`, etc.
 
-### Fase 1: DB Migration - Adicionar colunas ao `vsl_scripts`
+### 2. `useMetaAds.ts` — Expor status real + invalidar cache ao trocar perfil
 
-Adicionar `title` (text, default '') e `content_json` (jsonb, nullable) à tabela existente `vsl_scripts`.
+- Adicionar `effectiveStatus` ao `MetaAdsCampaign` e mapear para `Campaign.status` baseado no valor da API:
+  - `ACTIVE` → `active`
+  - `PAUSED` → `paused`
+  - Outros → `paused`
+- Remover lógica atual que infere status a partir de spend/ROAS
+- `queryKey` já inclui `adAccountId`, portanto trocar perfil já invalida cache automaticamente
 
----
+### 3. `mockData.ts` — Adicionar campo `effectiveStatus` ao Campaign type
 
-### Fase 2: Edge Function `generate-vsl` - Output JSON
+- Adicionar `effectiveStatus?: string` ao type `Campaign`
 
-**Arquivo:** `supabase/functions/generate-vsl/index.ts`
+### 4. `CampaignsTable.tsx` — Coluna Status com badges + Toggle de filtro
 
-- Substituir as regras de formato Markdown por instrução JSON estrita:
-  ```
-  Retorne EXCLUSIVAMENTE um JSON: { "titulo": "...", "cenas": [{ "tempo": "0-5s", "visual": "...", "audio": "..." }] }
-  ```
-- Desabilitar streaming (não faz sentido para JSON) — usar resposta não-streaming para garantir JSON válido
-- Salvar no DB com `title` = titulo do JSON e `content_json` = JSON completo, além do `script_content` como fallback texto
+- Adicionar coluna "Status" com badges: `[ATIVO]` verde neon, `[PAUSADO]` cinza
+- Adicionar `Switch` toggle "Mostrar apenas ativas" acima da tabela
+- Filtrar campanhas com base no toggle
 
-**Decisão de design:** Manter streaming mas acumular o JSON completo. Após stream completo, parsear o JSON e salvar `content_json` + `title`. O frontend parseia o JSON final após streaming terminar.
+### 5. Campanhas, Criativos, Simulador — Botão "Forçar Atualização" replicado
 
----
+- **`Campanhas.tsx`**: Adicionar `useClientProfiles` + `DateRangePicker` + botão Refresh com `forceRefetch()` e timestamp independente
+- **`Criativos.tsx`**: Adicionar botão Refresh com `forceRefetch()` e timestamp independente
+- **`Simulador.tsx`**: Consumir `useMetaAds` para pegar CPA e Ticket Médio reais; adicionar botão Refresh
 
-### Fase 3: Componente `VSLScriptBoard`
+### 6. `Configuracoes.tsx` — Limpar campos duplicados
 
-**Arquivo novo:** `src/components/VSLScriptBoard.tsx`
+- A seção "Controle de Teto Financeiro" tem campos CPA Meta, Ticket Médio e Limite Escala duplicados. Remover a duplicação, mantendo apenas Budget Máximo + Frequência nessa seção.
 
-- Recebe `{ cenas: Array<{tempo, visual, audio}>, titulo: string }` como props
-- Renderiza lista vertical de cards de cena:
-  - Badge `tempo` no topo
-  - Grid 2 colunas: VISUAL (bg mais escuro, cinza claro) | AUDIO (branco, fonte maior)
-  - `whitespace-pre-wrap` para quebras de linha
-- Botões de ação no topo:
-  - "Copiar Roteiro Completo" — clipboard API, formato `[tempo] VISUAL: ... | AUDIO: ...`
-  - "Baixar como TXT" — gera blob e download
-- Animação fade-in nos cards com framer-motion
+### 7. `Index.tsx` — Indicador "Monitoramento Ativo" + Log de Automação
 
----
+- Adicionar pill pulsante no topo: `"● Monitoramento Ativo em Tempo Real"` com animação pulse neon
+- Criar seção "Log de Automação" abaixo das campanhas com entries geradas client-side:
+  - A cada renderização/refetch, gerar entry: `"Check realizado às HH:MM — ROI atual: X.XX — Nenhuma ação necessária"`
+  - Se alguma campanha tiver CPA > 2× meta com 0 vendas: `"AÇÃO: Campanha [Nome] sinalizada por CPA alto"`
+  - Armazenar últimos 20 logs em state local
 
-### Fase 4: Script Vault (Barra Lateral)
+### 8. Não necessita migração SQL
 
-**Arquivo:** `src/pages/Diagnostico.tsx` (aba VSL)
+Budget frequency e budget_maximo já existem no schema. Nenhuma alteração de banco necessária.
 
-- Layout grid 2 colunas na aba VSL: sidebar 25% + área principal 75%
-- Sidebar "Banco de Roteiros":
-  - Fetch `vsl_scripts` filtrado por `profile_id` com React Query
-  - Lista rolável com cards compactos (título + data)
-  - Clique carrega `content_json` diretamente no `VSLScriptBoard` (zero API call)
-  - Hover mostra ícone lixeira vermelha para deletar
-- Auto-save: após streaming completar e JSON ser parseado, INSERT automático + toast "Roteiro salvo no cofre" + invalidate query
-- Estado `selectedVaultId` para highlight do item selecionado
-
----
-
-### Fase 5: i18n com `react-i18next`
-
-**Instalar:** `react-i18next`, `i18next`
-
-**Arquivos novos:**
-- `src/i18n/index.ts` — config i18next com `lng` do localStorage, fallback `pt-BR`
-- `src/i18n/locales/pt-BR.json` — dicionário PT
-- `src/i18n/locales/en-US.json` — dicionário EN
-
-**Cobertura inicial (navegação + botões principais):**
-- `AppSidebar.tsx` — labels do menu
-- Botões: "Publicar Campanha", "Sugestão da IA", "Kill Switch", "Gerar Diagnóstico", "Gerar Script"
-- Cabeçalhos de tabelas
-
-**Seletor de idioma:**
-- Novo componente `LanguageSelector.tsx` — dropdown `PT ▾` / `EN ▾`, estilo dark mode
-- Inserido no `AppLayout.tsx` como header fixo no canto direito
-
-**Isolamento:** O idioma da UI NÃO afeta os prompts da IA. Os prompts continuam em PT-BR, ditados pelo dossiê do perfil.
-
----
-
-### Arquivos
-
-| Arquivo | Tipo | Descrição |
-|---|---|---|
-| Migration SQL | DB | Adicionar `title`, `content_json` ao `vsl_scripts` |
-| `supabase/functions/generate-vsl/index.ts` | Editar | Prompt JSON, salvar `content_json` + `title` |
-| `src/components/VSLScriptBoard.tsx` | Novo | Cards Notion-style para cenas |
-| `src/components/LanguageSelector.tsx` | Novo | Dropdown PT/EN |
-| `src/pages/Diagnostico.tsx` | Editar | Grid layout, vault sidebar, auto-save, usar VSLScriptBoard |
-| `src/i18n/index.ts` | Novo | Config i18next |
-| `src/i18n/locales/pt-BR.json` | Novo | Dicionário PT |
-| `src/i18n/locales/en-US.json` | Novo | Dicionário EN |
-| `src/components/AppSidebar.tsx` | Editar | Traduzir labels |
-| `src/components/AppLayout.tsx` | Editar | Inserir LanguageSelector |
-| `src/main.tsx` | Editar | Importar i18n config |
+### Arquivos modificados
+- `supabase/functions/meta-ads-sync/index.ts` — campos effective_status
+- `src/lib/mockData.ts` — type Campaign atualizado  
+- `src/hooks/useMetaAds.ts` — mapear status real
+- `src/components/CampaignsTable.tsx` — badges status + toggle filtro
+- `src/pages/Campanhas.tsx` — botão refresh + profiles
+- `src/pages/Criativos.tsx` — botão refresh
+- `src/pages/Simulador.tsx` — dados reais + botão refresh
+- `src/pages/Index.tsx` — indicador pulse + log de automação
+- `src/pages/Configuracoes.tsx` — remover campos duplicados
 

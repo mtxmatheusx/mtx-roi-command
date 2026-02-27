@@ -1,0 +1,63 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "campaigns": "Campanhas",
+    "diagnostic": "Diagnóstico IA",
+    "launchCampaign": "Lançar Campanha",
+    "simulator": "Simulador",
+    "creatives": "Criativos",
+    "auditMeta": "Auditoria Meta AI",
+    "settings": "Configurações",
+    "agencyView": "Visão da Agência",
+    "logout": "Sair"
+  },
+  "common": {
+    "loading": "Carregando...",
+    "generate": "Gerar",
+    "regenerate": "Regenerar",
+    "cancel": "Cancelar",
+    "confirm": "Confirmar",
+    "delete": "Excluir",
+    "copy": "Copiar",
+    "download": "Baixar",
+    "save": "Salvar",
+    "close": "Fechar"
+  },
+  "diagnostic": {
+    "title": "Diagnóstico da IA",
+    "subtitle": "Análise profunda das suas campanhas com frameworks Hormozi & StoryBrand",
+    "generateBtn": "Gerar Diagnóstico",
+    "analyzing": "Analisando...",
+    "noReport": "Nenhum diagnóstico gerado",
+    "noReportHint": "Clique em \"Gerar Diagnóstico\" para a IA analisar suas campanhas",
+    "reportTitle": "Relatório de Diagnóstico",
+    "mockWarning": "Dados mock detectados. Conecte sua conta Meta Ads em Configurações para análise real."
+  },
+  "vsl": {
+    "title": "Fábrica de VSL & Copy",
+    "subtitle": "Gere roteiros de alta conversão com Storybrand + Hormozi",
+    "directionTitle": "Direção Criativa",
+    "directionDesc": "Configure os parâmetros para guiar a IA na geração do roteiro.",
+    "angle": "Ângulo da Oferta",
+    "anglePlaceholder": "Ex: Medo de perder, Oportunidade",
+    "duration": "Tempo Desejado",
+    "tone": "Tom de Voz",
+    "generateBtn": "Gerar Script de Alta Conversão",
+    "generating": "Gerando roteiro...",
+    "noScript": "Nenhum roteiro gerado",
+    "noScriptHint": "Configure a direção criativa e clique em \"Gerar Script\"",
+    "scriptTitle": "Roteiro de Produção",
+    "vaultTitle": "Banco de Roteiros",
+    "vaultEmpty": "Nenhum roteiro salvo",
+    "savedToast": "💾 Roteiro salvo no cofre.",
+    "deletedToast": "🗑️ Roteiro excluído."
+  },
+  "killSwitch": {
+    "btn": "Pausar Operação",
+    "title": "Kill Switch"
+  },
+  "campaign": {
+    "publishBtn": "Publicar Campanha",
+    "aiSuggestion": "Sugestão da IA"
+  }
+}
