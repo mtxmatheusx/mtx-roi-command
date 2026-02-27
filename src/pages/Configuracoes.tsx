@@ -68,6 +68,7 @@ export default function Configuracoes() {
         name: activeProfile.name || "",
         adAccountId: activeProfile.ad_account_id || "act_",
         pixelId: activeProfile.pixel_id || "",
+        pageId: (activeProfile as any).page_id || "",
         cpaMeta: String(activeProfile.cpa_meta ?? 45),
         ticketMedio: String(activeProfile.ticket_medio ?? 697),
         limiteEscala: String(activeProfile.limite_escala ?? 15),
