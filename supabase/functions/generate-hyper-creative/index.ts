@@ -31,14 +31,21 @@ serve(async (req) => {
     }
 
     const { profile } = ctx;
-    const isPhysicalProduct = (profile.product_context || "").toLowerCase().match(/roupa|tecido|produto|loja|ecommerce|e-commerce|físico|camiseta|calça|sapato|acessório/);
 
-    // Step 2: Generate visual prompt via text AI
-    const artDirectionRules = isPhysicalProduct
-      ? `Focus on FABRIC TEXTURE and DRAMATIC STUDIO LIGHTING. Show the product being worn or displayed with cinematic depth of field. Emphasize material quality, stitching details, and premium feel.`
-      : `Focus on an AUTHORITY FIGURE (Hormozi/Brunson style) - confident pose, direct eye contact, pointing at camera or gesturing toward pain/solution. The person should embody success and expertise.`;
+    // If masterPrompt provided (from Visual Forge), skip internal prompt engineering
+    let imagePrompt: string;
+    if (masterPrompt.trim()) {
+      imagePrompt = masterPrompt.trim();
+      console.log("Using master prompt from Visual Forge:", imagePrompt.substring(0, 200));
+    } else {
+      // Legacy fallback: generate prompt internally
+      const isPhysicalProduct = (profile.product_context || "").toLowerCase().match(/roupa|tecido|produto|loja|ecommerce|e-commerce|físico|camiseta|calça|sapato|acessório/);
 
-    const promptEngPrompt = `You are an elite Art Director for performance marketing creatives. Based on the brand context below, generate a SINGLE detailed image generation prompt in English.
+      const artDirectionRules = isPhysicalProduct
+        ? `Focus on FABRIC TEXTURE and DRAMATIC STUDIO LIGHTING. Show the product being worn or displayed with cinematic depth of field. Emphasize material quality, stitching details, and premium feel.`
+        : `Focus on an AUTHORITY FIGURE (Hormozi/Brunson style) - confident pose, direct eye contact, pointing at camera or gesturing toward pain/solution. The person should embody success and expertise.`;
+
+      const promptEngPrompt = `You are an elite Art Director for performance marketing creatives. Based on the brand context below, generate a SINGLE detailed image generation prompt in English.
 
 BRAND CONTEXT:
 - Name: ${profile.name}
@@ -56,26 +63,26 @@ MANDATORY ART DIRECTION RULES (inject ALL of these):
 
 Generate ONLY the image prompt, nothing else. Make it specific, vivid, and production-ready. Maximum 200 words.`;
 
-    const promptResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [{ role: "user", content: promptEngPrompt }],
-      }),
-    });
+      const promptResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash",
+          messages: [{ role: "user", content: promptEngPrompt }],
+        }),
+      });
 
-    if (!promptResp.ok) {
-      if (promptResp.status === 429) return new Response(JSON.stringify({ error: "Rate limit exceeded. Try again later." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      if (promptResp.status === 402) return new Response(JSON.stringify({ error: "AI credits exhausted. Add funds." }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      throw new Error(`Prompt generation failed: ${promptResp.status}`);
+      if (!promptResp.ok) {
+        if (promptResp.status === 429) return new Response(JSON.stringify({ error: "Rate limit exceeded. Try again later." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        if (promptResp.status === 402) return new Response(JSON.stringify({ error: "AI credits exhausted. Add funds." }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        throw new Error(`Prompt generation failed: ${promptResp.status}`);
+      }
+
+      const promptData = await promptResp.json();
+      imagePrompt = promptData.choices?.[0]?.message?.content?.trim();
+      if (!imagePrompt) throw new Error("Failed to generate image prompt");
+      console.log("Generated image prompt:", imagePrompt.substring(0, 200));
     }
-
-    const promptData = await promptResp.json();
-    const imagePrompt = promptData.choices?.[0]?.message?.content?.trim();
-    if (!imagePrompt) throw new Error("Failed to generate image prompt");
-
-    console.log("Generated image prompt:", imagePrompt.substring(0, 200));
 
     // Step 3: Generate images
     const results: Array<{ url: string; file_name: string; asset_id: string }> = [];
