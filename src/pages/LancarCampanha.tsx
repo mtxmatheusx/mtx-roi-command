@@ -497,11 +497,14 @@ export default function LancarCampanha() {
                 )}
 
                 {publishResult && !publishResult.success && (
-                  <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-4">
+                  <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-4 space-y-2">
                     <p className="text-destructive font-semibold flex items-center gap-2">
                       <XCircle className="w-4 h-4" /> Erro na publicação
                     </p>
-                    <p className="text-xs text-muted-foreground mt-1">{publishResult.error}</p>
+                    <p className="text-xs text-muted-foreground whitespace-pre-line">{publishResult.error}</p>
+                    {publishResult.meta_campaign_id && (
+                      <p className="text-xs text-amber-400">⚠️ Campanha parcialmente criada (ID: {publishResult.meta_campaign_id}). Verifique no Gerenciador de Anúncios.</p>
+                    )}
                   </div>
                 )}
               </CardContent>
