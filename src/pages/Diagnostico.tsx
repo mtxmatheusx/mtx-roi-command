@@ -155,7 +155,11 @@ export default function Diagnostico() {
 
       if (!resp.ok) {
         const err = await resp.json().catch(() => ({ error: "Erro" }));
-        toast({ title: "Erro ao gerar VSL", description: err.error || `Erro ${resp.status}`, variant: "destructive" });
+        if (err.blocked) {
+          toast({ title: "⚠️ IA Bloqueada", description: err.error || "Preencha o Dossiê do Avatar nas Configurações.", variant: "destructive" });
+        } else {
+          toast({ title: "Erro ao gerar VSL", description: err.error || `Erro ${resp.status}`, variant: "destructive" });
+        }
         setVslLoading(false);
         return;
       }
