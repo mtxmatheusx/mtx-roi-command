@@ -188,9 +188,12 @@ export default function LancarCampanha() {
       }).select("id").single();
 
       if (insertErr || !inserted) throw new Error(insertErr?.message || "Erro ao salvar");
+      addLog("Rascunho salvo", "done");
 
+      addLog("Validando token e act_ID...", "pending");
       setPublishStep("Criando Campanha na Meta...");
       setPublishProgress(30);
+      addLog("Enviando payload para Meta API...", "pending");
 
       const { data: result, error: publishError } = await supabase.functions.invoke("create-meta-campaign", {
         body: { draftId: inserted.id },
