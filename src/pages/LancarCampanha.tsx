@@ -92,6 +92,7 @@ export default function LancarCampanha() {
   const [creativeBrain, setCreativeBrain] = useState<{ recommendation: any; total_assets: number; total_campaigns_analyzed?: number } | null>(null);
   const [isChoosingCreative, setIsChoosingCreative] = useState(false);
   const [confirmPublishOpen, setConfirmPublishOpen] = useState(false);
+  const [useAndromeda, setUseAndromeda] = useState(false);
 
   // Load draft history filtered by profile
   useEffect(() => {
