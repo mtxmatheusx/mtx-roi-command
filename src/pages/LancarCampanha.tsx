@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import AppLayout from "@/components/AppLayout";
 import ActiveProfileHeader from "@/components/ActiveProfileHeader";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -14,7 +14,10 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Rocket, Brain, ChevronDown, CheckCircle2, XCircle, Clock, Loader2, ExternalLink, AlertTriangle, Sparkles, Image as ImageIcon, Video, Trash2, Copy } from "lucide-react";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
+} from "@/components/ui/dialog";
+import { Rocket, Brain, ChevronDown, CheckCircle2, XCircle, Clock, Loader2, ExternalLink, AlertTriangle, Sparkles, Image as ImageIcon, Video, Trash2, Copy, Upload, X } from "lucide-react";
 import { useClientProfiles } from "@/hooks/useClientProfiles";
 import { useMetaAds } from "@/hooks/useMetaAds";
 import { supabase } from "@/integrations/supabase/client";
