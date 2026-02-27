@@ -7,6 +7,7 @@ const navItems = [
   { to: "/", label: "Dashboard", icon: BarChart3 },
   { to: "/campanhas", label: "Campanhas", icon: Target },
   { to: "/diagnostico", label: "Diagnóstico IA", icon: Brain },
+  { to: "/lancar-campanha", label: "Lançar Campanha", icon: Rocket },
   { to: "/simulador", label: "Simulador", icon: Zap },
   { to: "/criativos", label: "Criativos", icon: ImageIcon },
 ];
