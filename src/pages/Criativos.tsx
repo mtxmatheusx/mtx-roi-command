@@ -53,6 +53,9 @@ export default function CriativosPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [assetDescription, setAssetDescription] = useState("");
+  const [scrapeUrl, setScrapeUrl] = useState("");
+  const [isScraping, setIsScraping] = useState(false);
+  const [scrapeResult, setScrapeResult] = useState<{ total_found: number; total_saved: number } | null>(null);
 
   // Fetch creative assets from DB
   const { data: assets = [] } = useQuery({
