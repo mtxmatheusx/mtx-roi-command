@@ -13,6 +13,7 @@ import AuditoriaMeta from "./pages/AuditoriaMeta";
 import Configuracoes from "./pages/Configuracoes";
 import Diagnostico from "./pages/Diagnostico";
 import LancarCampanha from "./pages/LancarCampanha";
+import AgencyView from "./pages/AgencyView";
 import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
