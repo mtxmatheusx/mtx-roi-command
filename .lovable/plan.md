@@ -1,63 +1,75 @@
 
 
-## Plano: Status de Campanhas + Log de Automação + Sync Global + Correções
+## Plano: Fix Andromeda + Rollback + Limpeza + Clone & Scale
 
-### 1. Edge Function — Adicionar `campaign_id`, `effective_status` ao fetch
+### Fase 1: Fix do Payload Andromeda + Auto-Rollback (`create-meta-campaign`)
 
-**`supabase/functions/meta-ads-sync/index.ts`**
-- Adicionar `campaign_id` e `effective_status` aos fields do fetch de campanhas
-- Retornar esses campos no response para cada campaign row
-- O campo `effective_status` da Meta API retorna: `ACTIVE`, `PAUSED`, `DELETED`, `ARCHIVED`, etc.
+**Arquivo:** `supabase/functions/create-meta-campaign/index.ts`
 
-### 2. `useMetaAds.ts` — Expor status real + invalidar cache ao trocar perfil
+1. **Injetar `targeting_automation`** no payload do AdSet quando Andromeda estiver ativo:
+   ```json
+   "targeting_automation": { "advantage_audience": 1 }
+   ```
+   Colocar dentro de `adSetBody` ao lado de `targeting_optimization`.
 
-- Adicionar `effectiveStatus` ao `MetaAdsCampaign` e mapear para `Campaign.status` baseado no valor da API:
-  - `ACTIVE` → `active`
-  - `PAUSED` → `paused`
-  - Outros → `paused`
-- Remover lógica atual que infere status a partir de spend/ROAS
-- `queryKey` já inclui `adAccountId`, portanto trocar perfil já invalida cache automaticamente
+2. **Rollback automático** — Se o Step 2 (AdSet) ou Step 3 (Ad) falhar, fazer `DELETE /{metaCampaignId}?access_token=...` para apagar a campanha órfã. Atualizar o `error_message` para incluir `"Campanha parcial apagada."`.
 
-### 3. `mockData.ts` — Adicionar campo `effectiveStatus` ao Campaign type
+3. **Revalidação**: Confirmar que `is_adset_budget_sharing_enabled: false` (linha 117) e `page_id` (linha 243) continuam injetados — já estão corretos.
 
-- Adicionar `effectiveStatus?: string` ao type `Campaign`
+---
 
-### 4. `CampaignsTable.tsx` — Coluna Status com badges + Toggle de filtro
+### Fase 2: Edge Function `delete-meta-campaign` (Nova)
 
-- Adicionar coluna "Status" com badges: `[ATIVO]` verde neon, `[PAUSADO]` cinza
-- Adicionar `Switch` toggle "Mostrar apenas ativas" acima da tabela
-- Filtrar campanhas com base no toggle
+**Arquivo:** `supabase/functions/delete-meta-campaign/index.ts`
 
-### 5. Campanhas, Criativos, Simulador — Botão "Forçar Atualização" replicado
+Recebe `{ draftId }`. Lógica:
+1. Buscar draft do Supabase (validar `user_id`)
+2. Se `meta_campaign_id` presente, fazer `DELETE /{meta_campaign_id}?access_token=...` na Meta API
+3. Deletar registro do `campaign_drafts` no Supabase
+4. Retornar sucesso ou erro detalhado
 
-- **`Campanhas.tsx`**: Adicionar `useClientProfiles` + `DateRangePicker` + botão Refresh com `forceRefetch()` e timestamp independente
-- **`Criativos.tsx`**: Adicionar botão Refresh com `forceRefetch()` e timestamp independente
-- **`Simulador.tsx`**: Consumir `useMetaAds` para pegar CPA e Ticket Médio reais; adicionar botão Refresh
+---
 
-### 6. `Configuracoes.tsx` — Limpar campos duplicados
+### Fase 3: Edge Function `clone-scale-campaign` (Nova)
 
-- A seção "Controle de Teto Financeiro" tem campos CPA Meta, Ticket Médio e Limite Escala duplicados. Remover a duplicação, mantendo apenas Budget Máximo + Frequência nessa seção.
+**Arquivo:** `supabase/functions/clone-scale-campaign/index.ts`
 
-### 7. `Index.tsx` — Indicador "Monitoramento Ativo" + Log de Automação
+Recebe `{ draftId }`. Lógica:
+1. Buscar draft + profile (validar `user_id`, status `published`)
+2. Ler campanha original via `GET /{meta_campaign_id}?fields=name,objective,status`
+3. Ler AdSet via `GET /{meta_adset_id}?fields=name,daily_budget,targeting,optimization_goal,billing_event,bid_strategy,promoted_object`
+4. Ler Ad via `GET /{meta_ad_id}?fields=name,creative`
+5. Recriar campanha com nome `[SCALED 🚀] - {nome_original}`
+6. Recriar AdSet com `daily_budget * 1.20`
+7. Recriar Ad com mesmo creative
+8. Salvar novo registro em `campaign_drafts` com status `published` e IDs da Meta
 
-- Adicionar pill pulsante no topo: `"● Monitoramento Ativo em Tempo Real"` com animação pulse neon
-- Criar seção "Log de Automação" abaixo das campanhas com entries geradas client-side:
-  - A cada renderização/refetch, gerar entry: `"Check realizado às HH:MM — ROI atual: X.XX — Nenhuma ação necessária"`
-  - Se alguma campanha tiver CPA > 2× meta com 0 vendas: `"AÇÃO: Campanha [Nome] sinalizada por CPA alto"`
-  - Armazenar últimos 20 logs em state local
+---
 
-### 8. Não necessita migração SQL
+### Fase 4: Frontend (`LancarCampanha.tsx`)
 
-Budget frequency e budget_maximo já existem no schema. Nenhuma alteração de banco necessária.
+#### 4a. Botão de Limpeza (Lixeira) no Histórico
+- Adicionar coluna "Ações" na tabela de histórico
+- Para drafts com status `failed`: ícone `Trash2` com hover vermelho
+- Ao clicar: abrir `AlertDialog` de confirmação com ID da campanha
+- Ao confirmar: chamar `delete-meta-campaign`, mostrar spinner, remover linha reativamente, toast verde
 
-### Arquivos modificados
-- `supabase/functions/meta-ads-sync/index.ts` — campos effective_status
-- `src/lib/mockData.ts` — type Campaign atualizado  
-- `src/hooks/useMetaAds.ts` — mapear status real
-- `src/components/CampaignsTable.tsx` — badges status + toggle filtro
-- `src/pages/Campanhas.tsx` — botão refresh + profiles
-- `src/pages/Criativos.tsx` — botão refresh
-- `src/pages/Simulador.tsx` — dados reais + botão refresh
-- `src/pages/Index.tsx` — indicador pulse + log de automação
-- `src/pages/Configuracoes.tsx` — remover campos duplicados
+#### 4b. Botão Clone & Scale no Histórico
+- Para drafts com status `published`: ícone `Copy` em verde neon
+- Ao clicar: abrir `AlertDialog` com nome, orçamento atual e projetado (+20%)
+- Ao confirmar: chamar `clone-scale-campaign`, mostrar spinner, adicionar nova linha reativamente, toast verde
+
+#### 4c. Atualizar DraftRecord
+- Adicionar `meta_adset_id` e `meta_ad_id` ao tipo para suportar clone
+
+---
+
+### Arquivos
+
+| Arquivo | Tipo | Descrição |
+|---|---|---|
+| `supabase/functions/create-meta-campaign/index.ts` | Editar | `targeting_automation` + rollback automático |
+| `supabase/functions/delete-meta-campaign/index.ts` | Novo | Deleção dupla Meta + Supabase |
+| `supabase/functions/clone-scale-campaign/index.ts` | Novo | Leitura + duplicação + escala +20% |
+| `src/pages/LancarCampanha.tsx` | Editar | Coluna Ações com Lixeira + Clone, modais, feedback |
 
