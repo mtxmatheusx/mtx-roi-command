@@ -73,7 +73,7 @@ export default function Diagnostico() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
-        body: JSON.stringify({ messages: [{ role: "user", content: userMessage }], campaignData, mode: "diagnostico" }),
+        body: JSON.stringify({ messages: [{ role: "user", content: userMessage }], campaignData, mode: "diagnostico", profileId: activeProfile?.id }),
       });
 
       if (!resp.ok) {
