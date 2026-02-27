@@ -82,6 +82,7 @@ export type Database = {
       client_profiles: {
         Row: {
           ad_account_id: string
+          avatar_dossier: string | null
           budget_frequency: string
           budget_maximo: number
           cpa_max_toleravel: number
@@ -105,6 +106,7 @@ export type Database = {
         }
         Insert: {
           ad_account_id?: string
+          avatar_dossier?: string | null
           budget_frequency?: string
           budget_maximo?: number
           cpa_max_toleravel?: number
@@ -128,6 +130,7 @@ export type Database = {
         }
         Update: {
           ad_account_id?: string
+          avatar_dossier?: string | null
           budget_frequency?: string
           budget_maximo?: number
           cpa_max_toleravel?: number
@@ -229,6 +232,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      knowledge_base: {
+        Row: {
+          created_at: string
+          doc_type: string
+          extracted_text: string | null
+          field_key: string | null
+          file_name: string | null
+          file_url: string | null
+          id: string
+          profile_id: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          doc_type?: string
+          extracted_text?: string | null
+          field_key?: string | null
+          file_name?: string | null
+          file_url?: string | null
+          id?: string
+          profile_id: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          doc_type?: string
+          extracted_text?: string | null
+          field_key?: string | null
+          file_name?: string | null
+          file_url?: string | null
+          id?: string
+          profile_id?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       vsl_scripts: {
         Row: {

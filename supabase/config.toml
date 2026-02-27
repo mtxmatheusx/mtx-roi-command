@@ -38,3 +38,9 @@ verify_jwt = false
 
 [functions.generate-vsl]
 verify_jwt = false
+
+[functions.digest-company-context]
+verify_jwt = false
+
+[functions.ai-campaign-draft]
+verify_jwt = false
