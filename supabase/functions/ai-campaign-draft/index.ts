@@ -87,6 +87,17 @@ Você DEVE gerar exatamente 3 variações de copy, cada uma com um copy_type esp
 - Padrão: "[OBJETIVO] | [PRODUTO/OFERTA] | [PÚBLICO] | [DATA]"
 - Exemplo: "VENDAS | Curso Excel Pro | Lookalike 1% | 2026-03"
 
+## MOTOR DE SEGMENTAÇÃO ANDROMEDA (OBRIGATÓRIO)
+
+Atuando como Estrategista Sênior em 2026, traduza o Dossiê do Avatar para os parâmetros do algoritmo Andromeda da Meta Ads. Retorne o campo "andromeda_targeting" contendo:
+
+- **age_min / age_max:** A faixa etária central do comprador (ex: 25 a 45). Números inteiros.
+- **genders:** O gênero predominante como array de inteiros ([0] = todos, [1] = masculino, [2] = feminino). Use [0] se não houver indicação clara.
+- **semantic_seeds:** No máximo 3 interesses ultradirecionados que sirvam como semente para o Andromeda (ex: "Alfaiataria", "Marcas de Luxo"). Devem ser termos reconhecidos pela Meta como interesses de segmentação.
+- **andromeda_exclusion:** Lista do que o algoritmo DEVE evitar (ex: "Caçadores de cupom", "Público infantil").
+
+IMPORTANTE: Baseie as sementes semânticas ESTRITAMENTE no Dossiê do Avatar e no nicho da empresa. NUNCA sugira interesses genéricos de marketing digital.
+
 Ao gerar, use a function tool "suggest_campaign" para retornar dados estruturados.`;
 
   return prompt;
