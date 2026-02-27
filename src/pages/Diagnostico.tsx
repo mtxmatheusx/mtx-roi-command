@@ -28,7 +28,7 @@ export default function Diagnostico() {
       ticket_medio: ticketMedio,
       limite_escala: limiteEscala,
       budget_maximo: budgetMaximo,
-      usando_dados_mock: isMockData,
+      usando_dados_mock: isUsingMock,
       campanhas: campaigns.map((c: any) => ({
         nome: c.name,
         status: c.status,
