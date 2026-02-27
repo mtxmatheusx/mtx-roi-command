@@ -119,6 +119,7 @@ export default function Configuracoes() {
       await updateProfile(updateData as any);
       toast({ title: "✅ Configurações salvas", description: "Parâmetros atualizados com sucesso." });
       setTokenEditing(false);
+      setGeminiEditing(false);
     } catch (err) {
       toast({ title: "Erro ao salvar", description: (err as Error).message, variant: "destructive" });
     } finally { setSaving(false); }
