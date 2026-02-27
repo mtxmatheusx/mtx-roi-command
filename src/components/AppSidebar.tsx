@@ -1,5 +1,5 @@
 import { NavLink as RouterNavLink } from "react-router-dom";
-import { BarChart3, Zap, Target, ImageIcon, Settings, LogOut, Brain, Rocket, Shield } from "lucide-react";
+import { BarChart3, Zap, Target, ImageIcon, Settings, LogOut, Brain, Rocket, Shield, Building2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import ProfileSelector from "@/components/ProfileSelector";
 
@@ -24,6 +24,21 @@ export default function AppSidebar() {
           <span className="text-foreground">Estratégias</span>
         </h1>
         <p className="text-xs text-muted-foreground mt-1">ROI Command Center</p>
+      </div>
+      <div className="px-4 pt-4 pb-2">
+        <RouterNavLink
+          to="/agencia"
+          className={({ isActive }) =>
+            `flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 w-full ${
+              isActive
+                ? "bg-primary/10 text-neon-red border-glow-red border glow-red"
+                : "text-muted-foreground hover:text-foreground hover:bg-secondary"
+            }`
+          }
+        >
+          <Building2 className="w-4 h-4" />
+          Visão da Agência
+        </RouterNavLink>
       </div>
       <ProfileSelector />
       <nav className="flex-1 p-4 space-y-1">

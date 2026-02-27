@@ -72,8 +72,16 @@ export function useClientProfiles() {
       .from("client_profiles")
       .update({ is_active: true })
       .eq("id", profileId);
-    invalidate();
-  }, [user?.id]);
+    // Clear all localStorage Meta Ads caches
+    Object.keys(localStorage).forEach((key) => {
+      if (key.startsWith("meta_ads_cache_")) localStorage.removeItem(key);
+    });
+    // Invalidate all relevant React Query caches
+    queryClient.invalidateQueries({ queryKey: ["client_profiles"] });
+    queryClient.invalidateQueries({ queryKey: ["meta-ads"] });
+    queryClient.invalidateQueries({ queryKey: ["creative_assets"] });
+    queryClient.invalidateQueries({ queryKey: ["campaign_drafts"] });
+  }, [user?.id, queryClient]);
 
   const createProfile = useCallback(async (input: CreateProfileInput) => {
     if (!user?.id) return;

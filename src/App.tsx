@@ -13,6 +13,7 @@ import AuditoriaMeta from "./pages/AuditoriaMeta";
 import Configuracoes from "./pages/Configuracoes";
 import Diagnostico from "./pages/Diagnostico";
 import LancarCampanha from "./pages/LancarCampanha";
+import AgencyView from "./pages/AgencyView";
 import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
@@ -30,6 +31,7 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
+            <Route path="/agencia" element={<ProtectedRoute><AgencyView /></ProtectedRoute>} />
             <Route path="/campanhas" element={<ProtectedRoute><Campanhas /></ProtectedRoute>} />
             <Route path="/diagnostico" element={<ProtectedRoute><Diagnostico /></ProtectedRoute>} />
             <Route path="/lancar-campanha" element={<ProtectedRoute><LancarCampanha /></ProtectedRoute>} />

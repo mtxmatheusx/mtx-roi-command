@@ -1,70 +1,63 @@
 
 
-## Plano: Estado Global de Perfil + Master Dashboard da Agência
+## Plano: Status de Campanhas + Log de Automação + Sync Global + Correções
 
-### Parte 1: Estado Global com Invalidação de Cache
+### 1. Edge Function — Adicionar `campaign_id`, `effective_status` ao fetch
 
-**Problema atual:** `useClientProfiles` já fornece `activeProfile`, mas ao trocar de perfil, os caches do React Query das outras abas não são limpos — dados do cliente anterior permanecem visíveis até navegação manual.
+**`supabase/functions/meta-ads-sync/index.ts`**
+- Adicionar `campaign_id` e `effective_status` aos fields do fetch de campanhas
+- Retornar esses campos no response para cada campaign row
+- O campo `effective_status` da Meta API retorna: `ACTIVE`, `PAUSED`, `DELETED`, `ARCHIVED`, etc.
 
-**Solução:**
+### 2. `useMetaAds.ts` — Expor status real + invalidar cache ao trocar perfil
 
-#### 1. Invalidação global no `setActiveProfile` (`useClientProfiles.ts`)
-- Após trocar perfil no banco, chamar `queryClient.invalidateQueries()` para limpar **todos** os caches relevantes: `meta-ads`, `creative_assets`, `campaign_drafts`, `client_profiles`
-- Limpar localStorage de cache Meta Ads (`meta_ads_cache_*`)
+- Adicionar `effectiveStatus` ao `MetaAdsCampaign` e mapear para `Campaign.status` baseado no valor da API:
+  - `ACTIVE` → `active`
+  - `PAUSED` → `paused`
+  - Outros → `paused`
+- Remover lógica atual que infere status a partir de spend/ROAS
+- `queryKey` já inclui `adAccountId`, portanto trocar perfil já invalida cache automaticamente
 
-#### 2. Skeleton Loading durante transição
-- Criar componente `ProfileTransitionGuard` que envolve o conteúdo de `AppLayout`
-- Detecta mudança de `activeProfile?.id` e exibe skeleton por ~500ms durante re-fetch
-- Skeleton com layout genérico (cards + tabela) usando componente `Skeleton` existente
+### 3. `mockData.ts` — Adicionar campo `effectiveStatus` ao Campaign type
 
-#### 3. Garantir `profile_id` em todas as queries
-- `Diagnostico.tsx`: Limpar `report` state quando `activeProfile?.id` mudar (useEffect)
-- `LancarCampanha.tsx`: Filtrar `campaign_drafts` por `profile_id` (atualmente filtra só por `user_id`)
-- `Criativos.tsx`: Já filtra por `profile_id` — OK
-- `useMetaAds`: Já usa `adAccountId` como query key — OK (muda automaticamente)
+- Adicionar `effectiveStatus?: string` ao type `Campaign`
 
----
+### 4. `CampaignsTable.tsx` — Coluna Status com badges + Toggle de filtro
 
-### Parte 2: Master Dashboard — Visão da Agência
+- Adicionar coluna "Status" com badges: `[ATIVO]` verde neon, `[PAUSADO]` cinza
+- Adicionar `Switch` toggle "Mostrar apenas ativas" acima da tabela
+- Filtrar campanhas com base no toggle
 
-#### 4. Nova página `src/pages/AgencyView.tsx`
-- Rota `/agencia` no `App.tsx`
-- Item "Visão da Agência" no topo do sidebar com ícone `Building2`, acima do `ProfileSelector`
-- **Não** filtra por `activeProfileId` — agrega dados de todos os perfis
+### 5. Campanhas, Criativos, Simulador — Botão "Forçar Atualização" replicado
 
-#### 5. Métricas Agregadas (4 cards executivos)
-- Busca todos os perfis do usuário
-- Para cada perfil com `ad_account_id` válido, chama `meta-ads-sync` em paralelo
-- Calcula:
-  - Gasto Total MTX (mês atual)
-  - Faturamento Estimado (soma receita)
-  - ROAS Global (média ponderada)
-  - Saúde da Operação (contas ativas vs com erro)
+- **`Campanhas.tsx`**: Adicionar `useClientProfiles` + `DateRangePicker` + botão Refresh com `forceRefetch()` e timestamp independente
+- **`Criativos.tsx`**: Adicionar botão Refresh com `forceRefetch()` e timestamp independente
+- **`Simulador.tsx`**: Consumir `useMetaAds` para pegar CPA e Ticket Médio reais; adicionar botão Refresh
 
-#### 6. Ranking de Performance (Client Leaderboard)
-- Tabela ordenada por ROAS ou compras nos últimos 7 dias
-- Colunas: Cliente, Gasto, Receita, ROAS, Compras, Status
-- Botão "Gerenciar" → seta `setActiveProfile(id)` e redireciona para `/`
+### 6. `Configuracoes.tsx` — Limpar campos duplicados
 
-#### 7. Radar do Gestor IA (Alertas Globais)
-- Edge function `agency-alerts` que:
-  - Recebe array de perfis com seus dados agregados
-  - Envia ao Lovable AI (Gemini Flash) com prompt de "Gestor de Agência"
-  - Retorna array de alertas: `{ profile_name, level: "success"|"warning"|"danger", message }`
-- Exibido como lista de cards com cores de status (verde neon para sucesso, vermelho para alertas)
+- A seção "Controle de Teto Financeiro" tem campos CPA Meta, Ticket Médio e Limite Escala duplicados. Remover a duplicação, mantendo apenas Budget Máximo + Frequência nessa seção.
 
----
+### 7. `Index.tsx` — Indicador "Monitoramento Ativo" + Log de Automação
 
-### Arquivos
+- Adicionar pill pulsante no topo: `"● Monitoramento Ativo em Tempo Real"` com animação pulse neon
+- Criar seção "Log de Automação" abaixo das campanhas com entries geradas client-side:
+  - A cada renderização/refetch, gerar entry: `"Check realizado às HH:MM — ROI atual: X.XX — Nenhuma ação necessária"`
+  - Se alguma campanha tiver CPA > 2× meta com 0 vendas: `"AÇÃO: Campanha [Nome] sinalizada por CPA alto"`
+  - Armazenar últimos 20 logs em state local
 
-| Arquivo | Mudança |
-|---|---|
-| `src/hooks/useClientProfiles.ts` | Invalidação global de cache no `setActiveProfile` |
-| `src/components/AppLayout.tsx` | Skeleton loading durante transição de perfil |
-| `src/pages/Diagnostico.tsx` | Limpar report ao trocar perfil |
-| `src/pages/LancarCampanha.tsx` | Filtrar drafts por `profile_id` |
-| `src/pages/AgencyView.tsx` | Nova página — Master Dashboard |
-| `src/components/AppSidebar.tsx` | Item "Visão da Agência" no topo |
-| `src/App.tsx` | Rota `/agencia` |
-| `supabase/functions/agency-alerts/index.ts` | Edge function — alertas IA globais |
+### 8. Não necessita migração SQL
+
+Budget frequency e budget_maximo já existem no schema. Nenhuma alteração de banco necessária.
+
+### Arquivos modificados
+- `supabase/functions/meta-ads-sync/index.ts` — campos effective_status
+- `src/lib/mockData.ts` — type Campaign atualizado  
+- `src/hooks/useMetaAds.ts` — mapear status real
+- `src/components/CampaignsTable.tsx` — badges status + toggle filtro
+- `src/pages/Campanhas.tsx` — botão refresh + profiles
+- `src/pages/Criativos.tsx` — botão refresh
+- `src/pages/Simulador.tsx` — dados reais + botão refresh
+- `src/pages/Index.tsx` — indicador pulse + log de automação
+- `src/pages/Configuracoes.tsx` — remover campos duplicados
 

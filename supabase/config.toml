@@ -23,3 +23,6 @@ verify_jwt = false
 
 [functions.scrape-media]
 verify_jwt = false
+
+[functions.agency-alerts]
+verify_jwt = false
