@@ -1,63 +1,74 @@
 
 
-## Plano: Status de Campanhas + Log de Automação + Sync Global + Correções
+## Plano: Fábrica de Criativos com Geração de Imagens IA
 
-### 1. Edge Function — Adicionar `campaign_id`, `effective_status` ao fetch
+### Fase 1: Edge Function `generate-hyper-creative`
 
-**`supabase/functions/meta-ads-sync/index.ts`**
-- Adicionar `campaign_id` e `effective_status` aos fields do fetch de campanhas
-- Retornar esses campos no response para cada campaign row
-- O campo `effective_status` da Meta API retorna: `ACTIVE`, `PAUSED`, `DELETED`, `ARCHIVED`, etc.
+**Arquivo:** `supabase/functions/generate-hyper-creative/index.ts`
 
-### 2. `useMetaAds.ts` — Expor status real + invalidar cache ao trocar perfil
+Pipeline em 3 passos:
 
-- Adicionar `effectiveStatus` ao `MetaAdsCampaign` e mapear para `Campaign.status` baseado no valor da API:
-  - `ACTIVE` → `active`
-  - `PAUSED` → `paused`
-  - Outros → `paused`
-- Remover lógica atual que infere status a partir de spend/ROAS
-- `queryKey` já inclui `adAccountId`, portanto trocar perfil já invalida cache automaticamente
+1. **Leitura de Contexto**: `fetchMasterContext(profileId)` → avatar_dossier + product_context. Buscar `creative_assets` com maior ROAS tags do perfil.
 
-### 3. `mockData.ts` — Adicionar campo `effectiveStatus` ao Campaign type
+2. **Engenharia de Prompt Visual**: Chamar `google/gemini-2.5-flash` (texto) para gerar um prompt de imagem em inglês, injetando regras de Direção de Arte:
+   - Aspect ratio 4:5 (1080x1350)
+   - Dark textured background, minimalist, subtle red/neon accents
+   - Hyper-realistic photography, facial consistency
+   - Produto físico → textura do tecido, iluminação dramática de estúdio
+   - Serviço/infoproduto → figura de autoridade (Hormozi/Brunson style), dor/solução
+   - Contexto do usuário (ex: "Black Friday") integrado
 
-- Adicionar `effectiveStatus?: string` ao type `Campaign`
+3. **Geração de Imagem**: Chamar `google/gemini-2.5-flash-image` com o prompt gerado + `modalities: ["image", "text"]`. Capturar base64.
 
-### 4. `CampaignsTable.tsx` — Coluna Status com badges + Toggle de filtro
+4. **Upload Automático**: Salvar cada imagem no bucket `creative-assets` como `generated/{profileId}/{timestamp}.png`, inserir na tabela `creative_assets` com `source_tag = "ai-generated"`.
 
-- Adicionar coluna "Status" com badges: `[ATIVO]` verde neon, `[PAUSADO]` cinza
-- Adicionar `Switch` toggle "Mostrar apenas ativas" acima da tabela
-- Filtrar campanhas com base no toggle
+5. **Retorno**: Array de `{ url, file_name, asset_id }` para renderização imediata.
 
-### 5. Campanhas, Criativos, Simulador — Botão "Forçar Atualização" replicado
+Recebe: `{ profileId, quantity (1-4), context (string) }`
 
-- **`Campanhas.tsx`**: Adicionar `useClientProfiles` + `DateRangePicker` + botão Refresh com `forceRefetch()` e timestamp independente
-- **`Criativos.tsx`**: Adicionar botão Refresh com `forceRefetch()` e timestamp independente
-- **`Simulador.tsx`**: Consumir `useMetaAds` para pegar CPA e Ticket Médio reais; adicionar botão Refresh
+---
 
-### 6. `Configuracoes.tsx` — Limpar campos duplicados
+### Fase 2: Config
 
-- A seção "Controle de Teto Financeiro" tem campos CPA Meta, Ticket Médio e Limite Escala duplicados. Remover a duplicação, mantendo apenas Budget Máximo + Frequência nessa seção.
+**Arquivo:** `supabase/config.toml` — Adicionar `[functions.generate-hyper-creative] verify_jwt = false`
 
-### 7. `Index.tsx` — Indicador "Monitoramento Ativo" + Log de Automação
+---
 
-- Adicionar pill pulsante no topo: `"● Monitoramento Ativo em Tempo Real"` com animação pulse neon
-- Criar seção "Log de Automação" abaixo das campanhas com entries geradas client-side:
-  - A cada renderização/refetch, gerar entry: `"Check realizado às HH:MM — ROI atual: X.XX — Nenhuma ação necessária"`
-  - Se alguma campanha tiver CPA > 2× meta com 0 vendas: `"AÇÃO: Campanha [Nome] sinalizada por CPA alto"`
-  - Armazenar últimos 20 logs em state local
+### Fase 3: UI — Refatorar `Criativos.tsx`
 
-### 8. Não necessita migração SQL
+Layout dividido em 2 colunas dentro de um novo bloco após a Biblioteca e o Extrator:
 
-Budget frequency e budget_maximo já existem no schema. Nenhuma alteração de banco necessária.
+**Coluna Esquerda — Biblioteca Vencedora (40%)**:
+- Grid de criativos filtrados por `status === "winner"` (ROAS >= 3 && spend > 100) dos `displayCreatives` existentes
+- Cards compactos com thumbnail, nome, ROAS badge
+- Se não há winners, mostrar mensagem "Nenhum criativo vencedor identificado ainda"
 
-### Arquivos modificados
-- `supabase/functions/meta-ads-sync/index.ts` — campos effective_status
-- `src/lib/mockData.ts` — type Campaign atualizado  
-- `src/hooks/useMetaAds.ts` — mapear status real
-- `src/components/CampaignsTable.tsx` — badges status + toggle filtro
-- `src/pages/Campanhas.tsx` — botão refresh + profiles
-- `src/pages/Criativos.tsx` — botão refresh
-- `src/pages/Simulador.tsx` — dados reais + botão refresh
-- `src/pages/Index.tsx` — indicador pulse + log de automação
-- `src/pages/Configuracoes.tsx` — remover campos duplicados
+**Coluna Direita — Gerador Autônomo (60%)**:
+- Input: slider/select para quantidade (1-4)
+- Input: campo de texto para contexto ("Coleção de Inverno", "Black Friday")
+- Botão "🎨 Gerar [X] Criativos de Alta Conversão"
+- Loading state com progress indicator
+- Grid de resultados: cards com imagem gerada, botão "🚀 Injetar no Meta Ads" (salva o `asset_id` no state para uso no `LancarCampanha`)
+
+**Botão "Injetar no Meta Ads"**: Armazena o `asset_id` selecionado em `localStorage` key `mtx_injected_creative_{profileId}` para ser lido pelo wizard de campanha.
+
+---
+
+### Fase 4: Isolamento Multi-Tenant
+
+Já garantido pela arquitetura existente:
+- `fetchMasterContext` filtra por `profileId`
+- `creative_assets` tem `profile_id` + RLS por `user_id`
+- O prompt visual é construído a partir do dossier específico do perfil ativo
+- Nenhum dado cruza entre perfis
+
+---
+
+### Arquivos
+
+| Arquivo | Tipo | Descrição |
+|---|---|---|
+| `supabase/functions/generate-hyper-creative/index.ts` | Novo | Prompt visual → geração imagem → upload bucket → insert DB |
+| `supabase/config.toml` | Editar | Adicionar entry `generate-hyper-creative` |
+| `src/pages/Criativos.tsx` | Editar | Layout dividido: Biblioteca Vencedora + Gerador Autônomo |
 
