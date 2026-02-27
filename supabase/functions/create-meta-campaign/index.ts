@@ -211,8 +211,15 @@ serve(async (req) => {
     const adSetData = await adSetRes.json();
     if (adSetData.error) {
       const errorMsg = metaError(adSetData);
-      await supabase.from("campaign_drafts").update({ status: "failed", error_message: errorMsg, meta_campaign_id: metaCampaignId }).eq("id", draftId);
-      return new Response(JSON.stringify({ error: errorMsg, step: "adset", meta_campaign_id: metaCampaignId, steps }), {
+      // Rollback: delete orphan campaign from Meta
+      try {
+        await fetch(`${META_API}/${metaCampaignId}?access_token=${accessToken}`, { method: "DELETE" });
+        console.log(`Rollback: deleted orphan campaign ${metaCampaignId}`);
+      } catch (rollbackErr) {
+        console.error("Rollback failed:", rollbackErr);
+      }
+      await supabase.from("campaign_drafts").update({ status: "failed", error_message: `${errorMsg} | Campanha parcial apagada automaticamente.`, meta_campaign_id: metaCampaignId }).eq("id", draftId);
+      return new Response(JSON.stringify({ error: `${errorMsg} | Campanha parcial apagada automaticamente.`, step: "adset", meta_campaign_id: metaCampaignId, steps, rollback: true }), {
         status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
