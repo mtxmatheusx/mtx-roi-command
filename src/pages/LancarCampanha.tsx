@@ -759,37 +759,48 @@ export default function LancarCampanha() {
                 </CardTitle>
                 <CardDescription>A IA analisa seus ativos e recomenda o melhor criativo para esta campanha.</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-3">
-                <Button
-                  onClick={async () => {
-                    if (!activeProfile) return;
-                    setIsChoosingCreative(true);
-                    setCreativeBrain(null);
-                    try {
-                      const { data, error } = await supabase.functions.invoke("ai-creative-brain", {
-                        body: {
-                          profileId: activeProfile.id,
-                          objective,
-                          campaignContext: draft?.campaign_name,
-                        },
-                      });
-                      if (error) throw error;
-                      if (data?.error) throw new Error(data.error);
-                      setCreativeBrain(data);
-                      toast({ title: "🧠 Criativo recomendado!", description: data.recommendation?.recommended_asset_name });
-                    } catch (e: any) {
-                      toast({ title: "Erro no Cérebro de Criativos", description: e.message, variant: "destructive" });
-                    } finally {
-                      setIsChoosingCreative(false);
-                    }
-                  }}
-                  disabled={isChoosingCreative}
-                  variant="outline"
-                  className="gap-2"
-                >
-                  {isChoosingCreative ? <Loader2 className="w-4 h-4 animate-spin" /> : <Brain className="w-4 h-4" />}
-                  {isChoosingCreative ? "Analisando criativos..." : "Escolher Criativo com IA"}
-                </Button>
+              <CardContent className="space-y-4">
+                <div className="flex gap-2">
+                  <Button
+                    onClick={async () => {
+                      if (!activeProfile) return;
+                      setIsChoosingCreative(true);
+                      setCreativeBrain(null);
+                      try {
+                        const { data, error } = await supabase.functions.invoke("ai-creative-brain", {
+                          body: {
+                            profileId: activeProfile.id,
+                            objective,
+                            campaignContext: draft?.campaign_name,
+                          },
+                        });
+                        if (error) throw error;
+                        if (data?.error) throw new Error(data.error);
+                        setCreativeBrain(data);
+                        // Auto-inject recommended creative
+                        if (data.recommendation?.recommended_asset_url) {
+                          setSelectedAssetUrl(data.recommendation.recommended_asset_url);
+                          localStorage.setItem(`mtx_injected_creative_${activeProfile.id}`, JSON.stringify({ url: data.recommendation.recommended_asset_url }));
+                        }
+                        toast({ title: "🧠 Criativo recomendado!", description: data.recommendation?.recommended_asset_name });
+                      } catch (e: any) {
+                        toast({ title: "Erro no Cérebro de Criativos", description: e.message, variant: "destructive" });
+                      } finally {
+                        setIsChoosingCreative(false);
+                      }
+                    }}
+                    disabled={isChoosingCreative}
+                    variant="outline"
+                    className="gap-2"
+                  >
+                    {isChoosingCreative ? <Loader2 className="w-4 h-4 animate-spin" /> : <Brain className="w-4 h-4" />}
+                    {isChoosingCreative ? "Analisando criativos..." : "Escolher Criativo com IA"}
+                  </Button>
+                  <Button variant="outline" className="gap-2" onClick={() => setUploadOpen(true)}>
+                    <Upload className="w-4 h-4" />
+                    📤 Subir Novo Ativo
+                  </Button>
+                </div>
 
                 {creativeBrain?.recommendation && (
                   <div className="rounded-lg border bg-card p-4 space-y-3">
@@ -829,17 +840,42 @@ export default function LancarCampanha() {
                     </p>
                   </div>
                 )}
-              </CardContent>
-            </Card>
 
-            <div className="flex gap-3">
-              <Button onClick={() => setStep(3)}>Revisar e Aprovar</Button>
-              <Button variant="outline" onClick={handleSaveDraft}>Salvar como Rascunho</Button>
-              <Button variant="ghost" onClick={() => setStep(1)}>Voltar</Button>
-            </div>
-          </div>
-        )}
-
+                {/* Recent Assets Grid */}
+                {recentAssets.length > 0 && (
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground mb-2">Ativos Recentes ({recentAssets.length})</p>
+                    <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+                      {recentAssets.map((asset) => (
+                        <button
+                          key={asset.id}
+                          onClick={() => {
+                            setSelectedAssetUrl(asset.file_url);
+                            localStorage.setItem(`mtx_injected_creative_${activeProfile!.id}`, JSON.stringify({ url: asset.file_url }));
+                            toast({ title: "Criativo selecionado", description: asset.file_name });
+                          }}
+                          className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all hover:opacity-80 ${
+                            selectedAssetUrl === asset.file_url ? "border-primary ring-2 ring-primary/30" : "border-border"
+                          }`}
+                          title={asset.description || asset.file_name}
+                        >
+                          {asset.file_type === "video" ? (
+                            <div className="w-full h-full bg-secondary flex items-center justify-center">
+                              <Video className="w-6 h-6 text-muted-foreground/50" />
+                            </div>
+                          ) : (
+                            <img src={asset.file_url} alt={asset.file_name} className="w-full h-full object-cover" />
+                          )}
+                          {asset.description && (
+                            <div className="absolute bottom-0 left-0 right-0 bg-background/80 px-1 py-0.5">
+                              <span className="text-[10px] text-primary">✨ IA</span>
+                            </div>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
         {/* Step 3 */}
         {step === 3 && draft && (
           <div className="space-y-4">
