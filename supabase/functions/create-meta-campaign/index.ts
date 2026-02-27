@@ -95,7 +95,7 @@ serve(async (req) => {
       const msg = `Token inválido ou sem permissão ads_management: ${metaError(tokenData)}`;
       await supabase.from("campaign_drafts").update({ status: "failed", error_message: msg }).eq("id", draftId);
       return new Response(JSON.stringify({ error: msg, step: "token_validation" }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
