@@ -484,6 +484,82 @@ export default function LancarCampanha() {
               </CardContent>
             </Card>
 
+            {/* Andromeda Targeting Card */}
+            {draft.andromeda_targeting && (
+              <Card className={`border-dashed ${useAndromeda ? "border-primary/50 bg-primary/5" : "border-border"}`}>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      🌌 Segmentação Andromeda Sugerida
+                    </CardTitle>
+                    <Badge className={useAndromeda ? "bg-primary/15 text-primary" : "bg-secondary text-muted-foreground"}>
+                      {useAndromeda ? "Ativa" : "Inativa"}
+                    </Badge>
+                  </div>
+                  <CardDescription>Parâmetros gerados pela IA para o algoritmo Andromeda da Meta</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div className="flex items-center gap-2">
+                      <span className="text-base">🎯</span>
+                      <div>
+                        <span className="text-muted-foreground">Idade:</span>
+                        <p className="font-medium">{draft.andromeda_targeting.age_min} a {draft.andromeda_targeting.age_max} anos</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-base">🚻</span>
+                      <div>
+                        <span className="text-muted-foreground">Gênero:</span>
+                        <p className="font-medium">
+                          {draft.andromeda_targeting.genders.includes(0) ? "Todos" :
+                           draft.andromeda_targeting.genders.includes(2) ? "Feminino" :
+                           draft.andromeda_targeting.genders.includes(1) ? "Masculino" : "Todos"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-base">🌱</span>
+                      <span className="text-sm text-muted-foreground">Sementes Semânticas:</span>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {draft.andromeda_targeting.semantic_seeds.map((seed, i) => (
+                        <Badge key={i} variant="outline" className="bg-primary/10 text-primary border-primary/30">
+                          {seed}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+
+                  {draft.andromeda_targeting.andromeda_exclusion.length > 0 && (
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-base">🚫</span>
+                        <span className="text-sm text-muted-foreground">Exclusões Andromeda:</span>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {draft.andromeda_targeting.andromeda_exclusion.map((exc, i) => (
+                          <Badge key={i} variant="outline" className="bg-destructive/10 text-destructive border-destructive/30">
+                            {exc}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <Button
+                    variant={useAndromeda ? "secondary" : "default"}
+                    className="gap-2 w-full"
+                    onClick={() => setUseAndromeda(!useAndromeda)}
+                  >
+                    {useAndromeda ? "✅ Injetado no Conjunto de Anúncios" : "🌌 Injetar no Conjunto de Anúncios"}
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Orçamento Diário (R$)</Label>
