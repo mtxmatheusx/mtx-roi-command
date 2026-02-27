@@ -50,3 +50,6 @@ verify_jwt = false
 
 [functions.clone-scale-campaign]
 verify_jwt = false
+
+[functions.daily-closing]
+verify_jwt = false

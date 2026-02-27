@@ -1,45 +1,63 @@
 
 
-## Plano: Edge Function `daily-closing` (Fechamento Diário Completo + Webhook n8n)
+## Plano: Status de Campanhas + Log de Automação + Sync Global + Correções
 
-### Fase 1: Nova Edge Function `daily-closing`
+### 1. Edge Function — Adicionar `campaign_id`, `effective_status` ao fetch
 
-**Arquivo:** `supabase/functions/daily-closing/index.ts`
+**`supabase/functions/meta-ads-sync/index.ts`**
+- Adicionar `campaign_id` e `effective_status` aos fields do fetch de campanhas
+- Retornar esses campos no response para cada campaign row
+- O campo `effective_status` da Meta API retorna: `ACTIVE`, `PAUSED`, `DELETED`, `ARCHIVED`, etc.
 
-Recebe `{ profileId }`. Lógica sequencial:
+### 2. `useMetaAds.ts` — Expor status real + invalidar cache ao trocar perfil
 
-1. **Buscar contexto** via `fetchMasterContext(profileId)` — obtém perfil + métricas Meta 7d
-2. **Buscar métricas detalhadas do dia** — `meta-ads-sync` style fetch com `date_preset=today` no `ad_account_id` do perfil (spend, purchases, ROAS, CPA, top campaigns)
-3. **Gerar Resumo Executivo via IA** — Chamada não-streaming ao Lovable AI Gateway (`google/gemini-2.5-flash`) com tool calling para extrair JSON estruturado:
-   ```json
-   {
-     "resumo": "Texto do resumo executivo...",
-     "destaques": ["ponto 1", "ponto 2"],
-     "alertas": ["alerta 1"]
-   }
-   ```
-4. **Gerar HTML do relatório** — Template HTML inline (dark mode, DM Sans) com: header com nome do perfil + data, KPIs em cards (Spend, CPA, ROAS, Purchases), tabela de campanhas, resumo executivo da IA
-5. **Converter HTML para PDF** — Usar o serviço gratuito `https://pdf.lovable.dev` ou alternativa via `jspdf` no Deno. **Decisão pragmática:** como Deno não tem puppeteer, gerar o relatório como **HTML salvo como .html** no bucket (renderizável pelo n8n/WhatsApp como link), OU usar uma API externa de HTML→PDF
-6. **Upload ao bucket** — Salvar no bucket `creative-assets` (público) com path `reports/{profileId}/{date}.html`
-7. **Disparar Webhook n8n** — `POST https://nervousanaconda-n8n.cloudfy.live/webhook/mtx-fechamento-diario` com `{ mediaUrl, caption }` dentro de try/catch isolado
+- Adicionar `effectiveStatus` ao `MetaAdsCampaign` e mapear para `Campaign.status` baseado no valor da API:
+  - `ACTIVE` → `active`
+  - `PAUSED` → `paused`
+  - Outros → `paused`
+- Remover lógica atual que infere status a partir de spend/ROAS
+- `queryKey` já inclui `adAccountId`, portanto trocar perfil já invalida cache automaticamente
 
-### Fase 2: Config
+### 3. `mockData.ts` — Adicionar campo `effectiveStatus` ao Campaign type
 
-**Arquivo:** `supabase/config.toml` — Adicionar `[functions.daily-closing] verify_jwt = false`
+- Adicionar `effectiveStatus?: string` ao type `Campaign`
 
-### Decisão sobre PDF
+### 4. `CampaignsTable.tsx` — Coluna Status com badges + Toggle de filtro
 
-Como edge functions Deno não suportam puppeteer/chromium para renderização HTML→PDF nativa, proponho duas alternativas:
+- Adicionar coluna "Status" com badges: `[ATIVO]` verde neon, `[PAUSADO]` cinza
+- Adicionar `Switch` toggle "Mostrar apenas ativas" acima da tabela
+- Filtrar campanhas com base no toggle
 
-- **Opção A (Recomendada):** Gerar o relatório como arquivo `.html` público no bucket. O link é enviado no webhook e o n8n/WhatsApp pode renderizar como preview de link.
-- **Opção B:** Usar uma API externa de conversão HTML→PDF (ex: `html2pdf.app` ou similar). Requer API key adicional.
+### 5. Campanhas, Criativos, Simulador — Botão "Forçar Atualização" replicado
 
-Vou seguir com **Opção A** (HTML público no bucket) por ser zero-dependência.
+- **`Campanhas.tsx`**: Adicionar `useClientProfiles` + `DateRangePicker` + botão Refresh com `forceRefetch()` e timestamp independente
+- **`Criativos.tsx`**: Adicionar botão Refresh com `forceRefetch()` e timestamp independente
+- **`Simulador.tsx`**: Consumir `useMetaAds` para pegar CPA e Ticket Médio reais; adicionar botão Refresh
 
-### Arquivos
+### 6. `Configuracoes.tsx` — Limpar campos duplicados
 
-| Arquivo | Tipo | Descrição |
-|---|---|---|
-| `supabase/functions/daily-closing/index.ts` | Novo | Função completa: métricas → IA → HTML → upload → webhook |
-| `supabase/config.toml` | Editar | Adicionar entry `daily-closing` |
+- A seção "Controle de Teto Financeiro" tem campos CPA Meta, Ticket Médio e Limite Escala duplicados. Remover a duplicação, mantendo apenas Budget Máximo + Frequência nessa seção.
+
+### 7. `Index.tsx` — Indicador "Monitoramento Ativo" + Log de Automação
+
+- Adicionar pill pulsante no topo: `"● Monitoramento Ativo em Tempo Real"` com animação pulse neon
+- Criar seção "Log de Automação" abaixo das campanhas com entries geradas client-side:
+  - A cada renderização/refetch, gerar entry: `"Check realizado às HH:MM — ROI atual: X.XX — Nenhuma ação necessária"`
+  - Se alguma campanha tiver CPA > 2× meta com 0 vendas: `"AÇÃO: Campanha [Nome] sinalizada por CPA alto"`
+  - Armazenar últimos 20 logs em state local
+
+### 8. Não necessita migração SQL
+
+Budget frequency e budget_maximo já existem no schema. Nenhuma alteração de banco necessária.
+
+### Arquivos modificados
+- `supabase/functions/meta-ads-sync/index.ts` — campos effective_status
+- `src/lib/mockData.ts` — type Campaign atualizado  
+- `src/hooks/useMetaAds.ts` — mapear status real
+- `src/components/CampaignsTable.tsx` — badges status + toggle filtro
+- `src/pages/Campanhas.tsx` — botão refresh + profiles
+- `src/pages/Criativos.tsx` — botão refresh
+- `src/pages/Simulador.tsx` — dados reais + botão refresh
+- `src/pages/Index.tsx` — indicador pulse + log de automação
+- `src/pages/Configuracoes.tsx` — remover campos duplicados
 
