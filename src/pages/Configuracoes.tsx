@@ -39,14 +39,16 @@ function maskToken(token: string | null | undefined): string {
 export default function Configuracoes() {
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { activeProfile, updateProfile, deleteProfile, profiles, isLoading: profilesLoading, productContext, productUrls } = useClientProfiles();
+  const { activeProfile, updateProfile, deleteProfile, profiles, isLoading: profilesLoading, productContext, productUrls, geminiApiKey } = useClientProfiles();
   const [form, setForm] = useState({
     name: "", adAccountId: "act_", pixelId: "",
     cpaMeta: "45", ticketMedio: "697", limiteEscala: "15",
     budgetMaximo: "0", budgetFrequency: "monthly" as "daily" | "weekly" | "monthly",
     metaAccessToken: "",
+    geminiApiKey: "",
   });
   const [tokenEditing, setTokenEditing] = useState(false);
+  const [geminiEditing, setGeminiEditing] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [testResult, setTestResult] = useState<"idle" | "loading" | "success" | "error">("idle");
@@ -71,8 +73,10 @@ export default function Configuracoes() {
         budgetMaximo: String(activeProfile.budget_maximo ?? 0),
         budgetFrequency: (activeProfile.budget_frequency ?? "monthly") as "daily" | "weekly" | "monthly",
         metaAccessToken: "",
+        geminiApiKey: "",
       });
       setTokenEditing(false);
+      setGeminiEditing(false);
       setAbsorbResult(null);
       setShowManualInput(false);
       setManualText("");
@@ -107,9 +111,15 @@ export default function Configuracoes() {
       } else if (tokenEditing && !form.metaAccessToken) {
         updateData.meta_access_token = null;
       }
+      if (geminiEditing && form.geminiApiKey) {
+        updateData.gemini_api_key = form.geminiApiKey;
+      } else if (geminiEditing && !form.geminiApiKey) {
+        updateData.gemini_api_key = null;
+      }
       await updateProfile(updateData as any);
       toast({ title: "✅ Configurações salvas", description: "Parâmetros atualizados com sucesso." });
       setTokenEditing(false);
+      setGeminiEditing(false);
     } catch (err) {
       toast({ title: "Erro ao salvar", description: (err as Error).message, variant: "destructive" });
     } finally { setSaving(false); }
@@ -216,6 +226,7 @@ export default function Configuracoes() {
   if (!activeProfile) return <AppLayout><div className="space-y-4 text-center py-20"><h2 className="text-xl font-bold">Nenhum perfil encontrado</h2><p className="text-muted-foreground text-sm">Use o seletor no sidebar para criar seu primeiro perfil.</p></div></AppLayout>;
 
   const hasProfileToken = !!activeProfile.meta_access_token;
+  const hasGeminiKey = !!activeProfile.gemini_api_key;
 
   return (
     <AppLayout>
@@ -296,6 +307,46 @@ export default function Configuracoes() {
               </Button>
               {testResult === "success" && <span className="text-sm text-emerald-400">✓ Conectado</span>}
               {testResult === "error" && <span className="text-sm text-destructive">✗ Falha</span>}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Gemini API Key Section */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Brain className={`w-5 h-5 ${hasGeminiKey ? "text-emerald-400" : "text-muted-foreground"}`} />
+              🧠 Inteligência Artificial (Gemini)
+            </CardTitle>
+            <CardDescription>Insira sua chave do Google AI Studio para ativar o diagnóstico estratégico e geração de copies. Opcional — o sistema já funciona com a IA integrada.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className={`flex items-center gap-2 p-3 rounded-lg border ${hasGeminiKey ? "bg-emerald-500/10 border-emerald-500/20" : "bg-secondary border-border"}`}>
+              {hasGeminiKey ? (
+                <>
+                  <Brain className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span className="text-sm text-emerald-400 font-semibold">IA Conectada — Gemini API Key ativa ({maskToken(activeProfile.gemini_api_key)})</span>
+                </>
+              ) : (
+                <>
+                  <Brain className="w-4 h-4 text-muted-foreground shrink-0" />
+                  <span className="text-sm text-muted-foreground">IA Desconectada — Usando IA integrada do sistema. Adicione uma chave Gemini para uso avançado.</span>
+                </>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="geminiApiKey">Gemini API Key (opcional)</Label>
+              {!geminiEditing ? (
+                <div className="flex items-center gap-2">
+                  <Input id="geminiApiKey" value={hasGeminiKey ? maskToken(activeProfile.gemini_api_key) : ""} placeholder="Não configurada" disabled className="font-mono text-sm" />
+                  <Button variant="outline" size="sm" onClick={() => setGeminiEditing(true)}>{hasGeminiKey ? "Alterar" : "Adicionar"}</Button>
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  <Input id="geminiApiKey" type="password" value={form.geminiApiKey} onChange={(e) => handleChange("geminiApiKey", e.target.value)} placeholder="Cole aqui sua API Key do Google AI Studio" className="font-mono text-sm" />
+                  <p className="text-xs text-muted-foreground">Obtenha em <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">aistudio.google.com/apikey</a>. Deixe vazio e salve para usar a IA integrada.</p>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>

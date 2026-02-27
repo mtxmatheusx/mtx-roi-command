@@ -15,6 +15,7 @@ export interface ClientProfile {
   budget_maximo: number;
   budget_frequency: string;
   meta_access_token: string | null;
+  gemini_api_key: string | null;
   product_context: string | null;
   product_urls: string[];
   is_active: boolean;
@@ -35,6 +36,7 @@ export type UpdateProfileInput = Partial<CreateProfileInput & {
   budget_maximo?: number;
   budget_frequency?: string;
   meta_access_token?: string | null;
+  gemini_api_key?: string | null;
 }> & { id: string };
 
 export function useClientProfiles() {
@@ -126,6 +128,7 @@ export function useClientProfiles() {
     budgetMaximo: activeProfile?.budget_maximo ?? 0,
     budgetFrequency: activeProfile?.budget_frequency ?? "monthly",
     metaAccessToken: activeProfile?.meta_access_token ?? null,
+    geminiApiKey: activeProfile?.gemini_api_key ?? null,
     productContext: activeProfile?.product_context ?? null,
     productUrls: activeProfile?.product_urls ?? [],
   };

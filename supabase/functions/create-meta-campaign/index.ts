@@ -9,6 +9,10 @@ const corsHeaders = {
 
 const META_API = "https://graph.facebook.com/v21.0";
 
+function metaError(data: any): string {
+  return data?.error?.error_user_msg || data?.error?.message || "Erro desconhecido da Meta API";
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -28,7 +32,7 @@ serve(async (req) => {
       { global: { headers: { Authorization: authHeader } } }
     );
 
-    // Try getClaims first, fallback to getUser
+    // Auth — try getClaims, fallback to getUser
     let userId: string;
     try {
       const token = authHeader.replace("Bearer ", "");
@@ -84,14 +88,24 @@ serve(async (req) => {
       });
     }
 
+    // Validate token
+    const tokenCheck = await fetch(`${META_API}/me?access_token=${accessToken}&fields=id`);
+    const tokenData = await tokenCheck.json();
+    if (tokenData.error) {
+      const msg = `Token inválido ou sem permissão ads_management: ${metaError(tokenData)}`;
+      await supabase.from("campaign_drafts").update({ status: "failed", error_message: msg }).eq("id", draftId);
+      return new Response(JSON.stringify({ error: msg, step: "token_validation" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // Update status to approved
     await supabase.from("campaign_drafts").update({ status: "approved" }).eq("id", draftId);
 
     const steps: string[] = [];
-
-    // Step 1: Create Campaign
     const selectedCopy = Array.isArray(draft.copy_options) && draft.copy_options.length > 0 ? draft.copy_options[0] : null;
 
+    // Step 1: Create Campaign
     const campaignRes = await fetch(`${META_API}/${adAccountId}/campaigns`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -106,7 +120,7 @@ serve(async (req) => {
 
     const campaignData = await campaignRes.json();
     if (campaignData.error) {
-      const errorMsg = campaignData.error.message || "Erro ao criar campanha na Meta";
+      const errorMsg = metaError(campaignData);
       await supabase.from("campaign_drafts").update({ status: "failed", error_message: errorMsg }).eq("id", draftId);
       return new Response(JSON.stringify({ error: errorMsg, step: "campaign" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -117,27 +131,37 @@ serve(async (req) => {
     steps.push(`Campanha criada: ${metaCampaignId}`);
     await supabase.from("campaign_drafts").update({ meta_campaign_id: metaCampaignId }).eq("id", draftId);
 
-    // Step 2: Create Ad Set
+    // Step 2: Create Ad Set — with pixel injection for conversion objectives
     const dailyBudgetCents = Math.round((draft.daily_budget || 50) * 100);
+    const isConversion = ["OUTCOME_SALES", "OUTCOME_LEADS"].includes(draft.objective);
+    const pixelId = profile?.pixel_id;
+
+    const adSetBody: Record<string, unknown> = {
+      name: `${draft.campaign_name} - Conjunto 01`,
+      campaign_id: metaCampaignId,
+      daily_budget: dailyBudgetCents,
+      billing_event: "IMPRESSIONS",
+      optimization_goal: draft.objective === "OUTCOME_LEADS" ? "LEAD_GENERATION" : "OFFSITE_CONVERSIONS",
+      bid_strategy: "LOWEST_COST_WITHOUT_CAP",
+      targeting: { geo_locations: { countries: ["BR"] } },
+      status: "PAUSED",
+      access_token: accessToken,
+    };
+
+    // Inject pixel_id as promoted_object for conversion campaigns
+    if (isConversion && pixelId && pixelId.trim() !== "") {
+      adSetBody.promoted_object = { pixel_id: pixelId };
+    }
+
     const adSetRes = await fetch(`${META_API}/${adAccountId}/adsets`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: `${draft.campaign_name} - Conjunto 01`,
-        campaign_id: metaCampaignId,
-        daily_budget: dailyBudgetCents,
-        billing_event: "IMPRESSIONS",
-        optimization_goal: draft.objective === "OUTCOME_LEADS" ? "LEAD_GENERATION" : "OFFSITE_CONVERSIONS",
-        bid_strategy: "LOWEST_COST_WITHOUT_CAP",
-        targeting: { geo_locations: { countries: ["BR"] } },
-        status: "PAUSED",
-        access_token: accessToken,
-      }),
+      body: JSON.stringify(adSetBody),
     });
 
     const adSetData = await adSetRes.json();
     if (adSetData.error) {
-      const errorMsg = adSetData.error.message || "Erro ao criar conjunto de anúncios";
+      const errorMsg = metaError(adSetData);
       await supabase.from("campaign_drafts").update({ status: "failed", error_message: errorMsg, meta_campaign_id: metaCampaignId }).eq("id", draftId);
       return new Response(JSON.stringify({ error: errorMsg, step: "adset", meta_campaign_id: metaCampaignId, steps }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -173,7 +197,7 @@ serve(async (req) => {
 
     const adData = await adRes.json();
     if (adData.error) {
-      const errorMsg = adData.error.message || "Erro ao criar anúncio";
+      const errorMsg = metaError(adData);
       await supabase.from("campaign_drafts").update({
         status: "failed",
         error_message: `Campanha e conjunto criados, mas erro no anúncio: ${errorMsg}`,

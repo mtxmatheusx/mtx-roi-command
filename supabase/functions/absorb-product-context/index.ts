@@ -51,6 +51,45 @@ async function fetchWithRetry(url: string, maxRetries = 3): Promise<string> {
   throw new Error("Máximo de tentativas excedido");
 }
 
+// Try Firecrawl deep crawl if available
+async function tryFirecrawl(url: string): Promise<string | null> {
+  const apiKey = Deno.env.get("FIRECRAWL_API_KEY");
+  if (!apiKey) return null;
+
+  console.log("Firecrawl available, attempting deep scrape for:", url);
+  try {
+    // Use scrape endpoint for single page (fast)
+    const response = await fetch("https://api.firecrawl.dev/v1/scrape", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        url,
+        formats: ["markdown"],
+        onlyMainContent: true,
+      }),
+    });
+
+    if (!response.ok) {
+      console.log("Firecrawl scrape failed:", response.status);
+      return null;
+    }
+
+    const data = await response.json();
+    const markdown = data?.data?.markdown || data?.markdown;
+    if (markdown && markdown.length > 50) {
+      console.log(`Firecrawl extracted ${markdown.length} chars`);
+      return markdown.slice(0, 12000);
+    }
+    return null;
+  } catch (e) {
+    console.error("Firecrawl error:", e);
+    return null;
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -61,7 +100,6 @@ serve(async (req) => {
     if (!profileId) throw new Error("profileId é obrigatório");
     if (!url && !manualText) throw new Error("url ou manualText é obrigatório");
 
-    const authHeader = req.headers.get("authorization") || "";
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
@@ -69,13 +107,11 @@ serve(async (req) => {
     let textContent: string;
 
     if (manualText) {
-      // Manual text input — skip scraping
       textContent = manualText.trim().slice(0, 8000);
       if (textContent.length < 20) {
         throw new Error("Texto muito curto. Cole pelo menos um parágrafo.");
       }
     } else {
-      // Check for social media URLs
       if (isSocialMediaUrl(url!)) {
         return new Response(JSON.stringify({
           error: "Redes sociais bloqueiam scraping automático. Use o campo de 'Inserção Manual' para colar o conteúdo.",
@@ -86,27 +122,33 @@ serve(async (req) => {
         });
       }
 
-      // Fetch with retry
-      let html: string;
-      try {
-        html = await fetchWithRetry(url!);
-      } catch (e) {
-        return new Response(JSON.stringify({
-          error: `Não foi possível acessar a URL. Use o campo de 'Inserção Manual' para colar o conteúdo.`,
-          scrape_failed: true,
-        }), {
-          status: 200,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+      // Try Firecrawl first (deep scrape), then fallback to simple fetch
+      let content = await tryFirecrawl(url!);
+
+      if (!content) {
+        let html: string;
+        try {
+          html = await fetchWithRetry(url!);
+        } catch (e) {
+          return new Response(JSON.stringify({
+            error: `Não foi possível acessar a URL. Use o campo de 'Inserção Manual' para colar o conteúdo.`,
+            scrape_failed: true,
+          }), {
+            status: 200,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        content = html
+          .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
+          .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
+          .replace(/<[^>]+>/g, " ")
+          .replace(/\s+/g, " ")
+          .trim()
+          .slice(0, 8000);
       }
 
-      textContent = html
-        .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
-        .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
-        .replace(/<[^>]+>/g, " ")
-        .replace(/\s+/g, " ")
-        .trim()
-        .slice(0, 8000);
+      textContent = content;
 
       if (!textContent || textContent.length < 50) {
         return new Response(JSON.stringify({
@@ -130,7 +172,6 @@ serve(async (req) => {
     const existingUrls = (profile?.product_urls as string[]) || [];
     const totalLinksAfter = url ? (existingUrls.includes(url) ? existingUrls.length : existingUrls.length + 1) : existingUrls.length;
 
-    // Build AI prompt — cumulative if 2+ links
     const consolidationInstruction = (existingContext && totalLinksAfter >= 2)
       ? `\n\nCONTEXTO EXISTENTE DO PERFIL (de URLs anteriores):\n${existingContext}\n\nVocê deve CONSOLIDAR as informações do novo conteúdo com o contexto existente acima, criando um perfil unificado. Identifique padrões consistentes e dores/objeções negligenciadas.`
       : "";
@@ -150,7 +191,8 @@ serve(async (req) => {
           {
             role: "system",
             content: `Você é um analista estratégico sênior especializado em Hormozi. Extraia do conteúdo as informações estratégicas.
-Use a function tool "extract_product_context" para retornar dados estruturados.${consolidationInstruction ? "\nQuando houver contexto existente, CONSOLIDE as informações em vez de substituir." : ""}`,
+Use a function tool "extract_product_context" para retornar dados estruturados.${consolidationInstruction ? "\nQuando houver contexto existente, CONSOLIDE as informações em vez de substituir." : ""}
+Se o conteúdo parecer de e-commerce, identifique também: produtos mais vendidos, faixas de preço, provas sociais (avaliações/depoimentos).`,
           },
           {
             role: "user",

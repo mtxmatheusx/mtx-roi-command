@@ -241,6 +241,14 @@ export default function LancarCampanha() {
           )}
         </div>
 
+        {/* Pixel warning for conversion objectives */}
+        {(objective === "OUTCOME_SALES" || objective === "OUTCOME_LEADS") && (!activeProfile?.pixel_id || activeProfile.pixel_id.trim() === "") && (
+          <div className="flex items-center gap-2 text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-lg px-4 py-2">
+            <AlertTriangle className="w-4 h-4 shrink-0" />
+            Pixel ID não configurado. Campanhas de conversão requerem um Pixel. Configure em Configurações.
+          </div>
+        )}
+
         {/* Budget warning */}
         {budgetMaximo > 0 && (
           <div className="flex items-center gap-2 text-xs text-muted-foreground bg-secondary/50 rounded-lg px-4 py-2">
