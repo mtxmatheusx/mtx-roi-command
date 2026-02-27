@@ -25,12 +25,21 @@ import ReactMarkdown from "react-markdown";
 type CopyOption = { copy_type?: "direct_response" | "storytelling" | "social_proof"; headline: string; primary_text: string; cta: string };
 type TargetingSuggestion = { audience_type?: string; age_range?: string; interests?: string[]; lookalike_source?: string; placements?: string };
 
+interface AndromedaTargeting {
+  age_min: number;
+  age_max: number;
+  genders: number[];
+  semantic_seeds: string[];
+  andromeda_exclusion: string[];
+}
+
 interface DraftData {
   campaign_name: string;
   copy_options: CopyOption[];
   targeting_suggestion: TargetingSuggestion;
   daily_budget: number;
   ai_reasoning: string;
+  andromeda_targeting?: AndromedaTargeting;
 }
 
 type DraftRecord = {
