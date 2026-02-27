@@ -311,6 +311,46 @@ export default function Configuracoes() {
           </CardContent>
         </Card>
 
+        {/* Gemini API Key Section */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Brain className={`w-5 h-5 ${hasGeminiKey ? "text-emerald-400" : "text-muted-foreground"}`} />
+              🧠 Inteligência Artificial (Gemini)
+            </CardTitle>
+            <CardDescription>Insira sua chave do Google AI Studio para ativar o diagnóstico estratégico e geração de copies. Opcional — o sistema já funciona com a IA integrada.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className={`flex items-center gap-2 p-3 rounded-lg border ${hasGeminiKey ? "bg-emerald-500/10 border-emerald-500/20" : "bg-secondary border-border"}`}>
+              {hasGeminiKey ? (
+                <>
+                  <Brain className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span className="text-sm text-emerald-400 font-semibold">IA Conectada — Gemini API Key ativa ({maskToken(activeProfile.gemini_api_key)})</span>
+                </>
+              ) : (
+                <>
+                  <Brain className="w-4 h-4 text-muted-foreground shrink-0" />
+                  <span className="text-sm text-muted-foreground">IA Desconectada — Usando IA integrada do sistema. Adicione uma chave Gemini para uso avançado.</span>
+                </>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="geminiApiKey">Gemini API Key (opcional)</Label>
+              {!geminiEditing ? (
+                <div className="flex items-center gap-2">
+                  <Input id="geminiApiKey" value={hasGeminiKey ? maskToken(activeProfile.gemini_api_key) : ""} placeholder="Não configurada" disabled className="font-mono text-sm" />
+                  <Button variant="outline" size="sm" onClick={() => setGeminiEditing(true)}>{hasGeminiKey ? "Alterar" : "Adicionar"}</Button>
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  <Input id="geminiApiKey" type="password" value={form.geminiApiKey} onChange={(e) => handleChange("geminiApiKey", e.target.value)} placeholder="Cole aqui sua API Key do Google AI Studio" className="font-mono text-sm" />
+                  <p className="text-xs text-muted-foreground">Obtenha em <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">aistudio.google.com/apikey</a>. Deixe vazio e salve para usar a IA integrada.</p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Product Context Section */}
         <Card>
           <CardHeader>

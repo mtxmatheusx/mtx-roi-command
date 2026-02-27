@@ -5,3 +5,9 @@ verify_jwt = false
 
 [functions.ai-chat]
 verify_jwt = false
+
+[functions.create-meta-campaign]
+verify_jwt = false
+
+[functions.absorb-product-context]
+verify_jwt = false
