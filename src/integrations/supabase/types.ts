@@ -278,31 +278,37 @@ export type Database = {
       vsl_scripts: {
         Row: {
           angle: string
+          content_json: Json | null
           created_at: string
           duration: string
           id: string
           profile_id: string | null
           script_content: string
+          title: string
           tone: string
           user_id: string
         }
         Insert: {
           angle?: string
+          content_json?: Json | null
           created_at?: string
           duration?: string
           id?: string
           profile_id?: string | null
           script_content?: string
+          title?: string
           tone?: string
           user_id: string
         }
         Update: {
           angle?: string
+          content_json?: Json | null
           created_at?: string
           duration?: string
           id?: string
           profile_id?: string | null
           script_content?: string
+          title?: string
           tone?: string
           user_id?: string
         }

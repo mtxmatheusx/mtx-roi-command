@@ -1,0 +1,63 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "campaigns": "Campaigns",
+    "diagnostic": "AI Diagnostic",
+    "launchCampaign": "Launch Campaign",
+    "simulator": "Simulator",
+    "creatives": "Creatives",
+    "auditMeta": "Meta AI Audit",
+    "settings": "Settings",
+    "agencyView": "Agency View",
+    "logout": "Log Out"
+  },
+  "common": {
+    "loading": "Loading...",
+    "generate": "Generate",
+    "regenerate": "Regenerate",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "delete": "Delete",
+    "copy": "Copy",
+    "download": "Download",
+    "save": "Save",
+    "close": "Close"
+  },
+  "diagnostic": {
+    "title": "AI Diagnostic",
+    "subtitle": "Deep campaign analysis with Hormozi & StoryBrand frameworks",
+    "generateBtn": "Generate Diagnostic",
+    "analyzing": "Analyzing...",
+    "noReport": "No diagnostic generated",
+    "noReportHint": "Click \"Generate Diagnostic\" to let the AI analyze your campaigns",
+    "reportTitle": "Diagnostic Report",
+    "mockWarning": "Mock data detected. Connect your Meta Ads account in Settings for real analysis."
+  },
+  "vsl": {
+    "title": "VSL & Copy Factory",
+    "subtitle": "Generate high-conversion scripts with Storybrand + Hormozi",
+    "directionTitle": "Creative Direction",
+    "directionDesc": "Set the parameters to guide the AI in script generation.",
+    "angle": "Offer Angle",
+    "anglePlaceholder": "E.g.: Fear of missing out, Opportunity",
+    "duration": "Desired Duration",
+    "tone": "Tone of Voice",
+    "generateBtn": "Generate High-Conversion Script",
+    "generating": "Generating script...",
+    "noScript": "No script generated",
+    "noScriptHint": "Set up creative direction and click \"Generate Script\"",
+    "scriptTitle": "Production Script",
+    "vaultTitle": "Script Vault",
+    "vaultEmpty": "No saved scripts",
+    "savedToast": "💾 Script saved to vault.",
+    "deletedToast": "🗑️ Script deleted."
+  },
+  "killSwitch": {
+    "btn": "Pause Operation",
+    "title": "Kill Switch"
+  },
+  "campaign": {
+    "publishBtn": "Publish Campaign",
+    "aiSuggestion": "AI Suggestion"
+  }
+}
