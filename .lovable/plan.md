@@ -1,63 +1,100 @@
 
 
-## Plano: Status de Campanhas + Log de Automação + Sync Global + Correções
+## Plano: Módulos de Auditoria Meta AI, Asset Vault com Scraper Visual, e Públicos Dinâmicos
 
-### 1. Edge Function — Adicionar `campaign_id`, `effective_status` ao fetch
+Este é um conjunto grande de features. Vou dividir em fases implementáveis.
 
-**`supabase/functions/meta-ads-sync/index.ts`**
-- Adicionar `campaign_id` e `effective_status` aos fields do fetch de campanhas
-- Retornar esses campos no response para cada campaign row
-- O campo `effective_status` da Meta API retorna: `ACTIVE`, `PAUSED`, `DELETED`, `ARCHIVED`, etc.
+---
 
-### 2. `useMetaAds.ts` — Expor status real + invalidar cache ao trocar perfil
+### FASE 1: Auditoria Meta AI + Scraper Visual (prioridade)
 
-- Adicionar `effectiveStatus` ao `MetaAdsCampaign` e mapear para `Campaign.status` baseado no valor da API:
-  - `ACTIVE` → `active`
-  - `PAUSED` → `paused`
-  - Outros → `paused`
-- Remover lógica atual que infere status a partir de spend/ROAS
-- `queryKey` já inclui `adAccountId`, portanto trocar perfil já invalida cache automaticamente
+#### 1. Nova página "Auditoria Meta AI" (`src/pages/AuditoriaMeta.tsx`)
+- Sub-aba no sidebar: "Auditoria Meta AI" com ícone `Shield`
+- Cards de recomendações com 3 seções: o que a Meta quer, veredito do Gemini, botões de ação
+- Rota `/auditoria-meta` no `App.tsx` e item no `AppSidebar.tsx`
 
-### 3. `mockData.ts` — Adicionar campo `effectiveStatus` ao Campaign type
+#### 2. Edge function `meta-recommendations` 
+- Fetch `GET /{act_id}/recommendations` da Meta API com o access token do perfil
+- Retorna JSON cru das sugestões
 
-- Adicionar `effectiveStatus?: string` ao type `Campaign`
+#### 3. Edge function `audit-recommendation`
+- Recebe a recomendação + perfil (CPA, budget, dossiê)
+- Envia ao Lovable AI (Gemini) com prompt de "Auditor de Tráfego Sênior"
+- Retorna veredito: `✅ APROVADO`, `⚠️ COM RESSALVAS`, ou `❌ REJEITADO`
+- Inclui justificativa de 1 linha
 
-### 4. `CampaignsTable.tsx` — Coluna Status com badges + Toggle de filtro
+#### 4. Scraper Visual na aba Criativos (`Criativos.tsx`)
+- Nova seção "Extrator Visual Rápido" no topo com input de URL + botão "Capturar Mídias"
+- Loader durante extração
 
-- Adicionar coluna "Status" com badges: `[ATIVO]` verde neon, `[PAUSADO]` cinza
-- Adicionar `Switch` toggle "Mostrar apenas ativas" acima da tabela
-- Filtrar campanhas com base no toggle
+#### 5. Edge function `scrape-media`
+- Recebe URL, usa Firecrawl (já conectado) para scrape com formato `html`
+- Parseia `<img>` e `<video>` tags, filtra por resolução (ignora ícones/banners)
+- Faz download das mídias válidas e salva no bucket `creative-assets`
+- Insere registros em `creative_assets` com tag `source: "scraped:URL"`
+- Retorna lista de mídias salvas
 
-### 5. Campanhas, Criativos, Simulador — Botão "Forçar Atualização" replicado
+#### 6. Coluna `source_tag` em `creative_assets`
+- Migration: `ALTER TABLE creative_assets ADD COLUMN source_tag text DEFAULT 'uploaded';`
+- Tags automáticas: `uploaded`, `scraped:https://...`
 
-- **`Campanhas.tsx`**: Adicionar `useClientProfiles` + `DateRangePicker` + botão Refresh com `forceRefetch()` e timestamp independente
-- **`Criativos.tsx`**: Adicionar botão Refresh com `forceRefetch()` e timestamp independente
-- **`Simulador.tsx`**: Consumir `useMetaAds` para pegar CPA e Ticket Médio reais; adicionar botão Refresh
+---
 
-### 6. `Configuracoes.tsx` — Limpar campos duplicados
+### FASE 2: Vision-to-Copy + Galeria no Lançar Campanha
 
-- A seção "Controle de Teto Financeiro" tem campos CPA Meta, Ticket Médio e Limite Escala duplicados. Remover a duplicação, mantendo apenas Budget Máximo + Frequência nessa seção.
+#### 7. Galeria de ativos no Step 2 (`LancarCampanha.tsx`)
+- Grid visual dos `creative_assets` do perfil para seleção com clique
+- Estado `selectedAssetId` que será enviado na publicação
 
-### 7. `Index.tsx` — Indicador "Monitoramento Ativo" + Log de Automação
+#### 8. Atualizar `ai-campaign-draft` para Vision-to-Copy
+- Se um asset (imagem) estiver selecionado, enviar URL da imagem ao Gemini com prompt StoryBrand/Brunson
+- Chain-of-Thought: análise visual → cruzamento com dossiê → geração de copy com Hook/Story/CTA
 
-- Adicionar pill pulsante no topo: `"● Monitoramento Ativo em Tempo Real"` com animação pulse neon
-- Criar seção "Log de Automação" abaixo das campanhas com entries geradas client-side:
-  - A cada renderização/refetch, gerar entry: `"Check realizado às HH:MM — ROI atual: X.XX — Nenhuma ação necessária"`
-  - Se alguma campanha tiver CPA > 2× meta com 0 vendas: `"AÇÃO: Campanha [Nome] sinalizada por CPA alto"`
-  - Armazenar últimos 20 logs em state local
+#### 9. Enviar `image_url` na criação do anúncio
+- Atualizar `create-meta-campaign` para incluir `image_url` ou `picture` no `link_data` do `object_story_spec`
 
-### 8. Não necessita migração SQL
+---
 
-Budget frequency e budget_maximo já existem no schema. Nenhuma alteração de banco necessária.
+### FASE 3: Públicos Dinâmicos (Custom Audiences)
 
-### Arquivos modificados
-- `supabase/functions/meta-ads-sync/index.ts` — campos effective_status
-- `src/lib/mockData.ts` — type Campaign atualizado  
-- `src/hooks/useMetaAds.ts` — mapear status real
-- `src/components/CampaignsTable.tsx` — badges status + toggle filtro
-- `src/pages/Campanhas.tsx` — botão refresh + profiles
-- `src/pages/Criativos.tsx` — botão refresh
-- `src/pages/Simulador.tsx` — dados reais + botão refresh
-- `src/pages/Index.tsx` — indicador pulse + log de automação
-- `src/pages/Configuracoes.tsx` — remover campos duplicados
+#### 10. Edge function `create-custom-audience`
+- POST `/{act_id}/customaudiences` na Meta API
+- Suporta: Custom Audience (pixel-based), Lookalike
+- Retorna `audience_id`
+
+#### 11. Injeção no AdSet
+- Atualizar `create-meta-campaign` para aceitar `audience_id` opcional no targeting
+- Injetar em `targeting.custom_audiences`
+
+#### 12. Log visual de audiência no Step 3
+- Feedback em tempo real: "⚙️ IA criando público..." → "✅ Público criado (ID: xxx)"
+
+---
+
+### Arquivos
+
+| Arquivo | Mudança |
+|---|---|
+| Migration SQL | `source_tag` em `creative_assets` |
+| `src/pages/AuditoriaMeta.tsx` | Nova página — dashboard de auditoria |
+| `src/App.tsx` | Rota `/auditoria-meta` |
+| `src/components/AppSidebar.tsx` | Item "Auditoria Meta AI" |
+| `supabase/functions/meta-recommendations/index.ts` | Fetch recomendações da Meta |
+| `supabase/functions/audit-recommendation/index.ts` | Gemini audita recomendação |
+| `supabase/functions/scrape-media/index.ts` | Scraper visual com Firecrawl |
+| `src/pages/Criativos.tsx` | Seção "Extrator Visual Rápido" + tags |
+| `src/pages/LancarCampanha.tsx` | Galeria de ativos + seleção + image_url |
+| `supabase/functions/create-meta-campaign/index.ts` | Injetar image_url + audience_id |
+| `supabase/functions/ai-campaign-draft/index.ts` | Vision-to-Copy com imagem |
+| `supabase/functions/create-custom-audience/index.ts` | Criação de públicos na Meta |
+
+---
+
+### Nota sobre WhatsApp
+A integração WhatsApp (alerta de custo +15%) requer um webhook externo (Make/Evolution API). Será planejada separadamente após configuração do endpoint.
+
+### Nota sobre Instagram Graph API
+O fetch de posts orgânicos do Instagram requer permissões adicionais (`instagram_basic`, `instagram_manage_insights`) no token. Será adicionado como extensão futura do Cérebro de Criativos.
+
+Recomendo implementar a **Fase 1** primeiro (Auditoria + Scraper), validar, e seguir para as Fases 2 e 3.
 
