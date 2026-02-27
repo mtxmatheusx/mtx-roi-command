@@ -876,6 +876,56 @@ export default function LancarCampanha() {
                     </div>
                   </div>
                 )}
+              </CardContent>
+            </Card>
+
+            <div className="flex gap-3">
+              <Button onClick={() => setStep(3)}>Revisar e Aprovar</Button>
+              <Button variant="outline" onClick={handleSaveDraft}>Salvar como Rascunho</Button>
+              <Button variant="ghost" onClick={() => setStep(1)}>Voltar</Button>
+            </div>
+          </div>
+        )}
+
+        {/* Upload Modal */}
+        <Dialog open={uploadOpen} onOpenChange={setUploadOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>📤 Subir Novo Ativo</DialogTitle>
+              <DialogDescription>Arraste ou selecione fotos e vídeos para o Cérebro de Criativos.</DialogDescription>
+            </DialogHeader>
+            <div
+              onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+              onDragLeave={() => setIsDragging(false)}
+              onDrop={handleDrop}
+              onClick={() => fileInputRef.current?.click()}
+              className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-all ${
+                isDragging ? "border-primary bg-primary/10" : "border-border hover:border-primary/50"
+              }`}
+            >
+              <Upload className="w-10 h-10 mx-auto mb-3 text-muted-foreground" />
+              <p className="text-sm font-medium">Arraste arquivos aqui ou clique para selecionar</p>
+              <p className="text-xs text-muted-foreground mt-1">JPG, PNG, MP4, MOV — máx. 20MB</p>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".jpg,.jpeg,.png,.mp4,.mov"
+                multiple
+                className="hidden"
+                onChange={(e) => {
+                  if (e.target.files?.length) handleFileUpload(e.target.files);
+                }}
+              />
+            </div>
+            {isUploading && (
+              <div className="space-y-2">
+                <Progress value={uploadProgress} className="h-2" />
+                <p className="text-xs text-muted-foreground text-center">{uploadProgress}% — Enviando e indexando com IA...</p>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
         {/* Step 3 */}
         {step === 3 && draft && (
           <div className="space-y-4">
