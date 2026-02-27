@@ -1,51 +1,63 @@
 
 
-## Plan: Creative Thumbnails from Meta API + Date Filter on Criativos Page
+## Plano: Status de Campanhas + Log de Automação + Sync Global + Correções
 
-### 1. Fetch Ad Thumbnails from Meta API
+### 1. Edge Function — Adicionar `campaign_id`, `effective_status` ao fetch
 
-**File: `supabase/functions/meta-ads-sync/index.ts`**
+**`supabase/functions/meta-ads-sync/index.ts`**
+- Adicionar `campaign_id` e `effective_status` aos fields do fetch de campanhas
+- Retornar esses campos no response para cada campaign row
+- O campo `effective_status` da Meta API retorna: `ACTIVE`, `PAUSED`, `DELETED`, `ARCHIVED`, etc.
 
-- Add `ad_id` to `adFields` and include a second fetch at the ad level to get creative details: `GET /{ad_id}?fields=creative{thumbnail_url,image_url,object_story_spec}`
-- Simpler approach: add `adcreatives{thumbnail_url,image_url}` to the ad-level insights query, or do a batch call after getting ad IDs
-- Actually the cleanest approach: after fetching ad-level insights, collect all `ad_id`s, then fetch `GET /{adAccountId}/ads?fields=id,name,creative{thumbnail_url,image_url}&limit=50` and merge `thumbnail_url` into the creatives array
-- Return `thumbnailUrl` field in each creative object
+### 2. `useMetaAds.ts` — Expor status real + invalidar cache ao trocar perfil
 
-### 2. Add Date Filter to Criativos Page
+- Adicionar `effectiveStatus` ao `MetaAdsCampaign` e mapear para `Campaign.status` baseado no valor da API:
+  - `ACTIVE` → `active`
+  - `PAUSED` → `paused`
+  - Outros → `paused`
+- Remover lógica atual que infere status a partir de spend/ROAS
+- `queryKey` já inclui `adAccountId`, portanto trocar perfil já invalida cache automaticamente
 
-**File: `src/pages/Criativos.tsx`**
+### 3. `mockData.ts` — Adicionar campo `effectiveStatus` ao Campaign type
 
-- Import `DateRangePicker` component (already exists)
-- Add `dateRange` state initialized to `defaultRange`
-- Pass `dateRange` to `useMetaAds` instead of the static `defaultRange`
-- Render `<DateRangePicker>` in the header area next to the refresh button
+- Adicionar `effectiveStatus?: string` ao type `Campaign`
 
-### 3. Display Real Thumbnails
+### 4. `CampaignsTable.tsx` — Coluna Status com badges + Toggle de filtro
 
-**File: `src/pages/Criativos.tsx`**
+- Adicionar coluna "Status" com badges: `[ATIVO]` verde neon, `[PAUSADO]` cinza
+- Adicionar `Switch` toggle "Mostrar apenas ativas" acima da tabela
+- Filtrar campanhas com base no toggle
 
-- Update `MetaCreative` type in `useMetaAds.ts` to include optional `thumbnailUrl` field
-- In the creative card, replace the placeholder icon div with an `<img>` tag when `thumbnailUrl` exists, falling back to the icon placeholder when absent
+### 5. Campanhas, Criativos, Simulador — Botão "Forçar Atualização" replicado
 
-### 4. Creative Fatigue Detection
+- **`Campanhas.tsx`**: Adicionar `useClientProfiles` + `DateRangePicker` + botão Refresh com `forceRefetch()` e timestamp independente
+- **`Criativos.tsx`**: Adicionar botão Refresh com `forceRefetch()` e timestamp independente
+- **`Simulador.tsx`**: Consumir `useMetaAds` para pegar CPA e Ticket Médio reais; adicionar botão Refresh
 
-**File: `src/pages/Criativos.tsx`**
+### 6. `Configuracoes.tsx` — Limpar campos duplicados
 
-- Add logic: if a creative has `roas < previousRoas * 0.75` (25% drop), show a "⚠️ POSSÍVEL FADIGA" badge
-- This requires comparing current period ROAS against a baseline — use the `previous` period data from `useMetaAds`
+- A seção "Controle de Teto Financeiro" tem campos CPA Meta, Ticket Médio e Limite Escala duplicados. Remover a duplicação, mantendo apenas Budget Máximo + Frequência nessa seção.
 
----
+### 7. `Index.tsx` — Indicador "Monitoramento Ativo" + Log de Automação
 
-### Files Modified
+- Adicionar pill pulsante no topo: `"● Monitoramento Ativo em Tempo Real"` com animação pulse neon
+- Criar seção "Log de Automação" abaixo das campanhas com entries geradas client-side:
+  - A cada renderização/refetch, gerar entry: `"Check realizado às HH:MM — ROI atual: X.XX — Nenhuma ação necessária"`
+  - Se alguma campanha tiver CPA > 2× meta com 0 vendas: `"AÇÃO: Campanha [Nome] sinalizada por CPA alto"`
+  - Armazenar últimos 20 logs em state local
 
-| File | Change |
-|---|---|
-| `supabase/functions/meta-ads-sync/index.ts` | Fetch ad creative thumbnails, return `thumbnailUrl` per creative |
-| `src/hooks/useMetaAds.ts` | Add `thumbnailUrl` to `MetaCreative` interface |
-| `src/pages/Criativos.tsx` | Add DateRangePicker, display real thumbnails, fatigue badge |
+### 8. Não necessita migração SQL
 
-### Not Included
-- WhatsApp notifications (requires webhook endpoint setup — separate task)
-- Deep commerce scraper (already implemented with Firecrawl in `absorb-product-context`)
-- Campaign publishing fix (already addressed in previous iteration with pixel_id injection)
+Budget frequency e budget_maximo já existem no schema. Nenhuma alteração de banco necessária.
+
+### Arquivos modificados
+- `supabase/functions/meta-ads-sync/index.ts` — campos effective_status
+- `src/lib/mockData.ts` — type Campaign atualizado  
+- `src/hooks/useMetaAds.ts` — mapear status real
+- `src/components/CampaignsTable.tsx` — badges status + toggle filtro
+- `src/pages/Campanhas.tsx` — botão refresh + profiles
+- `src/pages/Criativos.tsx` — botão refresh
+- `src/pages/Simulador.tsx` — dados reais + botão refresh
+- `src/pages/Index.tsx` — indicador pulse + log de automação
+- `src/pages/Configuracoes.tsx` — remover campos duplicados
 
