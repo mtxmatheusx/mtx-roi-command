@@ -15,6 +15,8 @@ export interface ClientProfile {
   budget_maximo: number;
   budget_frequency: string;
   meta_access_token: string | null;
+  product_context: string | null;
+  product_urls: string[];
   is_active: boolean;
   created_at: string;
   updated_at: string;
