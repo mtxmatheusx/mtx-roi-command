@@ -41,7 +41,7 @@ export default function Configuracoes() {
   const navigate = useNavigate();
   const { activeProfile, updateProfile, deleteProfile, profiles, isLoading: profilesLoading, productContext, productUrls, geminiApiKey } = useClientProfiles();
   const [form, setForm] = useState({
-    name: "", adAccountId: "act_", pixelId: "",
+    name: "", adAccountId: "act_", pixelId: "", pageId: "",
     cpaMeta: "45", ticketMedio: "697", limiteEscala: "15",
     budgetMaximo: "0", budgetFrequency: "monthly" as "daily" | "weekly" | "monthly",
     metaAccessToken: "",
