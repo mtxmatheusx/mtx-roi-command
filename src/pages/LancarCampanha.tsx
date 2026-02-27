@@ -78,19 +78,23 @@ export default function LancarCampanha() {
   const [creativeBrain, setCreativeBrain] = useState<{ recommendation: any; total_assets: number; total_campaigns_analyzed?: number } | null>(null);
   const [isChoosingCreative, setIsChoosingCreative] = useState(false);
 
-  // Load draft history
+  // Load draft history filtered by profile
   useEffect(() => {
     if (!user?.id) return;
     loadDrafts();
-  }, [user?.id]);
+  }, [user?.id, activeProfile?.id]);
 
   const loadDrafts = async () => {
-    const { data } = await supabase
+    let query = supabase
       .from("campaign_drafts")
       .select("*")
       .eq("user_id", user!.id)
       .order("created_at", { ascending: false })
       .limit(20);
+    if (activeProfile?.id) {
+      query = query.eq("profile_id", activeProfile.id);
+    }
+    const { data } = await query;
     if (data) setDrafts(data as unknown as DraftRecord[]);
   };
 

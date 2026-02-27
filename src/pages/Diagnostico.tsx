@@ -18,6 +18,14 @@ export default function Diagnostico() {
   const { toast } = useToast();
   const reportRef = useRef<HTMLDivElement>(null);
 
+  // Clear report when profile changes
+  const profileId = activeProfile?.id;
+  const prevProfileRef = useRef(profileId);
+  if (prevProfileRef.current !== profileId) {
+    prevProfileRef.current = profileId;
+    if (report) setReport("");
+  }
+
   const generateDiagnostic = async () => {
     setLoading(true);
     setReport("");
