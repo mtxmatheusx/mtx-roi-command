@@ -155,7 +155,15 @@ serve(async (req) => {
 
     // Inject pixel_id as promoted_object for conversion campaigns
     if (isConversion && pixelId && pixelId.trim() !== "") {
-      adSetBody.promoted_object = { pixel_id: pixelId };
+      adSetBody.promoted_object = {
+        pixel_id: pixelId,
+        custom_event_type: draft.objective === "OUTCOME_LEADS" ? "LEAD" : "PURCHASE",
+      };
+    } else if (isConversion && (!pixelId || pixelId.trim() === "")) {
+      await supabase.from("campaign_drafts").update({ status: "failed", error_message: "Pixel ID é obrigatório para campanhas de conversão. Configure nas Configurações." }).eq("id", draftId);
+      return new Response(JSON.stringify({ error: "Pixel ID é obrigatório para campanhas de conversão.", step: "adset_validation" }), {
+        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const adSetRes = await fetch(`${META_API}/${adAccountId}/adsets`, {
