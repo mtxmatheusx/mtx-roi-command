@@ -13,8 +13,8 @@ const AI_CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-chat`;
 export default function Diagnostico() {
   const [report, setReport] = useState("");
   const [loading, setLoading] = useState(false);
-  const { activeProfile, cpaMeta, ticketMedio, limiteEscala, budgetMaximo, adAccountId } = useClientProfiles();
-  const { campaigns, dailyData, previousPeriod, isMockData } = useMetaAds(adAccountId);
+  const { activeProfile, cpaMeta, ticketMedio, limiteEscala, budgetMaximo, adAccountId, metaAccessToken } = useClientProfiles();
+  const { campaigns, daily, previous, isUsingMock } = useMetaAds(undefined, { adAccountId, cpaMeta, ticketMedio, accessToken: metaAccessToken });
   const { toast } = useToast();
   const reportRef = useRef<HTMLDivElement>(null);
 
