@@ -15,6 +15,7 @@ export interface ClientProfile {
   budget_maximo: number;
   budget_frequency: string;
   meta_access_token: string | null;
+  gemini_api_key: string | null;
   product_context: string | null;
   product_urls: string[];
   is_active: boolean;
