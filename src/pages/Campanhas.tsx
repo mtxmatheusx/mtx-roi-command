@@ -1,5 +1,6 @@
 import { useState } from "react";
 import AppLayout from "@/components/AppLayout";
+import ActiveProfileHeader from "@/components/ActiveProfileHeader";
 import CampaignsTable from "@/components/CampaignsTable";
 import { formatCurrency, formatPercent } from "@/lib/mockData";
 import { useMetaAds, DateRange } from "@/hooks/useMetaAds";
