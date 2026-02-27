@@ -110,7 +110,9 @@ export default function LancarCampanha() {
       const { data, error } = await supabase.functions.invoke("ai-campaign-draft", {
         body: {
           objective,
+          profileId: activeProfile?.id,
           profileConfig: {
+            name: activeProfile?.name,
             cpa_meta: cpaMeta,
             ticket_medio: ticketMedio,
             budget_maximo: budgetMaximo,
