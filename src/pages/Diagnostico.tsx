@@ -78,9 +78,23 @@ export default function Diagnostico() {
 
       if (!resp.ok) {
         const err = await resp.json().catch(() => ({ error: "Erro desconhecido" }));
-        toast({ title: "Erro no Diagnóstico", description: err.error || `Erro ${resp.status}`, variant: "destructive" });
+        if (err.blocked) {
+          toast({ title: "⚠️ IA Bloqueada", description: err.error || "Faltam dados no Dossiê ou falha de conexão com a Meta Ads. Preencha as configurações do perfil.", variant: "destructive" });
+        } else {
+          toast({ title: "Erro no Diagnóstico", description: err.error || `Erro ${resp.status}`, variant: "destructive" });
+        }
         setLoading(false);
         return;
+      }
+      // Check for blocked response on 200
+      const contentType = resp.headers.get("content-type") || "";
+      if (contentType.includes("application/json")) {
+        const jsonResp = await resp.json();
+        if (jsonResp.blocked) {
+          toast({ title: "⚠️ IA Bloqueada", description: jsonResp.error || "Preencha o Dossiê do Avatar nas Configurações.", variant: "destructive" });
+          setLoading(false);
+          return;
+        }
       }
 
       if (!resp.body) { setLoading(false); return; }

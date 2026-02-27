@@ -89,9 +89,14 @@ export default function AuditoriaMeta() {
         body: {
           recommendation: rec.recommendation,
           profileSummary,
-          productContext: productContext || undefined,
+          profileId: activeProfile?.id,
         },
       });
+      if (data?.blocked) {
+        toast({ title: "⚠️ IA Bloqueada", description: data.error || "Preencha o Dossiê do Avatar nas Configurações.", variant: "destructive" });
+        setRecommendations((prev) => prev.map((r, idx) => idx === index ? { ...r, isAuditing: false } : r));
+        return;
+      }
       if (error) throw error;
       if (data.error) throw new Error(data.error);
 

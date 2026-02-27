@@ -143,6 +143,12 @@ export default function LancarCampanha() {
 
       if (error) throw error;
 
+      if (data?.blocked) {
+        toast({ title: "⚠️ IA Bloqueada", description: data.error || "Faltam dados no Dossiê ou falha de conexão com a Meta Ads. Preencha as configurações do perfil.", variant: "destructive" });
+        setIsGenerating(false);
+        return;
+      }
+
       setDraft({
         campaign_name: data.campaign_name,
         copy_options: data.copy_options || [],
