@@ -243,6 +243,7 @@ export default function LancarCampanha() {
 
       loadDrafts();
     } catch (e: any) {
+      addLog(`Erro: ${e.message}`, "error");
       setPublishStep(`Erro: ${e.message}`);
       setPublishProgress(100);
       setPublishResult({ success: false, error: e.message });
