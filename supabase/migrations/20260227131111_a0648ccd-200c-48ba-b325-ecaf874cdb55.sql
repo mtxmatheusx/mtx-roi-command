@@ -1,0 +1,1 @@
+ALTER TABLE public.client_profiles ADD COLUMN page_id text;

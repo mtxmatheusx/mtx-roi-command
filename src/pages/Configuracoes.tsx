@@ -41,7 +41,7 @@ export default function Configuracoes() {
   const navigate = useNavigate();
   const { activeProfile, updateProfile, deleteProfile, profiles, isLoading: profilesLoading, productContext, productUrls, geminiApiKey } = useClientProfiles();
   const [form, setForm] = useState({
-    name: "", adAccountId: "act_", pixelId: "",
+    name: "", adAccountId: "act_", pixelId: "", pageId: "",
     cpaMeta: "45", ticketMedio: "697", limiteEscala: "15",
     budgetMaximo: "0", budgetFrequency: "monthly" as "daily" | "weekly" | "monthly",
     metaAccessToken: "",
@@ -68,6 +68,7 @@ export default function Configuracoes() {
         name: activeProfile.name || "",
         adAccountId: activeProfile.ad_account_id || "act_",
         pixelId: activeProfile.pixel_id || "",
+        pageId: (activeProfile as any).page_id || "",
         cpaMeta: String(activeProfile.cpa_meta ?? 45),
         ticketMedio: String(activeProfile.ticket_medio ?? 697),
         limiteEscala: String(activeProfile.limite_escala ?? 15),
@@ -104,7 +105,7 @@ export default function Configuracoes() {
     try {
       const updateData: Record<string, unknown> = {
         id: activeProfile.id, name: parsed.data.name, ad_account_id: parsed.data.adAccountId,
-        pixel_id: parsed.data.pixelId || "", cpa_meta: parsed.data.cpaMeta, ticket_medio: parsed.data.ticketMedio,
+        pixel_id: parsed.data.pixelId || "", page_id: form.pageId || null, cpa_meta: parsed.data.cpaMeta, ticket_medio: parsed.data.ticketMedio,
         limite_escala: parsed.data.limiteEscala, budget_maximo: parsed.data.budgetMaximo, budget_frequency: parsed.data.budgetFrequency,
       };
       if (tokenEditing && form.metaAccessToken) {
@@ -306,6 +307,11 @@ export default function Configuracoes() {
                 <Label htmlFor="pixelId">Pixel ID (opcional)</Label>
                 <Input id="pixelId" placeholder="123456789012345" value={form.pixelId} onChange={(e) => handleChange("pixelId", e.target.value)} className="font-mono text-sm" />
               </div>
+            </div>
+            <div className="space-y-2 max-w-md">
+              <Label htmlFor="pageId">Facebook Page ID</Label>
+              <Input id="pageId" placeholder="123456789012345" value={form.pageId} onChange={(e) => handleChange("pageId", e.target.value)} className="font-mono text-sm" />
+              <p className="text-xs text-muted-foreground">ID da Página do Facebook vinculada à conta de anúncios. Obrigatório para criar anúncios.</p>
             </div>
             <div className="flex items-center gap-3">
               <Button variant="outline" onClick={handleTestConnection} disabled={testResult === "loading"} className="gap-2">

@@ -92,6 +92,7 @@ export type Database = {
           limite_escala: number
           meta_access_token: string | null
           name: string
+          page_id: string | null
           pixel_id: string | null
           product_context: string | null
           product_urls: string[] | null
@@ -111,6 +112,7 @@ export type Database = {
           limite_escala?: number
           meta_access_token?: string | null
           name: string
+          page_id?: string | null
           pixel_id?: string | null
           product_context?: string | null
           product_urls?: string[] | null
@@ -130,6 +132,7 @@ export type Database = {
           limite_escala?: number
           meta_access_token?: string | null
           name?: string
+          page_id?: string | null
           pixel_id?: string | null
           product_context?: string | null
           product_urls?: string[] | null
