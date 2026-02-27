@@ -43,7 +43,7 @@ export default function Diagnostico() {
         compras: c.purchases,
       })),
       resumo_periodo_anterior: previous
-        ? { gasto: previous.spend, receita: previous.revenue, cpa: previous.cpa, roas: previous.roas }
+        ? { gasto: previous.spend, receita: previous.purchaseValue, cpa: previous.cpa, roas: previous.roas }
         : null,
       dados_diarios_recentes: daily?.slice(-7) || [],
     };
