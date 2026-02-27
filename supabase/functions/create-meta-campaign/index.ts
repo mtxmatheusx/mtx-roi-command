@@ -158,7 +158,8 @@ serve(async (req) => {
     const targetingObj: Record<string, unknown> = { geo_locations: { countries: ["BR"] } };
     if (andromedaTargeting) {
       if (andromedaTargeting.age_min) targetingObj.age_min = andromedaTargeting.age_min;
-      if (andromedaTargeting.age_max) targetingObj.age_max = andromedaTargeting.age_max;
+      // Force age_max=65 when Advantage+ is active (Meta API constraint)
+      targetingObj.age_max = 65;
       if (andromedaTargeting.genders?.length && !andromedaTargeting.genders.includes(0)) {
         targetingObj.genders = andromedaTargeting.genders;
       }
