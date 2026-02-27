@@ -86,6 +86,9 @@ serve(async (req) => {
       productBlock = `\n\n**Contexto do Produto (absorvido do site):**\n${productContext}\n\nUSE este contexto para manter consistência de marca em todas as copies.`;
     }
 
+    const today = new Date().toISOString().slice(0, 10);
+    const finalSystemPrompt = `**Data de hoje: ${today}**\n\n` + SYSTEM_PROMPT;
+
     const userPrompt = `Gere uma sugestão de campanha Meta Ads com os seguintes parâmetros:
 
 **Objetivo:** ${objective}
