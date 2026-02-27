@@ -86,6 +86,9 @@ serve(async (req) => {
       productBlock = `\n\n**Contexto do Produto (absorvido do site):**\n${productContext}\n\nUSE este contexto para manter consistência de marca em todas as copies.`;
     }
 
+    const today = new Date().toISOString().slice(0, 10);
+    const finalSystemPrompt = `**Data de hoje: ${today}**\n\n` + SYSTEM_PROMPT;
+
     const userPrompt = `Gere uma sugestão de campanha Meta Ads com os seguintes parâmetros:
 
 **Objetivo:** ${objective}
@@ -109,7 +112,7 @@ Gere EXATAMENTE 3 copies (direct_response, storytelling, social_proof), nome no 
       body: JSON.stringify({
         model: "google/gemini-3-flash-preview",
         messages: [
-          { role: "system", content: SYSTEM_PROMPT },
+          { role: "system", content: finalSystemPrompt },
           { role: "user", content: userPrompt },
         ],
         tools: [
