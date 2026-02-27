@@ -9,6 +9,7 @@ import Index from "./pages/Index";
 import Campanhas from "./pages/Campanhas";
 import Simulador from "./pages/Simulador";
 import Criativos from "./pages/Criativos";
+import AuditoriaMeta from "./pages/AuditoriaMeta";
 import Configuracoes from "./pages/Configuracoes";
 import Diagnostico from "./pages/Diagnostico";
 import LancarCampanha from "./pages/LancarCampanha";
