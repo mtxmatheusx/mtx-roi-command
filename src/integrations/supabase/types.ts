@@ -151,6 +151,7 @@ export type Database = {
           file_url: string
           id: string
           profile_id: string | null
+          source_tag: string
           user_id: string
         }
         Insert: {
@@ -161,6 +162,7 @@ export type Database = {
           file_url: string
           id?: string
           profile_id?: string | null
+          source_tag?: string
           user_id: string
         }
         Update: {
@@ -171,6 +173,7 @@ export type Database = {
           file_url?: string
           id?: string
           profile_id?: string | null
+          source_tag?: string
           user_id?: string
         }
         Relationships: [
