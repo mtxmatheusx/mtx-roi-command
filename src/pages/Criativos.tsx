@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import AppLayout from "@/components/AppLayout";
+import ActiveProfileHeader from "@/components/ActiveProfileHeader";
 import { mockCreatives, Creative, formatCurrency } from "@/lib/mockData";
 import { useMetaAds, DateRange, MetaCreative } from "@/hooks/useMetaAds";
 import { useClientProfiles } from "@/hooks/useClientProfiles";
