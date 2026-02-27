@@ -186,6 +186,7 @@ serve(async (req) => {
     // Enable Andromeda/Advantage+ audience expansion
     if (andromedaTargeting) {
       adSetBody.targeting_optimization = "expansion_all";
+      adSetBody.targeting_automation = { advantage_audience: 1 };
     }
 
     // Inject pixel_id as promoted_object for conversion campaigns
@@ -210,8 +211,15 @@ serve(async (req) => {
     const adSetData = await adSetRes.json();
     if (adSetData.error) {
       const errorMsg = metaError(adSetData);
-      await supabase.from("campaign_drafts").update({ status: "failed", error_message: errorMsg, meta_campaign_id: metaCampaignId }).eq("id", draftId);
-      return new Response(JSON.stringify({ error: errorMsg, step: "adset", meta_campaign_id: metaCampaignId, steps }), {
+      // Rollback: delete orphan campaign from Meta
+      try {
+        await fetch(`${META_API}/${metaCampaignId}?access_token=${accessToken}`, { method: "DELETE" });
+        console.log(`Rollback: deleted orphan campaign ${metaCampaignId}`);
+      } catch (rollbackErr) {
+        console.error("Rollback failed:", rollbackErr);
+      }
+      await supabase.from("campaign_drafts").update({ status: "failed", error_message: `${errorMsg} | Campanha parcial apagada automaticamente.`, meta_campaign_id: metaCampaignId }).eq("id", draftId);
+      return new Response(JSON.stringify({ error: `${errorMsg} | Campanha parcial apagada automaticamente.`, step: "adset", meta_campaign_id: metaCampaignId, steps, rollback: true }), {
         status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -260,11 +268,18 @@ serve(async (req) => {
     const adData = await adRes.json();
     if (adData.error) {
       const errorMsg = metaError(adData);
+      // Rollback: delete orphan campaign (which cascades adset) from Meta
+      try {
+        await fetch(`${META_API}/${metaCampaignId}?access_token=${accessToken}`, { method: "DELETE" });
+        console.log(`Rollback: deleted orphan campaign ${metaCampaignId} after ad failure`);
+      } catch (rollbackErr) {
+        console.error("Rollback failed:", rollbackErr);
+      }
       await supabase.from("campaign_drafts").update({
         status: "failed",
-        error_message: `Campanha e conjunto criados, mas erro no anúncio: ${errorMsg}`,
+        error_message: `Erro no anúncio: ${errorMsg} | Campanha parcial apagada automaticamente.`,
       }).eq("id", draftId);
-      return new Response(JSON.stringify({ error: errorMsg, step: "ad", meta_campaign_id: metaCampaignId, meta_adset_id: metaAdSetId, steps }), {
+      return new Response(JSON.stringify({ error: `${errorMsg} | Campanha parcial apagada automaticamente.`, step: "ad", meta_campaign_id: metaCampaignId, meta_adset_id: metaAdSetId, steps, rollback: true }), {
         status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }

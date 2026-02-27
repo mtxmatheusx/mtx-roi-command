@@ -14,7 +14,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Rocket, Brain, ChevronDown, CheckCircle2, XCircle, Clock, Loader2, ExternalLink, AlertTriangle, Sparkles, Image as ImageIcon, Video } from "lucide-react";
+import { Rocket, Brain, ChevronDown, CheckCircle2, XCircle, Clock, Loader2, ExternalLink, AlertTriangle, Sparkles, Image as ImageIcon, Video, Trash2, Copy } from "lucide-react";
 import { useClientProfiles } from "@/hooks/useClientProfiles";
 import { useMetaAds } from "@/hooks/useMetaAds";
 import { supabase } from "@/integrations/supabase/client";
@@ -52,6 +52,8 @@ type DraftRecord = {
   targeting_suggestion: TargetingSuggestion;
   ai_reasoning: string | null;
   meta_campaign_id: string | null;
+  meta_adset_id: string | null;
+  meta_ad_id: string | null;
   error_message: string | null;
   created_at: string;
 };
@@ -85,7 +87,7 @@ export default function LancarCampanha() {
   const [isPublishing, setIsPublishing] = useState(false);
   const [publishStep, setPublishStep] = useState("");
   const [publishProgress, setPublishProgress] = useState(0);
-  const [publishResult, setPublishResult] = useState<{ success: boolean; meta_campaign_id?: string; ads_manager_url?: string; error?: string; error_user_title?: string; error_user_msg?: string; fbtrace_id?: string; step?: string; steps?: string[] } | null>(null);
+  const [publishResult, setPublishResult] = useState<{ success: boolean; meta_campaign_id?: string; ads_manager_url?: string; error?: string; error_user_title?: string; error_user_msg?: string; fbtrace_id?: string; step?: string; steps?: string[]; rollback?: boolean } | null>(null);
   const [publishLogs, setPublishLogs] = useState<{ time: string; message: string; status: "done" | "pending" | "error" }[]>([]);
   const [drafts, setDrafts] = useState<DraftRecord[]>([]);
   const [reasoningOpen, setReasoningOpen] = useState(false);
@@ -93,6 +95,10 @@ export default function LancarCampanha() {
   const [isChoosingCreative, setIsChoosingCreative] = useState(false);
   const [confirmPublishOpen, setConfirmPublishOpen] = useState(false);
   const [useAndromeda, setUseAndromeda] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<DraftRecord | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [scaleTarget, setScaleTarget] = useState<DraftRecord | null>(null);
+  const [isScaling, setIsScaling] = useState(false);
 
   // Load draft history filtered by profile
   useEffect(() => {
@@ -262,6 +268,7 @@ export default function LancarCampanha() {
           step: result.step,
           steps: result.steps,
           meta_campaign_id: result.meta_campaign_id,
+          rollback: result.rollback || false,
         });
       } else {
         addLog("Campanha criada com sucesso!", "done");
@@ -292,6 +299,48 @@ export default function LancarCampanha() {
     setPublishResult(null);
     setPublishProgress(0);
     setPublishStep("");
+  };
+
+  const handleDeleteDraft = async (d: DraftRecord) => {
+    setIsDeleting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("delete-meta-campaign", {
+        body: { draftId: d.id },
+      });
+      if (error) throw error;
+      if (data?.error) {
+        toast({ title: "Erro ao apagar", description: data.error, variant: "destructive" });
+      } else {
+        setDrafts((prev) => prev.filter((x) => x.id !== d.id));
+        toast({ title: "✅ Sujeira apagada com sucesso do Meta Ads e do painel." });
+      }
+    } catch (e: any) {
+      toast({ title: "Erro", description: e.message, variant: "destructive" });
+    } finally {
+      setIsDeleting(false);
+      setDeleteTarget(null);
+    }
+  };
+
+  const handleCloneScale = async (d: DraftRecord) => {
+    setIsScaling(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("clone-scale-campaign", {
+        body: { draftId: d.id },
+      });
+      if (error) throw error;
+      if (data?.error) {
+        toast({ title: "Erro ao clonar", description: data.error, variant: "destructive" });
+      } else {
+        toast({ title: "💸 Campanha clonada com sucesso! Orçamento escalado em 20% e injetado na Meta Ads." });
+        loadDrafts();
+      }
+    } catch (e: any) {
+      toast({ title: "Erro", description: e.message, variant: "destructive" });
+    } finally {
+      setIsScaling(false);
+      setScaleTarget(null);
+    }
   };
 
   return (
@@ -757,8 +806,11 @@ export default function LancarCampanha() {
                     {publishResult.step && (
                       <p className="text-xs text-amber-400">Etapa com falha: {publishResult.step === "campaign" ? "Campanha" : publishResult.step === "adset" ? "Conjunto de Anúncios" : publishResult.step === "ad" ? "Anúncio" : publishResult.step}</p>
                     )}
-                    {publishResult.meta_campaign_id && (
+                    {publishResult.meta_campaign_id && !publishResult.rollback && (
                       <p className="text-xs text-amber-400">⚠️ Campanha parcialmente criada (ID: {publishResult.meta_campaign_id}). Verifique no Gerenciador de Anúncios.</p>
+                    )}
+                    {publishResult.rollback && (
+                      <p className="text-xs text-muted-foreground">🧹 Campanha parcial apagada automaticamente para manter o gerenciador limpo.</p>
                     )}
                     {publishResult.fbtrace_id && (
                       <p className="text-xs text-muted-foreground/60 font-mono">fbtrace_id: {publishResult.fbtrace_id}</p>
@@ -861,6 +913,7 @@ export default function LancarCampanha() {
                     <TableHead>Objetivo</TableHead>
                     <TableHead>Budget</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -880,11 +933,99 @@ export default function LancarCampanha() {
                             <Icon className="w-3 h-3" /> {sc.label}
                           </span>
                         </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            {d.status === "failed" && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 hover:bg-destructive/20 hover:text-destructive"
+                                onClick={() => setDeleteTarget(d)}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            )}
+                            {d.status === "published" && d.meta_campaign_id && d.meta_adset_id && d.meta_ad_id && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 hover:bg-primary/20 hover:text-primary"
+                                onClick={() => setScaleTarget(d)}
+                              >
+                                <Copy className="w-4 h-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
                       </TableRow>
                     );
                   })}
                 </TableBody>
               </Table>
+
+              {/* Delete Confirmation Modal */}
+              <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle className="flex items-center gap-2">
+                      <Trash2 className="w-5 h-5 text-destructive" />
+                      🗑️ Limpar Rastro no Meta Ads?
+                    </AlertDialogTitle>
+                    <AlertDialogDescription className="text-left space-y-2">
+                      <p>Isso vai deletar a campanha base permanentemente do seu gerenciador do Facebook e remover este registro do painel.</p>
+                      {deleteTarget?.meta_campaign_id && (
+                        <p className="font-mono text-xs text-muted-foreground">ID: {deleteTarget.meta_campaign_id}</p>
+                      )}
+                      <p className="font-medium">{deleteTarget?.campaign_name}</p>
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={() => deleteTarget && handleDeleteDraft(deleteTarget)}
+                      disabled={isDeleting}
+                      className="bg-destructive hover:bg-destructive/90 text-destructive-foreground gap-2"
+                    >
+                      {isDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                      Apagar Definitivamente
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+
+              {/* Clone & Scale Modal */}
+              <AlertDialog open={!!scaleTarget} onOpenChange={(open) => !open && setScaleTarget(null)}>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle className="flex items-center gap-2">
+                      <Rocket className="w-5 h-5 text-primary" />
+                      🚀 Escalar Campanha Vencedora
+                    </AlertDialogTitle>
+                    <AlertDialogDescription className="text-left space-y-3">
+                      <p><strong>Campanha Original:</strong> {scaleTarget?.campaign_name}</p>
+                      <p><strong>Orçamento Atual:</strong> R$ {Number(scaleTarget?.daily_budget || 0).toLocaleString("pt-BR")}/dia</p>
+                      <p>A IA aplicará a regra de escala segura (+20% de orçamento) para não resetar o algoritmo da Meta.</p>
+                      <div className="bg-primary/10 border border-primary/20 rounded-lg p-3 text-center">
+                        <p className="text-xs text-muted-foreground">Novo Orçamento Projetado</p>
+                        <p className="text-xl font-bold text-primary">
+                          R$ {(Number(scaleTarget?.daily_budget || 0) * 1.20).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}/dia
+                        </p>
+                      </div>
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel disabled={isScaling}>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={() => scaleTarget && handleCloneScale(scaleTarget)}
+                      disabled={isScaling}
+                      className="gap-2"
+                    >
+                      {isScaling ? <Loader2 className="w-4 h-4 animate-spin" /> : <Copy className="w-4 h-4" />}
+                      Clonar e Injetar Verba
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </CardContent>
           </Card>
         )}
