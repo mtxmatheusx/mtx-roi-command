@@ -9,7 +9,7 @@ import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Rocket, Brain, ChevronDown, CheckCircle2, XCircle, Clock, Loader2, ExternalLink, AlertTriangle } from "lucide-react";
+import { Rocket, Brain, ChevronDown, CheckCircle2, XCircle, Clock, Loader2, ExternalLink, AlertTriangle, Sparkles, Image as ImageIcon, Video } from "lucide-react";
 import { useClientProfiles } from "@/hooks/useClientProfiles";
 import { useMetaAds } from "@/hooks/useMetaAds";
 import { supabase } from "@/integrations/supabase/client";
