@@ -137,9 +137,14 @@ export default function Configuracoes() {
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       setTestResult("success");
-      toast({ title: "✅ Conexão OK", description: `${data.total} campanhas encontradas.` });
+      setTokenPermissions(data.permissions || []);
+      const hasAdsRead = (data.permissions || []).includes("ads_read");
+      const hasAdsMgmt = (data.permissions || []).includes("ads_management");
+      const permMsg = !hasAdsMgmt ? " ⚠️ Sem permissão ads_management (publicação bloqueada)." : "";
+      toast({ title: "✅ Conexão OK", description: `${data.total} campanhas encontradas.${permMsg}` });
     } catch (err) {
       setTestResult("error");
+      setTokenPermissions(null);
       toast({ title: "❌ Falha na conexão", description: (err as Error).message, variant: "destructive" });
     }
   };
