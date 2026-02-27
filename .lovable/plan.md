@@ -1,63 +1,52 @@
 
 
-## Plano: Status de Campanhas + Log de Automação + Sync Global + Correções
+## Análise do Estado Atual
 
-### 1. Edge Function — Adicionar `campaign_id`, `effective_status` ao fetch
+Após revisão do código:
 
-**`supabase/functions/meta-ads-sync/index.ts`**
-- Adicionar `campaign_id` e `effective_status` aos fields do fetch de campanhas
-- Retornar esses campos no response para cada campaign row
-- O campo `effective_status` da Meta API retorna: `ACTIVE`, `PAUSED`, `DELETED`, `ARCHIVED`, etc.
+1. **Page ID** — Já implementado. O campo existe em Configurações (linha 311-315), persiste no banco, e a edge function `create-meta-campaign` já valida e injeta o `page_id` no `object_story_spec` (linhas 189-216). Basta preencher o campo e salvar.
 
-### 2. `useMetaAds.ts` — Expor status real + invalidar cache ao trocar perfil
+2. **Gemini API Key** — Já funcional. O campo existe (linhas 344-382), com botão "Adicionar/Alterar", persiste via `updateProfile` com `gemini_api_key`. Clique em "Adicionar", cole a chave, e clique "Salvar Configurações".
 
-- Adicionar `effectiveStatus` ao `MetaAdsCampaign` e mapear para `Campaign.status` baseado no valor da API:
-  - `ACTIVE` → `active`
-  - `PAUSED` → `paused`
-  - Outros → `paused`
-- Remover lógica atual que infere status a partir de spend/ROAS
-- `queryKey` já inclui `adAccountId`, portanto trocar perfil já invalida cache automaticamente
+3. **Criação de Anúncios** — Já implementada. O fluxo completo Campaign → AdSet → Ad está na edge function com copy, CTA mapping, e link do produto.
 
-### 3. `mockData.ts` — Adicionar campo `effectiveStatus` ao Campaign type
+---
 
-- Adicionar `effectiveStatus?: string` ao type `Campaign`
+## Plano: Módulo "Cérebro de Criativos"
 
-### 4. `CampaignsTable.tsx` — Coluna Status com badges + Toggle de filtro
+Nova feature que usa IA para analisar criativos e recomendar o melhor para cada campanha.
 
-- Adicionar coluna "Status" com badges: `[ATIVO]` verde neon, `[PAUSADO]` cinza
-- Adicionar `Switch` toggle "Mostrar apenas ativas" acima da tabela
-- Filtrar campanhas com base no toggle
+### 1. Nova edge function `ai-creative-brain/index.ts`
 
-### 5. Campanhas, Criativos, Simulador — Botão "Forçar Atualização" replicado
+Recebe o `profileId` e contexto da campanha, consulta múltiplas fontes e retorna recomendação:
 
-- **`Campanhas.tsx`**: Adicionar `useClientProfiles` + `DateRangePicker` + botão Refresh com `forceRefetch()` e timestamp independente
-- **`Criativos.tsx`**: Adicionar botão Refresh com `forceRefetch()` e timestamp independente
-- **`Simulador.tsx`**: Consumir `useMetaAds` para pegar CPA e Ticket Médio reais; adicionar botão Refresh
+- **Supabase Storage**: Lista `creative_assets` do perfil com descrições
+- **Contexto do Produto**: Lê `product_context` do perfil
+- **Performance histórica**: Consulta `campaign_drafts` publicados para cruzar dados
+- Envia tudo ao Lovable AI (Gemini) com prompt de "Diretor de Arte Sênior"
+- Retorna: criativo recomendado + justificativa + score de confiança
 
-### 6. `Configuracoes.tsx` — Limpar campos duplicados
+### 2. Integração na página Lançar Campanha (`LancarCampanha.tsx`)
 
-- A seção "Controle de Teto Financeiro" tem campos CPA Meta, Ticket Médio e Limite Escala duplicados. Remover a duplicação, mantendo apenas Budget Máximo + Frequência nessa seção.
+- No Step 2 (revisão do draft), adicionar botão "🧠 Escolher Criativo com IA"
+- Chama `ai-creative-brain` e exibe o resultado: thumbnail do criativo recomendado, justificativa da IA, e opção de trocar
 
-### 7. `Index.tsx` — Indicador "Monitoramento Ativo" + Log de Automação
+### 3. Dashboard de Criativos (`Criativos.tsx`)
 
-- Adicionar pill pulsante no topo: `"● Monitoramento Ativo em Tempo Real"` com animação pulse neon
-- Criar seção "Log de Automação" abaixo das campanhas com entries geradas client-side:
-  - A cada renderização/refetch, gerar entry: `"Check realizado às HH:MM — ROI atual: X.XX — Nenhuma ação necessária"`
-  - Se alguma campanha tiver CPA > 2× meta com 0 vendas: `"AÇÃO: Campanha [Nome] sinalizada por CPA alto"`
-  - Armazenar últimos 20 logs em state local
+- Substituir placeholders cinzas por thumbnails reais dos `creative_assets` (URL do Storage)
+- Adicionar badge "🧠 Recomendado pela IA" nos criativos selecionados pelo módulo
+- Filtro de datas passa contexto temporal para a IA: "Baseado nos últimos X dias"
 
-### 8. Não necessita migração SQL
+### 4. Tooltip no Page ID
 
-Budget frequency e budget_maximo já existem no schema. Nenhuma alteração de banco necessária.
+Adicionar tooltip explicativo no campo Page ID em Configurações: "Obrigatório para vincular anúncios ao perfil do Instagram e Página do Facebook."
 
-### Arquivos modificados
-- `supabase/functions/meta-ads-sync/index.ts` — campos effective_status
-- `src/lib/mockData.ts` — type Campaign atualizado  
-- `src/hooks/useMetaAds.ts` — mapear status real
-- `src/components/CampaignsTable.tsx` — badges status + toggle filtro
-- `src/pages/Campanhas.tsx` — botão refresh + profiles
-- `src/pages/Criativos.tsx` — botão refresh
-- `src/pages/Simulador.tsx` — dados reais + botão refresh
-- `src/pages/Index.tsx` — indicador pulse + log de automação
-- `src/pages/Configuracoes.tsx` — remover campos duplicados
+### Arquivos
+
+| Arquivo | Mudança |
+|---|---|
+| `supabase/functions/ai-creative-brain/index.ts` | Nova edge function — motor de decisão de criativos |
+| `src/pages/LancarCampanha.tsx` | Botão "Escolher Criativo com IA" no Step 2 |
+| `src/pages/Criativos.tsx` | Thumbnails reais + badge IA + contexto temporal |
+| `src/pages/Configuracoes.tsx` | Tooltip no campo Page ID |
 
