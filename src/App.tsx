@@ -11,6 +11,7 @@ import Simulador from "./pages/Simulador";
 import Criativos from "./pages/Criativos";
 import Configuracoes from "./pages/Configuracoes";
 import Diagnostico from "./pages/Diagnostico";
+import LancarCampanha from "./pages/LancarCampanha";
 import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
