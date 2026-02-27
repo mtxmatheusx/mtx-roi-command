@@ -258,6 +258,39 @@ export default function CriativosPage() {
         </CardContent>
       </Card>
 
+      {/* Visual Scraper */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2"><ScanSearch className="w-5 h-5 text-primary" />Extrator Visual Rápido</CardTitle>
+          <CardDescription>Cole o link de um e-commerce, landing page ou Instagram para extrair imagens e vídeos automaticamente.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex gap-2">
+            <Input
+              placeholder="https://loja.com.br/produto ou Instagram URL"
+              value={scrapeUrl}
+              onChange={(e) => setScrapeUrl(e.target.value)}
+              className="flex-1"
+            />
+            <Button onClick={handleScrapeMedia} disabled={isScraping || !scrapeUrl} className="gap-2">
+              {isScraping ? <Loader2 className="w-4 h-4 animate-spin" /> : <ScanSearch className="w-4 h-4" />}
+              {isScraping ? "Extraindo..." : "Capturar Mídias"}
+            </Button>
+          </div>
+          {isScraping && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Scanner da IA extraindo ativos visuais...
+            </div>
+          )}
+          {scrapeResult && (
+            <div className="flex items-center gap-2 text-sm text-neon-green">
+              ✅ {scrapeResult.total_found} mídias encontradas, {scrapeResult.total_saved} salvas na biblioteca.
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {isUsingMock && (
         <div className="mb-4 flex items-center gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-sm text-amber-400">
           <AlertTriangle className="w-4 h-4 shrink-0" />
