@@ -1,20 +1,37 @@
-import { useState, useRef } from "react";
-import { Brain, Loader2, RefreshCw, Clapperboard } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { Brain, Loader2, RefreshCw, Clapperboard, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import AppLayout from "@/components/AppLayout";
 import ActiveProfileHeader from "@/components/ActiveProfileHeader";
+import VSLScriptBoard from "@/components/VSLScriptBoard";
 import ReactMarkdown from "react-markdown";
 import { useClientProfiles } from "@/hooks/useClientProfiles";
 import { useMetaAds } from "@/hooks/useMetaAds";
 import { useToast } from "@/hooks/use-toast";
+import { useTranslation } from "react-i18next";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { motion, AnimatePresence } from "framer-motion";
 
 const AI_CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-chat`;
 const VSL_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-vsl`;
+
+interface VslCena {
+  tempo: string;
+  visual: string;
+  audio: string;
+}
+
+interface ParsedVSL {
+  titulo: string;
+  cenas: VslCena[];
+}
 
 export default function Diagnostico() {
   const [report, setReport] = useState("");
@@ -22,23 +39,42 @@ export default function Diagnostico() {
   const { activeProfile, cpaMeta, ticketMedio, limiteEscala, budgetMaximo, adAccountId, metaAccessToken } = useClientProfiles();
   const { campaigns, daily, previous, isUsingMock } = useMetaAds(undefined, { adAccountId, cpaMeta, ticketMedio, accessToken: metaAccessToken });
   const { toast } = useToast();
+  const { t } = useTranslation();
   const reportRef = useRef<HTMLDivElement>(null);
+  const queryClient = useQueryClient();
 
   // VSL state
   const [vslAngle, setVslAngle] = useState("");
   const [vslDuration, setVslDuration] = useState("30 segundos para Meta Ads");
   const [vslTone, setVslTone] = useState("Agressivo e Direto");
-  const [vslScript, setVslScript] = useState("");
   const [vslLoading, setVslLoading] = useState(false);
+  const [parsedVSL, setParsedVSL] = useState<ParsedVSL | null>(null);
+  const [selectedVaultId, setSelectedVaultId] = useState<string | null>(null);
 
-  // Clear report when profile changes
   const profileId = activeProfile?.id;
   const prevProfileRef = useRef(profileId);
   if (prevProfileRef.current !== profileId) {
     prevProfileRef.current = profileId;
     if (report) setReport("");
-    if (vslScript) setVslScript("");
+    setParsedVSL(null);
+    setSelectedVaultId(null);
   }
+
+  // Vault query
+  const { data: vaultScripts = [], isLoading: vaultLoading } = useQuery({
+    queryKey: ["vsl-vault", profileId],
+    queryFn: async () => {
+      if (!profileId) return [];
+      const { data, error } = await supabase
+        .from("vsl_scripts")
+        .select("id, title, content_json, created_at, angle, duration, tone")
+        .eq("profile_id", profileId)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!profileId,
+  });
 
   const generateDiagnostic = async () => {
     setLoading(true);
@@ -86,7 +122,7 @@ export default function Diagnostico() {
         setLoading(false);
         return;
       }
-      // Check for blocked response on 200
+
       const contentType = resp.headers.get("content-type") || "";
       if (contentType.includes("application/json")) {
         const jsonResp = await resp.json();
@@ -136,7 +172,8 @@ export default function Diagnostico() {
   const generateVSL = async () => {
     if (!activeProfile) return;
     setVslLoading(true);
-    setVslScript("");
+    setParsedVSL(null);
+    setSelectedVaultId(null);
 
     try {
       const resp = await fetch(VSL_URL, {
@@ -164,35 +201,14 @@ export default function Diagnostico() {
         return;
       }
 
-      if (!resp.body) { setVslLoading(false); return; }
-
-      const reader = resp.body.getReader();
-      const decoder = new TextDecoder();
-      let buf = "";
-      let full = "";
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buf += decoder.decode(value, { stream: true });
-
-        let idx: number;
-        while ((idx = buf.indexOf("\n")) !== -1) {
-          let line = buf.slice(0, idx);
-          buf = buf.slice(idx + 1);
-          if (line.endsWith("\r")) line = line.slice(0, -1);
-          if (!line.startsWith("data: ")) continue;
-          const json = line.slice(6).trim();
-          if (json === "[DONE]") break;
-          try {
-            const p = JSON.parse(json);
-            const c = p.choices?.[0]?.delta?.content;
-            if (c) { full += c; setVslScript(full); }
-          } catch {
-            buf = line + "\n" + buf;
-            break;
-          }
-        }
+      const result = await resp.json();
+      if (result.parsed) {
+        setParsedVSL(result.parsed);
+        toast({ title: t("vsl.savedToast") });
+        queryClient.invalidateQueries({ queryKey: ["vsl-vault", profileId] });
+      } else {
+        // Fallback: show raw content
+        setParsedVSL({ titulo: "Roteiro", cenas: [{ tempo: "—", visual: result.content || "", audio: "" }] });
       }
     } catch (e) {
       toast({ title: "Erro", description: "Falha ao conectar com a IA", variant: "destructive" });
@@ -200,20 +216,44 @@ export default function Diagnostico() {
     setVslLoading(false);
   };
 
+  const loadFromVault = (script: any) => {
+    setSelectedVaultId(script.id);
+    if (script.content_json) {
+      setParsedVSL(script.content_json as ParsedVSL);
+    } else {
+      // Legacy fallback
+      setParsedVSL({ titulo: script.title || "Roteiro", cenas: [{ tempo: "—", visual: script.script_content || "", audio: "" }] });
+    }
+  };
+
+  const deleteFromVault = async (id: string) => {
+    const { error } = await supabase.from("vsl_scripts").delete().eq("id", id);
+    if (error) {
+      toast({ title: "Erro", description: "Falha ao excluir roteiro.", variant: "destructive" });
+      return;
+    }
+    toast({ title: t("vsl.deletedToast") });
+    queryClient.invalidateQueries({ queryKey: ["vsl-vault", profileId] });
+    if (selectedVaultId === id) {
+      setSelectedVaultId(null);
+      setParsedVSL(null);
+    }
+  };
+
   return (
     <AppLayout>
-      <div className="max-w-4xl mx-auto space-y-6">
+      <div className="max-w-6xl mx-auto space-y-6">
         <ActiveProfileHeader />
 
         <Tabs defaultValue="diagnostico">
           <TabsList>
             <TabsTrigger value="diagnostico" className="gap-2">
               <Brain className="w-4 h-4" />
-              Diagnóstico
+              {t("diagnostic.title")}
             </TabsTrigger>
             <TabsTrigger value="vsl" className="gap-2">
               <Clapperboard className="w-4 h-4" />
-              🎬 Fábrica de VSL & Copy
+              🎬 {t("vsl.title")}
             </TabsTrigger>
           </TabsList>
 
@@ -222,21 +262,19 @@ export default function Diagnostico() {
               <div>
                 <h1 className="text-2xl font-bold flex items-center gap-2">
                   <Brain className="h-6 w-6 text-neon-red" />
-                  Diagnóstico da IA
+                  {t("diagnostic.title")}
                 </h1>
-                <p className="text-muted-foreground text-sm mt-1">
-                  Análise profunda das suas campanhas com frameworks Hormozi & StoryBrand
-                </p>
+                <p className="text-muted-foreground text-sm mt-1">{t("diagnostic.subtitle")}</p>
               </div>
               <Button onClick={generateDiagnostic} disabled={loading} className="gap-2">
                 {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-                {loading ? "Analisando..." : report ? "Regenerar" : "Gerar Diagnóstico"}
+                {loading ? t("diagnostic.analyzing") : report ? t("common.regenerate") : t("diagnostic.generateBtn")}
               </Button>
             </div>
 
             {isUsingMock && (
               <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-3 text-sm text-destructive">
-                ⚠️ Dados mock detectados. Conecte sua conta Meta Ads em Configurações para análise real.
+                ⚠️ {t("diagnostic.mockWarning")}
               </div>
             )}
 
@@ -244,10 +282,8 @@ export default function Diagnostico() {
               <Card className="border-dashed">
                 <CardContent className="py-16 text-center">
                   <Brain className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-30" />
-                  <h3 className="text-lg font-medium text-muted-foreground">Nenhum diagnóstico gerado</h3>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Clique em "Gerar Diagnóstico" para a IA analisar suas campanhas
-                  </p>
+                  <h3 className="text-lg font-medium text-muted-foreground">{t("diagnostic.noReport")}</h3>
+                  <p className="text-sm text-muted-foreground mt-1">{t("diagnostic.noReportHint")}</p>
                 </CardContent>
               </Card>
             )}
@@ -257,7 +293,7 @@ export default function Diagnostico() {
                 <CardHeader>
                   <CardTitle className="text-lg flex items-center gap-2">
                     <Brain className="h-5 w-5 text-neon-red" />
-                    Relatório de Diagnóstico
+                    {t("diagnostic.reportTitle")}
                     {loading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
                   </CardTitle>
                 </CardHeader>
@@ -270,93 +306,152 @@ export default function Diagnostico() {
             )}
           </TabsContent>
 
-          <TabsContent value="vsl" className="space-y-6 mt-4">
-            <div>
-              <h1 className="text-2xl font-bold flex items-center gap-2">
-                <Clapperboard className="h-6 w-6 text-primary" />
-                Fábrica de VSL & Copy
-              </h1>
-              <p className="text-muted-foreground text-sm mt-1">
-                Gere roteiros de alta conversão com Storybrand + Hormozi
-              </p>
-            </div>
+          <TabsContent value="vsl" className="mt-4">
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+              {/* Vault Sidebar */}
+              <div className="lg:col-span-1">
+                <Card className="h-full">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm">{t("vsl.vaultTitle")}</CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    <ScrollArea className="h-[500px]">
+                      {vaultLoading ? (
+                        <div className="flex justify-center py-8">
+                          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                        </div>
+                      ) : vaultScripts.length === 0 ? (
+                        <p className="text-xs text-muted-foreground text-center py-8">{t("vsl.vaultEmpty")}</p>
+                      ) : (
+                        <div className="space-y-1 px-3 pb-3">
+                          {vaultScripts.map((script: any) => (
+                            <div
+                              key={script.id}
+                              onClick={() => loadFromVault(script)}
+                              className={`group cursor-pointer rounded-md px-3 py-2.5 text-xs transition-colors relative ${
+                                selectedVaultId === script.id
+                                  ? "bg-primary/10 border border-primary/30"
+                                  : "hover:bg-secondary/50"
+                              }`}
+                            >
+                              <p className="font-medium text-foreground truncate pr-6">
+                                {(script.content_json as any)?.titulo || script.title || "Sem título"}
+                              </p>
+                              <p className="text-muted-foreground mt-0.5">
+                                {new Date(script.created_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}
+                                {script.angle ? ` · ${script.angle}` : ""}
+                              </p>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); deleteFromVault(script.id); }}
+                                className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </ScrollArea>
+                  </CardContent>
+                </Card>
+              </div>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Direção Criativa</CardTitle>
-                <CardDescription>Configure os parâmetros para guiar a IA na geração do roteiro.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label>Ângulo da Oferta</Label>
-                    <Input
-                      value={vslAngle}
-                      onChange={(e) => setVslAngle(e.target.value)}
-                      placeholder="Ex: Medo de perder, Oportunidade"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Tempo Desejado</Label>
-                    <Select value={vslDuration} onValueChange={setVslDuration}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="15 segundos para Stories">15s Stories</SelectItem>
-                        <SelectItem value="30 segundos para Meta Ads">30s Meta Ads</SelectItem>
-                        <SelectItem value="1 minuto para YouTube">1min YouTube</SelectItem>
-                        <SelectItem value="5 minutos para Página de Vendas">5min Página de Vendas</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Tom de Voz</Label>
-                    <Select value={vslTone} onValueChange={setVslTone}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Agressivo e Direto">Agressivo e Direto</SelectItem>
-                        <SelectItem value="Elegante e Sofisticado">Elegante e Sofisticado</SelectItem>
-                        <SelectItem value="Amigável e Empático">Amigável e Empático</SelectItem>
-                        <SelectItem value="Científico e Autoritário">Científico e Autoritário</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+              {/* Main Area */}
+              <div className="lg:col-span-3 space-y-6">
+                <div>
+                  <h1 className="text-2xl font-bold flex items-center gap-2">
+                    <Clapperboard className="h-6 w-6 text-primary" />
+                    {t("vsl.title")}
+                  </h1>
+                  <p className="text-muted-foreground text-sm mt-1">{t("vsl.subtitle")}</p>
                 </div>
 
-                <Button onClick={generateVSL} disabled={vslLoading || !activeProfile} className="gap-2">
-                  {vslLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Clapperboard className="w-4 h-4" />}
-                  {vslLoading ? "Gerando roteiro..." : "Gerar Script de Alta Conversão"}
-                </Button>
-              </CardContent>
-            </Card>
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">{t("vsl.directionTitle")}</CardTitle>
+                    <CardDescription>{t("vsl.directionDesc")}</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <Label>{t("vsl.angle")}</Label>
+                        <Input value={vslAngle} onChange={(e) => setVslAngle(e.target.value)} placeholder={t("vsl.anglePlaceholder")} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>{t("vsl.duration")}</Label>
+                        <Select value={vslDuration} onValueChange={setVslDuration}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="15 segundos para Stories">15s Stories</SelectItem>
+                            <SelectItem value="30 segundos para Meta Ads">30s Meta Ads</SelectItem>
+                            <SelectItem value="1 minuto para YouTube">1min YouTube</SelectItem>
+                            <SelectItem value="5 minutos para Página de Vendas">5min Página de Vendas</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>{t("vsl.tone")}</Label>
+                        <Select value={vslTone} onValueChange={setVslTone}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Agressivo e Direto">Agressivo e Direto</SelectItem>
+                            <SelectItem value="Elegante e Sofisticado">Elegante e Sofisticado</SelectItem>
+                            <SelectItem value="Amigável e Empático">Amigável e Empático</SelectItem>
+                            <SelectItem value="Científico e Autoritário">Científico e Autoritário</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
 
-            {!vslScript && !vslLoading && (
-              <Card className="border-dashed">
-                <CardContent className="py-16 text-center">
-                  <Clapperboard className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-30" />
-                  <h3 className="text-lg font-medium text-muted-foreground">Nenhum roteiro gerado</h3>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Configure a direção criativa e clique em "Gerar Script"
-                  </p>
-                </CardContent>
-              </Card>
-            )}
+                    <Button onClick={generateVSL} disabled={vslLoading || !activeProfile} className="gap-2">
+                      {vslLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Clapperboard className="w-4 h-4" />}
+                      {vslLoading ? t("vsl.generating") : t("vsl.generateBtn")}
+                    </Button>
+                  </CardContent>
+                </Card>
 
-            {(vslScript || vslLoading) && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <Clapperboard className="h-5 w-5 text-primary" />
-                    Roteiro de Produção
-                    {vslLoading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="prose prose-sm prose-invert max-w-none [&_table]:w-full [&_table]:border-collapse [&_th]:border [&_th]:border-border [&_th]:px-4 [&_th]:py-2 [&_th]:text-left [&_th]:bg-secondary [&_td]:border [&_td]:border-border [&_td]:px-4 [&_td]:py-3 [&_td]:align-top [&_strong]:text-foreground">
-                    <ReactMarkdown>{vslScript}</ReactMarkdown>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+                <AnimatePresence mode="wait">
+                  {!parsedVSL && !vslLoading && (
+                    <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                      <Card className="border-dashed">
+                        <CardContent className="py-16 text-center">
+                          <Clapperboard className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-30" />
+                          <h3 className="text-lg font-medium text-muted-foreground">{t("vsl.noScript")}</h3>
+                          <p className="text-sm text-muted-foreground mt-1">{t("vsl.noScriptHint")}</p>
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+                  )}
+
+                  {vslLoading && (
+                    <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                      <Card>
+                        <CardContent className="py-16 text-center">
+                          <Loader2 className="h-10 w-10 mx-auto mb-4 animate-spin text-primary" />
+                          <p className="text-sm text-muted-foreground">{t("vsl.generating")}</p>
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+                  )}
+
+                  {parsedVSL && !vslLoading && (
+                    <motion.div key="board" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="text-lg flex items-center gap-2">
+                            <Clapperboard className="h-5 w-5 text-primary" />
+                            {t("vsl.scriptTitle")}
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <VSLScriptBoard titulo={parsedVSL.titulo} cenas={parsedVSL.cenas} />
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            </div>
           </TabsContent>
         </Tabs>
       </div>
