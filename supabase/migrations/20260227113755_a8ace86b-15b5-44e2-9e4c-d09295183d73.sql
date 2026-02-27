@@ -1,0 +1,1 @@
+ALTER TABLE public.client_profiles ADD COLUMN gemini_api_key TEXT DEFAULT NULL;

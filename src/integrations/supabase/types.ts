@@ -86,6 +86,7 @@ export type Database = {
           budget_maximo: number
           cpa_meta: number
           created_at: string
+          gemini_api_key: string | null
           id: string
           is_active: boolean
           limite_escala: number
@@ -104,6 +105,7 @@ export type Database = {
           budget_maximo?: number
           cpa_meta?: number
           created_at?: string
+          gemini_api_key?: string | null
           id?: string
           is_active?: boolean
           limite_escala?: number
@@ -122,6 +124,7 @@ export type Database = {
           budget_maximo?: number
           cpa_meta?: number
           created_at?: string
+          gemini_api_key?: string | null
           id?: string
           is_active?: boolean
           limite_escala?: number
