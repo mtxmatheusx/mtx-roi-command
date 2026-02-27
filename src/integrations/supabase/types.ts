@@ -84,6 +84,7 @@ export type Database = {
           ad_account_id: string
           budget_frequency: string
           budget_maximo: number
+          cpa_max_toleravel: number
           cpa_meta: number
           created_at: string
           gemini_api_key: string | null
@@ -96,6 +97,8 @@ export type Database = {
           pixel_id: string | null
           product_context: string | null
           product_urls: string[] | null
+          roas_min_escala: number
+          teto_diario_escala: number
           ticket_medio: number
           updated_at: string
           user_id: string
@@ -104,6 +107,7 @@ export type Database = {
           ad_account_id?: string
           budget_frequency?: string
           budget_maximo?: number
+          cpa_max_toleravel?: number
           cpa_meta?: number
           created_at?: string
           gemini_api_key?: string | null
@@ -116,6 +120,8 @@ export type Database = {
           pixel_id?: string | null
           product_context?: string | null
           product_urls?: string[] | null
+          roas_min_escala?: number
+          teto_diario_escala?: number
           ticket_medio?: number
           updated_at?: string
           user_id: string
@@ -124,6 +130,7 @@ export type Database = {
           ad_account_id?: string
           budget_frequency?: string
           budget_maximo?: number
+          cpa_max_toleravel?: number
           cpa_meta?: number
           created_at?: string
           gemini_api_key?: string | null
@@ -136,6 +143,8 @@ export type Database = {
           pixel_id?: string | null
           product_context?: string | null
           product_urls?: string[] | null
+          roas_min_escala?: number
+          teto_diario_escala?: number
           ticket_medio?: number
           updated_at?: string
           user_id?: string
@@ -179,6 +188,82 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "creative_assets_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "client_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      emergency_logs: {
+        Row: {
+          action_type: string
+          created_at: string
+          details: Json | null
+          id: string
+          profile_id: string | null
+          user_id: string
+        }
+        Insert: {
+          action_type: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          profile_id?: string | null
+          user_id: string
+        }
+        Update: {
+          action_type?: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          profile_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "emergency_logs_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "client_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vsl_scripts: {
+        Row: {
+          angle: string
+          created_at: string
+          duration: string
+          id: string
+          profile_id: string | null
+          script_content: string
+          tone: string
+          user_id: string
+        }
+        Insert: {
+          angle?: string
+          created_at?: string
+          duration?: string
+          id?: string
+          profile_id?: string | null
+          script_content?: string
+          tone?: string
+          user_id: string
+        }
+        Update: {
+          angle?: string
+          created_at?: string
+          duration?: string
+          id?: string
+          profile_id?: string | null
+          script_content?: string
+          tone?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vsl_scripts_profile_id_fkey"
             columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "client_profiles"
