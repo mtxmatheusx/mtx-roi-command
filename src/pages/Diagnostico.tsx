@@ -48,7 +48,7 @@ export default function Diagnostico() {
       dados_diarios_recentes: daily?.slice(-7) || [],
     };
 
-    const userMessage = isMockData
+    const userMessage = isUsingMock
       ? "Gere um diagnóstico de exemplo baseado nos dados mock disponíveis. Indique claramente que são dados simulados."
       : "Analise as métricas atuais das minhas campanhas e gere um diagnóstico completo com recomendações acionáveis.";
 
