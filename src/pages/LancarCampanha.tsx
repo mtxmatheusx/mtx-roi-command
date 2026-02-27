@@ -149,7 +149,9 @@ export default function LancarCampanha() {
         targeting_suggestion: data.targeting_suggestion || {},
         daily_budget: data.daily_budget || dailyBudget,
         ai_reasoning: data.ai_reasoning || "",
+        andromeda_targeting: data.andromeda_targeting || undefined,
       });
+      setUseAndromeda(!!data.andromeda_targeting);
       setDailyBudget(data.daily_budget || dailyBudget);
       setSelectedCopyIdx(0);
       setStep(2);
