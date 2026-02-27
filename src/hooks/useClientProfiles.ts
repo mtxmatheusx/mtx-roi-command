@@ -126,5 +126,7 @@ export function useClientProfiles() {
     budgetMaximo: activeProfile?.budget_maximo ?? 0,
     budgetFrequency: activeProfile?.budget_frequency ?? "monthly",
     metaAccessToken: activeProfile?.meta_access_token ?? null,
+    productContext: activeProfile?.product_context ?? null,
+    productUrls: activeProfile?.product_urls ?? [],
   };
 }

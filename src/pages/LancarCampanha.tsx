@@ -331,24 +331,41 @@ export default function LancarCampanha() {
                 <CardDescription>Selecione a melhor copy para seu anúncio</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
-                {draft.copy_options.map((copy, i) => (
-                  <div
-                    key={i}
-                    onClick={() => setSelectedCopyIdx(i)}
-                    className={`p-4 rounded-lg border cursor-pointer transition-all ${
-                      selectedCopyIdx === i ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <Badge variant={selectedCopyIdx === i ? "default" : "secondary"}>
-                        Opção {i + 1}
-                      </Badge>
-                      <span className="text-xs text-muted-foreground">{copy.cta}</span>
+                {draft.copy_options.map((copy, i) => {
+                  const copyTypeConfig: Record<string, { label: string; desc: string; className: string }> = {
+                    direct_response: { label: "Direct Response", desc: "Foco na dor e oferta", className: "bg-destructive/15 text-destructive border-destructive/30" },
+                    storytelling: { label: "Storytelling", desc: "Narrativa de transformação", className: "bg-blue-500/15 text-blue-400 border-blue-500/30" },
+                    social_proof: { label: "Social Proof", desc: "Resultados e autoridade", className: "bg-neon-green/15 text-neon-green border-neon-green/30" },
+                  };
+                  const ct = copy.copy_type ? copyTypeConfig[copy.copy_type] : null;
+                  return (
+                    <div
+                      key={i}
+                      onClick={() => setSelectedCopyIdx(i)}
+                      className={`p-4 rounded-lg border cursor-pointer transition-all ${
+                        selectedCopyIdx === i ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          {ct ? (
+                            <span className={`text-xs px-2 py-0.5 rounded-full font-semibold border ${ct.className}`}>
+                              {ct.label}
+                            </span>
+                          ) : (
+                            <Badge variant={selectedCopyIdx === i ? "default" : "secondary"}>
+                              Opção {i + 1}
+                            </Badge>
+                          )}
+                          {ct && <span className="text-xs text-muted-foreground">{ct.desc}</span>}
+                        </div>
+                        <span className="text-xs text-muted-foreground">{copy.cta}</span>
+                      </div>
+                      <p className="font-semibold text-sm">{copy.headline}</p>
+                      <p className="text-sm text-muted-foreground mt-1">{copy.primary_text}</p>
                     </div>
-                    <p className="font-semibold text-sm">{copy.headline}</p>
-                    <p className="text-sm text-muted-foreground mt-1">{copy.primary_text}</p>
-                  </div>
-                ))}
+                  );
+                })}
               </CardContent>
             </Card>
 

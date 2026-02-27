@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Shield, Save, Loader2, CheckCircle, KeyRound } from "lucide-react";
+import { Shield, Save, Loader2, CheckCircle, KeyRound, Globe, Brain, X, ExternalLink } from "lucide-react";
 import { z } from "zod";
 import AppLayout from "@/components/AppLayout";
 import { useClientProfiles } from "@/hooks/useClientProfiles";
@@ -11,10 +11,11 @@ import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import ReactMarkdown from "react-markdown";
 
 const configSchema = z.object({
   name: z.string().min(1, "Nome do cliente é obrigatório"),
-  adAccountId: z.string().min(1, "ID da conta é obrigatório").regex(/^act_/, "Deve começar com act_"),
+  adAccountId: z.string().min(1, "ID da conta é obrigatória").regex(/^act_/, "Deve começar com act_"),
   pixelId: z.string().optional(),
   cpaMeta: z.number().min(0.01, "CPA Meta deve ser maior que 0"),
   ticketMedio: z.number().min(0.01, "Ticket Médio deve ser maior que 0"),
@@ -31,7 +32,7 @@ function maskToken(token: string | null | undefined): string {
 
 export default function Configuracoes() {
   const { toast } = useToast();
-  const { activeProfile, updateProfile, isLoading: profilesLoading } = useClientProfiles();
+  const { activeProfile, updateProfile, isLoading: profilesLoading, productContext, productUrls } = useClientProfiles();
   const [form, setForm] = useState({
     name: "", adAccountId: "act_", pixelId: "",
     cpaMeta: "45", ticketMedio: "697", limiteEscala: "15",
@@ -42,6 +43,11 @@ export default function Configuracoes() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [testResult, setTestResult] = useState<"idle" | "loading" | "success" | "error">("idle");
+
+  // Product context state
+  const [productUrl, setProductUrl] = useState("");
+  const [isAbsorbing, setIsAbsorbing] = useState(false);
+  const [absorbResult, setAbsorbResult] = useState<any>(null);
 
   useEffect(() => {
     if (activeProfile) {
@@ -57,6 +63,7 @@ export default function Configuracoes() {
         metaAccessToken: "",
       });
       setTokenEditing(false);
+      setAbsorbResult(null);
     }
   }, [activeProfile?.id]);
 
@@ -83,11 +90,9 @@ export default function Configuracoes() {
         pixel_id: parsed.data.pixelId || "", cpa_meta: parsed.data.cpaMeta, ticket_medio: parsed.data.ticketMedio,
         limite_escala: parsed.data.limiteEscala, budget_maximo: parsed.data.budgetMaximo, budget_frequency: parsed.data.budgetFrequency,
       };
-      // Only update token if user explicitly edited it
       if (tokenEditing && form.metaAccessToken) {
         updateData.meta_access_token = form.metaAccessToken;
       } else if (tokenEditing && !form.metaAccessToken) {
-        // User cleared the token field — remove per-profile token
         updateData.meta_access_token = null;
       }
       await updateProfile(updateData as any);
@@ -103,10 +108,8 @@ export default function Configuracoes() {
     setTestResult("loading");
     try {
       const body: Record<string, unknown> = { adAccountId: form.adAccountId, testConnection: true };
-      // Use per-profile token if being edited, or existing profile token
       const tokenToTest = tokenEditing ? form.metaAccessToken : activeProfile?.meta_access_token;
       if (tokenToTest) body.accessToken = tokenToTest;
-
       const { data, error } = await supabase.functions.invoke("meta-ads-sync", { body });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
@@ -115,6 +118,43 @@ export default function Configuracoes() {
     } catch (err) {
       setTestResult("error");
       toast({ title: "❌ Falha na conexão", description: (err as Error).message, variant: "destructive" });
+    }
+  };
+
+  const handleAbsorbContext = async () => {
+    if (!productUrl || !activeProfile) return;
+    try {
+      new URL(productUrl);
+    } catch {
+      toast({ title: "URL inválida", description: "Insira uma URL válida.", variant: "destructive" });
+      return;
+    }
+    setIsAbsorbing(true);
+    setAbsorbResult(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("absorb-product-context", {
+        body: { url: productUrl, profileId: activeProfile.id },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      setAbsorbResult(data);
+      setProductUrl("");
+      toast({ title: "✅ Contexto absorvido!", description: "A IA analisou o conteúdo do site com sucesso." });
+    } catch (err) {
+      toast({ title: "Erro ao absorver contexto", description: (err as Error).message, variant: "destructive" });
+    } finally {
+      setIsAbsorbing(false);
+    }
+  };
+
+  const handleRemoveUrl = async (urlToRemove: string) => {
+    if (!activeProfile) return;
+    const updatedUrls = (productUrls || []).filter((u) => u !== urlToRemove);
+    try {
+      await updateProfile({ id: activeProfile.id, product_urls: updatedUrls } as any);
+      toast({ title: "URL removida" });
+    } catch (err) {
+      toast({ title: "Erro", description: (err as Error).message, variant: "destructive" });
     }
   };
 
@@ -148,7 +188,6 @@ export default function Configuracoes() {
             <CardDescription>Token global ou individual por perfil para suportar múltiplas contas.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Token status badge */}
             <div className={`flex items-center gap-2 p-3 rounded-lg border ${hasProfileToken ? "bg-emerald-500/10 border-emerald-500/20" : "bg-amber-500/10 border-amber-500/20"}`}>
               {hasProfileToken ? (
                 <>
@@ -163,32 +202,16 @@ export default function Configuracoes() {
               )}
             </div>
 
-            {/* Access Token input */}
             <div className="space-y-2">
               <Label htmlFor="metaAccessToken">Access Token (opcional — individual por perfil)</Label>
               {!tokenEditing ? (
                 <div className="flex items-center gap-2">
-                  <Input
-                    id="metaAccessToken"
-                    value={hasProfileToken ? maskToken(activeProfile.meta_access_token) : ""}
-                    placeholder="Usando token global"
-                    disabled
-                    className="font-mono text-sm"
-                  />
-                  <Button variant="outline" size="sm" onClick={() => setTokenEditing(true)}>
-                    {hasProfileToken ? "Alterar" : "Adicionar"}
-                  </Button>
+                  <Input id="metaAccessToken" value={hasProfileToken ? maskToken(activeProfile.meta_access_token) : ""} placeholder="Usando token global" disabled className="font-mono text-sm" />
+                  <Button variant="outline" size="sm" onClick={() => setTokenEditing(true)}>{hasProfileToken ? "Alterar" : "Adicionar"}</Button>
                 </div>
               ) : (
                 <div className="space-y-1">
-                  <Input
-                    id="metaAccessToken"
-                    type="password"
-                    value={form.metaAccessToken}
-                    onChange={(e) => handleChange("metaAccessToken", e.target.value)}
-                    placeholder="Cole aqui o Access Token da Meta"
-                    className="font-mono text-sm"
-                  />
+                  <Input id="metaAccessToken" type="password" value={form.metaAccessToken} onChange={(e) => handleChange("metaAccessToken", e.target.value)} placeholder="Cole aqui o Access Token da Meta" className="font-mono text-sm" />
                   <p className="text-xs text-muted-foreground">Deixe vazio e salve para usar o token global. O token é salvo criptografado no banco.</p>
                 </div>
               )}
@@ -212,6 +235,94 @@ export default function Configuracoes() {
               {testResult === "success" && <span className="text-sm text-emerald-400">✓ Conectado</span>}
               {testResult === "error" && <span className="text-sm text-destructive">✗ Falha</span>}
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Product Context Section */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg"><Brain className="w-5 h-5 text-primary" />Contexto do Produto</CardTitle>
+            <CardDescription>Insira a URL do seu site ou landing page para a IA absorver o contexto e gerar copies alinhadas à marca.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex gap-2">
+              <div className="flex-1 space-y-1">
+                <Input
+                  placeholder="https://seusite.com.br"
+                  value={productUrl}
+                  onChange={(e) => setProductUrl(e.target.value)}
+                  className="font-mono text-sm"
+                />
+              </div>
+              <Button onClick={handleAbsorbContext} disabled={isAbsorbing || !productUrl} className="gap-2">
+                {isAbsorbing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Globe className="w-4 h-4" />}
+                {isAbsorbing ? "Absorvendo..." : "Absorver Contexto"}
+              </Button>
+            </div>
+
+            {/* Stored URLs */}
+            {productUrls && productUrls.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">URLs absorvidas</p>
+                <div className="flex flex-wrap gap-2">
+                  {productUrls.map((u) => (
+                    <span key={u} className="inline-flex items-center gap-1.5 text-xs bg-secondary px-3 py-1.5 rounded-full">
+                      <ExternalLink className="w-3 h-3 text-muted-foreground" />
+                      <span className="max-w-[200px] truncate">{u}</span>
+                      <button onClick={() => handleRemoveUrl(u)} className="text-muted-foreground hover:text-destructive transition-colors">
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* AI Absorption Result */}
+            {absorbResult && !absorbResult.error && (
+              <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 space-y-3">
+                <p className="text-sm font-semibold flex items-center gap-2">
+                  <Brain className="w-4 h-4 text-primary" />
+                  O que a IA entendeu sobre o produto:
+                </p>
+                <div className="grid gap-3 text-sm">
+                  <div>
+                    <p className="text-xs text-muted-foreground font-medium uppercase">Promessa Principal</p>
+                    <p>{absorbResult.main_promise}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground font-medium uppercase">Dores do Avatar</p>
+                    <ul className="list-disc list-inside text-muted-foreground">
+                      {absorbResult.avatar_pains?.map((p: string, i: number) => <li key={i}>{p}</li>)}
+                    </ul>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground font-medium uppercase">Objeções</p>
+                    <ul className="list-disc list-inside text-muted-foreground">
+                      {absorbResult.objections?.map((o: string, i: number) => <li key={i}>{o}</li>)}
+                    </ul>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground font-medium uppercase">Estrutura da Oferta</p>
+                    <p className="text-muted-foreground">{absorbResult.offer_structure}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground font-medium uppercase">Tom de Marca</p>
+                    <p className="text-muted-foreground">{absorbResult.brand_tone}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Existing product context */}
+            {productContext && !absorbResult && (
+              <div className="bg-secondary/50 border border-border rounded-lg p-4">
+                <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide mb-2">Contexto atual do produto</p>
+                <div className="prose prose-sm prose-invert max-w-none text-sm">
+                  <ReactMarkdown>{productContext}</ReactMarkdown>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 
