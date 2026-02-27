@@ -111,6 +111,11 @@ export default function Configuracoes() {
       } else if (tokenEditing && !form.metaAccessToken) {
         updateData.meta_access_token = null;
       }
+      if (geminiEditing && form.geminiApiKey) {
+        updateData.gemini_api_key = form.geminiApiKey;
+      } else if (geminiEditing && !form.geminiApiKey) {
+        updateData.gemini_api_key = null;
+      }
       await updateProfile(updateData as any);
       toast({ title: "✅ Configurações salvas", description: "Parâmetros atualizados com sucesso." });
       setTokenEditing(false);
