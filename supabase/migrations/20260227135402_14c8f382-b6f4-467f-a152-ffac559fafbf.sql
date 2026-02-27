@@ -1,0 +1,1 @@
+ALTER TABLE public.creative_assets ADD COLUMN source_tag text NOT NULL DEFAULT 'uploaded';

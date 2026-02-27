@@ -7,7 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { motion } from "framer-motion";
 import { subDays, format } from "date-fns";
-import { Star, Video, Image, LayoutGrid, Loader2, AlertTriangle, RefreshCw, Upload, Trash2, FileText } from "lucide-react";
+import { Star, Video, Image, LayoutGrid, Loader2, AlertTriangle, RefreshCw, Upload, Trash2, FileText, ScanSearch, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -53,6 +53,9 @@ export default function CriativosPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [assetDescription, setAssetDescription] = useState("");
+  const [scrapeUrl, setScrapeUrl] = useState("");
+  const [isScraping, setIsScraping] = useState(false);
+  const [scrapeResult, setScrapeResult] = useState<{ total_found: number; total_saved: number } | null>(null);
 
   // Fetch creative assets from DB
   const { data: assets = [] } = useQuery({
@@ -130,6 +133,27 @@ export default function CriativosPage() {
       toast({ title: "Arquivo removido" });
     } catch (err) {
       toast({ title: "Erro", description: (err as Error).message, variant: "destructive" });
+    }
+  };
+
+  const handleScrapeMedia = async () => {
+    if (!scrapeUrl || !user?.id || !activeProfile?.id) return;
+    setIsScraping(true);
+    setScrapeResult(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("scrape-media", {
+        body: { url: scrapeUrl, profileId: activeProfile.id },
+      });
+      if (error) throw error;
+      if (data.error) throw new Error(data.error);
+      setScrapeResult({ total_found: data.total_found, total_saved: data.total_saved });
+      toast({ title: `✅ ${data.total_saved} mídias extraídas!`, description: `${data.total_found} encontradas, ${data.total_saved} salvas.` });
+      queryClient.invalidateQueries({ queryKey: ["creative_assets", activeProfile.id] });
+      setScrapeUrl("");
+    } catch (err) {
+      toast({ title: "Erro na extração", description: (err as Error).message, variant: "destructive" });
+    } finally {
+      setIsScraping(false);
     }
   };
 
@@ -220,6 +244,9 @@ export default function CriativosPage() {
                   <div className="p-2">
                     <p className="text-xs truncate font-medium">{asset.file_name}</p>
                     {asset.description && <p className="text-xs text-muted-foreground truncate">{asset.description}</p>}
+                    <Badge variant="outline" className="text-[10px] mt-1 px-1 py-0">
+                      {(asset as any).source_tag?.startsWith("scraped:") ? "🌐 Scraped" : "📤 Upload"}
+                    </Badge>
                   </div>
                   <button
                     onClick={() => handleDeleteAsset(asset)}
@@ -229,6 +256,39 @@ export default function CriativosPage() {
                   </button>
                 </div>
               ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Visual Scraper */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2"><ScanSearch className="w-5 h-5 text-primary" />Extrator Visual Rápido</CardTitle>
+          <CardDescription>Cole o link de um e-commerce, landing page ou Instagram para extrair imagens e vídeos automaticamente.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex gap-2">
+            <Input
+              placeholder="https://loja.com.br/produto ou Instagram URL"
+              value={scrapeUrl}
+              onChange={(e) => setScrapeUrl(e.target.value)}
+              className="flex-1"
+            />
+            <Button onClick={handleScrapeMedia} disabled={isScraping || !scrapeUrl} className="gap-2">
+              {isScraping ? <Loader2 className="w-4 h-4 animate-spin" /> : <ScanSearch className="w-4 h-4" />}
+              {isScraping ? "Extraindo..." : "Capturar Mídias"}
+            </Button>
+          </div>
+          {isScraping && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Scanner da IA extraindo ativos visuais...
+            </div>
+          )}
+          {scrapeResult && (
+            <div className="flex items-center gap-2 text-sm text-neon-green">
+              ✅ {scrapeResult.total_found} mídias encontradas, {scrapeResult.total_saved} salvas na biblioteca.
             </div>
           )}
         </CardContent>

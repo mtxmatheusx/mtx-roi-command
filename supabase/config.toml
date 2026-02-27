@@ -14,3 +14,12 @@ verify_jwt = false
 
 [functions.ai-creative-brain]
 verify_jwt = false
+
+[functions.meta-recommendations]
+verify_jwt = false
+
+[functions.audit-recommendation]
+verify_jwt = false
+
+[functions.scrape-media]
+verify_jwt = false

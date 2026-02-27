@@ -9,6 +9,7 @@ import Index from "./pages/Index";
 import Campanhas from "./pages/Campanhas";
 import Simulador from "./pages/Simulador";
 import Criativos from "./pages/Criativos";
+import AuditoriaMeta from "./pages/AuditoriaMeta";
 import Configuracoes from "./pages/Configuracoes";
 import Diagnostico from "./pages/Diagnostico";
 import LancarCampanha from "./pages/LancarCampanha";
@@ -34,6 +35,7 @@ const App = () => (
             <Route path="/lancar-campanha" element={<ProtectedRoute><LancarCampanha /></ProtectedRoute>} />
             <Route path="/simulador" element={<ProtectedRoute><Simulador /></ProtectedRoute>} />
             <Route path="/criativos" element={<ProtectedRoute><Criativos /></ProtectedRoute>} />
+            <Route path="/auditoria-meta" element={<ProtectedRoute><AuditoriaMeta /></ProtectedRoute>} />
             <Route path="/configuracoes" element={<ProtectedRoute><Configuracoes /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
