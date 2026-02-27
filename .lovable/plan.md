@@ -1,106 +1,63 @@
 
 
-## Plano: Middleware Global de IA (`fetch_master_context`) + Auditoria de Sistema
+## Plano: Status de Campanhas + Log de Automação + Sync Global + Correções
 
-Este plano é grande e será dividido em fases claras.
+### 1. Edge Function — Adicionar `campaign_id`, `effective_status` ao fetch
 
----
+**`supabase/functions/meta-ads-sync/index.ts`**
+- Adicionar `campaign_id` e `effective_status` aos fields do fetch de campanhas
+- Retornar esses campos no response para cada campaign row
+- O campo `effective_status` da Meta API retorna: `ACTIVE`, `PAUSED`, `DELETED`, `ARCHIVED`, etc.
 
-### Fase 1: Criar o Middleware `fetch_master_context`
+### 2. `useMetaAds.ts` — Expor status real + invalidar cache ao trocar perfil
 
-**Arquivo:** `supabase/functions/_shared/fetch_master_context.ts`
+- Adicionar `effectiveStatus` ao `MetaAdsCampaign` e mapear para `Campaign.status` baseado no valor da API:
+  - `ACTIVE` → `active`
+  - `PAUSED` → `paused`
+  - Outros → `paused`
+- Remover lógica atual que infere status a partir de spend/ROAS
+- `queryKey` já inclui `adAccountId`, portanto trocar perfil já invalida cache automaticamente
 
-Criar um módulo compartilhado (importável por todas as edge functions) com a função:
+### 3. `mockData.ts` — Adicionar campo `effectiveStatus` ao Campaign type
 
-```typescript
-export async function fetchMasterContext(profileId: string, supabaseClient, metaAccessToken?: string)
-```
+- Adicionar `effectiveStatus?: string` ao type `Campaign`
 
-**Lógica:**
-1. `Promise.all` com duas cargas:
-   - **Carga 1 (Supabase):** `client_profiles` (name, avatar_dossier, product_context, cpa_meta, ticket_medio, limite_escala, budget_maximo, budget_frequency, cpa_max_toleravel, roas_min_escala, teto_diario_escala)
-   - **Carga 2 (Meta API):** Fetch `/{act_id}/insights?date_preset=last_7d&fields=spend,actions,action_values,purchase_roas&level=account` para obter gasto total, CPA médio, ROAS médio dos últimos 7 dias
-2. Retorna um objeto `{ profile, metaMetrics, systemPromptBlock }` onde `systemPromptBlock` é o bloco de texto formatado para injeção no system prompt
-3. **Anti-alucinação:** Se `avatar_dossier` estiver vazio E `product_context` estiver vazio, retorna `{ error: "missing_dossier" }`. Se Meta API falhar, retorna `{ error: "meta_api_failed", metaError: "..." }`
+### 4. `CampaignsTable.tsx` — Coluna Status com badges + Toggle de filtro
 
-**Bloco de system prompt gerado:**
-```
-🛑 DIRETRIZ MESTRA: Você é o Estrategista Sênior da MTX...
-[JSON Carga 1]
-[JSON Carga 2]
-```
+- Adicionar coluna "Status" com badges: `[ATIVO]` verde neon, `[PAUSADO]` cinza
+- Adicionar `Switch` toggle "Mostrar apenas ativas" acima da tabela
+- Filtrar campanhas com base no toggle
 
----
+### 5. Campanhas, Criativos, Simulador — Botão "Forçar Atualização" replicado
 
-### Fase 2: Integrar o Middleware em 5 Edge Functions de IA
+- **`Campanhas.tsx`**: Adicionar `useClientProfiles` + `DateRangePicker` + botão Refresh com `forceRefetch()` e timestamp independente
+- **`Criativos.tsx`**: Adicionar botão Refresh com `forceRefetch()` e timestamp independente
+- **`Simulador.tsx`**: Consumir `useMetaAds` para pegar CPA e Ticket Médio reais; adicionar botão Refresh
 
-Cada function que chama o Lovable AI Gateway será atualizada para:
-1. Importar `fetchMasterContext` do módulo compartilhado
-2. Chamar antes de montar o prompt
-3. Se retornar erro, abortar com resposta clara (HTTP 200 com `{ error, blocked: true }`)
-4. Concatenar `systemPromptBlock` no início do system prompt
+### 6. `Configuracoes.tsx` — Limpar campos duplicados
 
-| Edge Function | Mudança |
-|---|---|
-| `ai-campaign-draft` | Substituir fetch manual do profile por `fetchMasterContext`. Injetar bloco no prompt |
-| `ai-chat` | Receber `profileId` do frontend, chamar middleware, injetar contexto |
-| `generate-vsl` | Substituir fetch manual por middleware |
-| `audit-recommendation` | Receber `profileId`, chamar middleware, injetar dossiê real |
-| `ai-creative-brain` | Substituir fetch manual por middleware |
-| `agency-alerts` | Manter sem middleware (opera sobre múltiplos perfis agregados, não faz chamada AI per-profile-context) |
-| `digest-company-context` | Manter sem middleware (é quem GERA o dossiê, não consome) |
+- A seção "Controle de Teto Financeiro" tem campos CPA Meta, Ticket Médio e Limite Escala duplicados. Remover a duplicação, mantendo apenas Budget Máximo + Frequência nessa seção.
 
----
+### 7. `Index.tsx` — Indicador "Monitoramento Ativo" + Log de Automação
 
-### Fase 3: Frontend - Anti-alucinação (Toast Vermelho)
+- Adicionar pill pulsante no topo: `"● Monitoramento Ativo em Tempo Real"` com animação pulse neon
+- Criar seção "Log de Automação" abaixo das campanhas com entries geradas client-side:
+  - A cada renderização/refetch, gerar entry: `"Check realizado às HH:MM — ROI atual: X.XX — Nenhuma ação necessária"`
+  - Se alguma campanha tiver CPA > 2× meta com 0 vendas: `"AÇÃO: Campanha [Nome] sinalizada por CPA alto"`
+  - Armazenar últimos 20 logs em state local
 
-Atualizar os componentes que chamam edge functions de IA para tratar o novo campo `blocked: true`:
+### 8. Não necessita migração SQL
 
-| Página | Mudança |
-|---|---|
-| `LancarCampanha.tsx` | No `handleGenerateAI`, verificar `data.blocked` e exibir toast destrutivo |
-| `Diagnostico.tsx` | Enviar `profileId` no body para `ai-chat`. Tratar bloqueio |
-| `AuditoriaMeta.tsx` | Enviar `profileId` no `audit-recommendation`. Tratar bloqueio |
-| `Criativos.tsx` | Se chama `ai-creative-brain`, tratar bloqueio |
+Budget frequency e budget_maximo já existem no schema. Nenhuma alteração de banco necessária.
 
-Toast padrão: `"⚠️ IA Bloqueada: Faltam dados no Dossiê ou falha de conexão com a Meta Ads. Preencha as configurações do perfil antes de usar a inteligência."`
-
----
-
-### Fase 4: Auditoria Multi-Tenant e Hardening
-
-#### 4a. Varredura de `profileId` nulo
-Revisar todas as chamadas frontend → edge functions. Garantir que NENHUMA requisição é disparada sem `activeProfile?.id` validado. Adicionar early return com toast se `!activeProfile`.
-
-Páginas a auditar: `Diagnostico.tsx` (atualmente NÃO envia profileId para ai-chat), `AuditoriaMeta.tsx`, `LancarCampanha.tsx`, `AgencyView.tsx`.
-
-#### 4b. Profile switch isolation
-Já implementado via `setActiveProfile` que invalida caches + `ProfileTransitionGuard`. Confirmar que `ai-chat` no `Diagnostico.tsx` limpa o relatório ao trocar perfil (já faz via `prevProfileRef`).
-
-#### 4c. Tratamento de exceções
-Revisar todos os `catch` blocks nas edge functions. Garantir que NENHUM retorna apenas "Internal Server Error" sem detalhes. Atual estado: todos já retornam `e.message` — OK.
-
-#### 4d. Storage bucket
-O bucket é `creative-assets` (público) e `knowledge-docs` (privado). Não existe `mtx_assets` — sem ação necessária.
-
----
-
-### Arquivos Modificados
-
-| Arquivo | Tipo | Descrição |
-|---|---|---|
-| `supabase/functions/_shared/fetch_master_context.ts` | Novo | Middleware central |
-| `supabase/functions/ai-campaign-draft/index.ts` | Editar | Integrar middleware |
-| `supabase/functions/ai-chat/index.ts` | Editar | Receber profileId + integrar middleware |
-| `supabase/functions/generate-vsl/index.ts` | Editar | Integrar middleware |
-| `supabase/functions/audit-recommendation/index.ts` | Editar | Receber profileId + integrar middleware |
-| `supabase/functions/ai-creative-brain/index.ts` | Editar | Integrar middleware |
-| `src/pages/Diagnostico.tsx` | Editar | Enviar profileId, tratar bloqueio |
-| `src/pages/LancarCampanha.tsx` | Editar | Tratar bloqueio |
-| `src/pages/AuditoriaMeta.tsx` | Editar | Enviar profileId na auditoria, tratar bloqueio |
-
----
-
-### Nota sobre Dry-Run
-O script de simulação de fluxo seco (dry-run) será implementado como uma edge function `dry-run-validation` que executa os passos 1-4 sem POST real para a Meta, retornando um relatório de validação. Será invocável via botão oculto no painel de configurações (visível apenas em modo dev).
+### Arquivos modificados
+- `supabase/functions/meta-ads-sync/index.ts` — campos effective_status
+- `src/lib/mockData.ts` — type Campaign atualizado  
+- `src/hooks/useMetaAds.ts` — mapear status real
+- `src/components/CampaignsTable.tsx` — badges status + toggle filtro
+- `src/pages/Campanhas.tsx` — botão refresh + profiles
+- `src/pages/Criativos.tsx` — botão refresh
+- `src/pages/Simulador.tsx` — dados reais + botão refresh
+- `src/pages/Index.tsx` — indicador pulse + log de automação
+- `src/pages/Configuracoes.tsx` — remover campos duplicados
 

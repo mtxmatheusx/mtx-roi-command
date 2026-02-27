@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { fetchMasterContext } from "../_shared/fetch_master_context.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -31,35 +32,31 @@ Gere um relatório de diagnóstico profundo e acionável com base nas métricas 
 Visão geral da saúde das campanhas em 2-3 parágrafos.
 
 ### 🚨 Alertas Imediatos
-Lista de problemas críticos que precisam de ação HOJE. Use emojis de severidade:
 - 🔴 Crítico (perda de dinheiro ativa)
 - 🟡 Atenção (degradação de performance)
 - 🟢 Oportunidade (ganho potencial)
 
 ### 📊 Análise por Métrica
-- **CPA**: Compare com a meta definida. Está acima? Abaixo? Por quê?
-- **CTR**: Benchmark do mercado 2026 é 1.5-3%. Como está?
-- **CPM**: Analise custo por mil e sugira ajustes de segmentação.
-- **ROAS/ROI**: Análise de retorno real considerando ticket médio.
+- **CPA**: Compare com a meta definida.
+- **CTR**: Benchmark do mercado 2026 é 1.5-3%.
+- **CPM**: Analise custo por mil e sugira ajustes.
+- **ROAS/ROI**: Análise de retorno real.
 
 ### 🎯 Recomendações de Otimização
-Ações ordenadas por impacto, usando frameworks:
-- **Hormozi (Value Equation)**: Dream Outcome × Perceived Likelihood / Time × Effort
-- **StoryBrand**: A mensagem está clara? O cliente é o herói?
+Ações ordenadas por impacto.
 
 ### 🎨 Estratégia de Criativos
-- Quais formatos testar (VSL, UGC, carrossel, estático)
+- Formatos a testar (VSL, UGC, carrossel, estático)
 - Ganchos sugeridos baseados nos dados
-- Roteiro simplificado de VSL usando Dor → Agitação → Solução
 
 ### 📅 Plano de Ação (Próximos 7 dias)
-Checklist priorizado do que fazer primeiro.
+Checklist priorizado.
 
 ## Regras
 - Use os dados reais fornecidos, NUNCA invente números.
 - Compare métricas com benchmarks do mercado brasileiro 2026.
-- Seja direto e acionável — nada de "depende" sem contexto.
-- Formate em markdown rico com emojis para facilitar leitura.`;
+- Seja direto e acionável.
+- Formate em markdown rico com emojis.`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -67,13 +64,26 @@ serve(async (req) => {
   }
 
   try {
-    const { messages, campaignData, mode } = await req.json();
+    const { messages, campaignData, mode, profileId } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
     const today = new Date().toISOString().slice(0, 10);
     const basePrompt = mode === "diagnostico" ? DIAGNOSTICO_SYSTEM_PROMPT : CHAT_SYSTEM_PROMPT;
-    const systemPrompt = `**Data de hoje: ${today}**\n\n` + basePrompt;
+
+    // Fetch master context if profileId provided
+    let masterBlock = "";
+    if (profileId) {
+      const ctx = await fetchMasterContext(profileId);
+      if (ctx.blocked) {
+        return new Response(JSON.stringify({ error: ctx.details || ctx.error, blocked: true }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      masterBlock = ctx.systemPromptBlock;
+    }
+
+    const systemPrompt = `**Data de hoje: ${today}**\n\n${masterBlock}\n\n${basePrompt}`;
 
     // Inject campaign context if available
     let contextMessage = "";

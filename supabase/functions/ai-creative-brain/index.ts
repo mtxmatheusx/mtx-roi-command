@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { fetchMasterContext } from "../_shared/fetch_master_context.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -16,12 +17,20 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
+    // Fetch master context
+    const ctx = await fetchMasterContext(profileId);
+    if (ctx.blocked) {
+      return new Response(JSON.stringify({ error: ctx.details || ctx.error, blocked: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // 1. Fetch creative assets for this profile
+    // Fetch creative assets
     const { data: assets } = await supabase
       .from("creative_assets")
       .select("id, file_name, file_url, file_type, description, created_at")
@@ -29,14 +38,7 @@ serve(async (req) => {
       .order("created_at", { ascending: false })
       .limit(50);
 
-    // 2. Fetch profile for product context
-    const { data: profile } = await supabase
-      .from("client_profiles")
-      .select("product_context, product_urls, name, ticket_medio, cpa_meta")
-      .eq("id", profileId)
-      .single();
-
-    // 3. Fetch published campaign drafts for performance history
+    // Fetch published campaign drafts
     const { data: publishedDrafts } = await supabase
       .from("campaign_drafts")
       .select("campaign_name, objective, daily_budget, status, copy_options, meta_campaign_id, created_at")
@@ -52,10 +54,12 @@ serve(async (req) => {
     ).join("\n");
 
     const historyList = (publishedDrafts || []).map((d, i) =>
-      `${i + 1}. "${d.campaign_name}" | Obj: ${d.objective} | Budget: R$${d.daily_budget}/dia | Status: ${d.status} | Meta ID: ${d.meta_campaign_id || "N/A"}`
+      `${i + 1}. "${d.campaign_name}" | Obj: ${d.objective} | Budget: R$${d.daily_budget}/dia | Status: ${d.status}`
     ).join("\n");
 
     const systemPrompt = `**Data de hoje: ${today}**
+
+${ctx.systemPromptBlock}
 
 Você é um Diretor de Arte Sênior especializado em performance marketing (Meta Ads).
 
@@ -72,12 +76,7 @@ REGRAS:
 - Retorne SEMPRE um criativo recomendado, mesmo que a confiança seja baixa
 - Score de confiança: 0-100 (acima de 70 = forte recomendação)`;
 
-    const userPrompt = `## Contexto do Produto
-${profile?.product_context || "Nenhum contexto absorvido ainda."}
-
-## Ticket Médio: R$${profile?.ticket_medio || "N/A"} | CPA Meta: R$${profile?.cpa_meta || "N/A"}
-
-## Objetivo da Campanha: ${objective || "OUTCOME_SALES"}
+    const userPrompt = `## Objetivo da Campanha: ${objective || "OUTCOME_SALES"}
 
 ## Período de Análise: ${dateRange?.since || "últimos 7 dias"} a ${dateRange?.until || today}
 
@@ -112,14 +111,14 @@ Com base em TODA essa informação, recomende o melhor criativo para usar.`;
               parameters: {
                 type: "object",
                 properties: {
-                  recommended_asset_id: { type: "string", description: "ID of the recommended creative asset" },
-                  recommended_asset_name: { type: "string", description: "File name of the recommended asset" },
-                  recommended_asset_url: { type: "string", description: "URL of the recommended asset" },
-                  recommended_asset_type: { type: "string", enum: ["image", "video"], description: "Type of asset" },
-                  justification: { type: "string", description: "Detailed justification in Portuguese for why this creative was chosen (2-4 sentences)" },
-                  confidence_score: { type: "number", description: "Confidence score 0-100" },
-                  creative_angle: { type: "string", description: "The creative angle/hook suggestion for this asset" },
-                  fallback_asset_id: { type: "string", description: "ID of a secondary option if available" },
+                  recommended_asset_id: { type: "string" },
+                  recommended_asset_name: { type: "string" },
+                  recommended_asset_url: { type: "string" },
+                  recommended_asset_type: { type: "string", enum: ["image", "video"] },
+                  justification: { type: "string" },
+                  confidence_score: { type: "number" },
+                  creative_angle: { type: "string" },
+                  fallback_asset_id: { type: "string" },
                 },
                 required: ["recommended_asset_id", "recommended_asset_name", "justification", "confidence_score"],
                 additionalProperties: false,
