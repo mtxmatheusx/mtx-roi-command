@@ -1,12 +1,18 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import AppLayout from "@/components/AppLayout";
 import { mockCreatives, Creative, formatCurrency } from "@/lib/mockData";
 import { useMetaAds, DateRange, MetaCreative } from "@/hooks/useMetaAds";
 import { useClientProfiles } from "@/hooks/useClientProfiles";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import { motion } from "framer-motion";
 import { subDays, format } from "date-fns";
-import { Star, Video, Image, LayoutGrid, Loader2, AlertTriangle, RefreshCw } from "lucide-react";
+import { Star, Video, Image, LayoutGrid, Loader2, AlertTriangle, RefreshCw, Upload, Trash2, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { useToast } from "@/hooks/use-toast";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 const typeIcon = { video: Video, image: Image, carousel: LayoutGrid };
 const statusConfig = {
@@ -26,9 +32,104 @@ function getCreativeStatus(roas: number, spend: number): Creative["status"] {
   return "testing";
 }
 
+type CreativeAsset = {
+  id: string;
+  file_name: string;
+  file_url: string;
+  file_type: string;
+  description: string | null;
+  created_at: string;
+};
+
 export default function CriativosPage() {
-  const { adAccountId, cpaMeta, ticketMedio, metaAccessToken } = useClientProfiles();
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const { adAccountId, cpaMeta, ticketMedio, metaAccessToken, activeProfile } = useClientProfiles();
   const { creatives, isLoading, isUsingMock, forceRefetch, fetchedAt } = useMetaAds(defaultRange, { adAccountId, cpaMeta, ticketMedio, accessToken: metaAccessToken });
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [assetDescription, setAssetDescription] = useState("");
+
+  // Fetch creative assets from DB
+  const { data: assets = [] } = useQuery({
+    queryKey: ["creative_assets", activeProfile?.id],
+    queryFn: async () => {
+      if (!user?.id || !activeProfile?.id) return [];
+      const { data, error } = await supabase
+        .from("creative_assets")
+        .select("*")
+        .eq("profile_id", activeProfile.id)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data || []) as CreativeAsset[];
+    },
+    enabled: !!user?.id && !!activeProfile?.id,
+  });
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user?.id || !activeProfile?.id) return;
+
+    const maxSize = 20 * 1024 * 1024;
+    if (file.size > maxSize) {
+      toast({ title: "Arquivo muito grande", description: "Máximo de 20MB.", variant: "destructive" });
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const ext = file.name.split(".").pop();
+      const filePath = `${user.id}/${Date.now()}.${ext}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("creative-assets")
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from("creative-assets")
+        .getPublicUrl(filePath);
+
+      const fileType = file.type.startsWith("video") ? "video" : "image";
+
+      const { error: dbError } = await supabase.from("creative_assets").insert({
+        user_id: user.id,
+        profile_id: activeProfile.id,
+        file_name: file.name,
+        file_url: publicUrl,
+        file_type: fileType,
+        description: assetDescription || null,
+      });
+
+      if (dbError) throw dbError;
+
+      toast({ title: "✅ Arquivo enviado!", description: file.name });
+      setAssetDescription("");
+      queryClient.invalidateQueries({ queryKey: ["creative_assets", activeProfile.id] });
+    } catch (err) {
+      toast({ title: "Erro no upload", description: (err as Error).message, variant: "destructive" });
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const handleDeleteAsset = async (asset: CreativeAsset) => {
+    try {
+      // Extract path from URL
+      const urlParts = asset.file_url.split("/creative-assets/");
+      if (urlParts[1]) {
+        await supabase.storage.from("creative-assets").remove([urlParts[1]]);
+      }
+      await supabase.from("creative_assets").delete().eq("id", asset.id);
+      queryClient.invalidateQueries({ queryKey: ["creative_assets", activeProfile?.id] });
+      toast({ title: "Arquivo removido" });
+    } catch (err) {
+      toast({ title: "Erro", description: (err as Error).message, variant: "destructive" });
+    }
+  };
 
   const displayCreatives: Array<{
     id: string; name: string; type: "video" | "image" | "carousel";
@@ -73,6 +174,55 @@ export default function CriativosPage() {
           </Button>
         </div>
       </div>
+
+      {/* Asset Library */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2"><Upload className="w-5 h-5 text-primary" />Biblioteca de Criativos</CardTitle>
+          <CardDescription>Envie imagens e vídeos para a IA analisar e sugerir copies alinhadas.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex gap-2">
+            <Input
+              placeholder="Descrição do criativo (opcional)"
+              value={assetDescription}
+              onChange={(e) => setAssetDescription(e.target.value)}
+              className="flex-1"
+            />
+            <input ref={fileInputRef} type="file" accept="image/*,video/*" onChange={handleUpload} className="hidden" />
+            <Button onClick={() => fileInputRef.current?.click()} disabled={uploading} className="gap-2">
+              {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+              {uploading ? "Enviando..." : "Upload"}
+            </Button>
+          </div>
+
+          {assets.length > 0 && (
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+              {assets.map((asset) => (
+                <div key={asset.id} className="group relative bg-secondary rounded-lg overflow-hidden border border-border">
+                  {asset.file_type === "image" ? (
+                    <img src={asset.file_url} alt={asset.description || asset.file_name} className="w-full h-24 object-cover" />
+                  ) : (
+                    <div className="w-full h-24 flex items-center justify-center bg-secondary">
+                      <Video className="w-8 h-8 text-muted-foreground/30" />
+                    </div>
+                  )}
+                  <div className="p-2">
+                    <p className="text-xs truncate font-medium">{asset.file_name}</p>
+                    {asset.description && <p className="text-xs text-muted-foreground truncate">{asset.description}</p>}
+                  </div>
+                  <button
+                    onClick={() => handleDeleteAsset(asset)}
+                    className="absolute top-1 right-1 p-1 rounded bg-background/80 opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <Trash2 className="w-3 h-3 text-destructive" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {isUsingMock && (
         <div className="mb-4 flex items-center gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-sm text-amber-400">

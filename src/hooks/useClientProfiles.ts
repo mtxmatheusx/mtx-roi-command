@@ -15,6 +15,8 @@ export interface ClientProfile {
   budget_maximo: number;
   budget_frequency: string;
   meta_access_token: string | null;
+  product_context: string | null;
+  product_urls: string[];
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -124,5 +126,7 @@ export function useClientProfiles() {
     budgetMaximo: activeProfile?.budget_maximo ?? 0,
     budgetFrequency: activeProfile?.budget_frequency ?? "monthly",
     metaAccessToken: activeProfile?.meta_access_token ?? null,
+    productContext: activeProfile?.product_context ?? null,
+    productUrls: activeProfile?.product_urls ?? [],
   };
 }
