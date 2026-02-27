@@ -73,8 +73,10 @@ export default function Configuracoes() {
         budgetMaximo: String(activeProfile.budget_maximo ?? 0),
         budgetFrequency: (activeProfile.budget_frequency ?? "monthly") as "daily" | "weekly" | "monthly",
         metaAccessToken: "",
+        geminiApiKey: "",
       });
       setTokenEditing(false);
+      setGeminiEditing(false);
       setAbsorbResult(null);
       setShowManualInput(false);
       setManualText("");
