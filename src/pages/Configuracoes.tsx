@@ -39,7 +39,7 @@ function maskToken(token: string | null | undefined): string {
 export default function Configuracoes() {
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { activeProfile, updateProfile, deleteProfile, profiles, isLoading: profilesLoading, productContext, productUrls } = useClientProfiles();
+  const { activeProfile, updateProfile, deleteProfile, profiles, isLoading: profilesLoading, productContext, productUrls, geminiApiKey } = useClientProfiles();
   const [form, setForm] = useState({
     name: "", adAccountId: "act_", pixelId: "",
     cpaMeta: "45", ticketMedio: "697", limiteEscala: "15",
