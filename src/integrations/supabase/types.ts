@@ -92,6 +92,8 @@ export type Database = {
           meta_access_token: string | null
           name: string
           pixel_id: string | null
+          product_context: string | null
+          product_urls: string[] | null
           ticket_medio: number
           updated_at: string
           user_id: string
@@ -108,6 +110,8 @@ export type Database = {
           meta_access_token?: string | null
           name: string
           pixel_id?: string | null
+          product_context?: string | null
+          product_urls?: string[] | null
           ticket_medio?: number
           updated_at?: string
           user_id: string
@@ -124,11 +128,54 @@ export type Database = {
           meta_access_token?: string | null
           name?: string
           pixel_id?: string | null
+          product_context?: string | null
+          product_urls?: string[] | null
           ticket_medio?: number
           updated_at?: string
           user_id?: string
         }
         Relationships: []
+      }
+      creative_assets: {
+        Row: {
+          created_at: string
+          description: string | null
+          file_name: string
+          file_type: string
+          file_url: string
+          id: string
+          profile_id: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          file_name: string
+          file_type?: string
+          file_url: string
+          id?: string
+          profile_id?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          file_name?: string
+          file_type?: string
+          file_url?: string
+          id?: string
+          profile_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "creative_assets_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "client_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
