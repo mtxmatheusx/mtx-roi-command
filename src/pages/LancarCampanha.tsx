@@ -213,11 +213,25 @@ export default function LancarCampanha() {
       if (result?.error) {
         const stepLabels: Record<string, string> = { campaign: "Criação da Campanha", adset: "Criação do Conjunto de Anúncios", ad: "Criação do Anúncio" };
         const failedStep = result.step ? stepLabels[result.step] || result.step : "";
-        const partialInfo = result.steps?.length ? `\nEtapas concluídas: ${result.steps.join(", ")}` : "";
+        addLog(`Falha em: ${failedStep || "Meta API"}`, "error");
+        if (result.steps?.length) {
+          result.steps.forEach((s: string) => addLog(`${stepLabels[s] || s} concluída`, "done"));
+        }
         setPublishStep(`Falha em: ${failedStep || "Meta API"}`);
         setPublishProgress(100);
-        setPublishResult({ success: false, error: `${result.error}${partialInfo}`, meta_campaign_id: result.meta_campaign_id });
+        setPublishResult({
+          success: false,
+          error: result.error,
+          error_user_title: result.error_user_title,
+          error_user_msg: result.error_user_msg,
+          fbtrace_id: result.fbtrace_id,
+          step: result.step,
+          steps: result.steps,
+          meta_campaign_id: result.meta_campaign_id,
+        });
       } else {
+        addLog("Campanha criada com sucesso!", "done");
+        if (result.meta_campaign_id) addLog(`ID: ${result.meta_campaign_id}`, "done");
         setPublishStep("Campanha publicada com sucesso!");
         setPublishProgress(100);
         setPublishResult({
