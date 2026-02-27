@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import AppLayout from "@/components/AppLayout";
 import ActiveProfileHeader from "@/components/ActiveProfileHeader";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -14,7 +14,10 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Rocket, Brain, ChevronDown, CheckCircle2, XCircle, Clock, Loader2, ExternalLink, AlertTriangle, Sparkles, Image as ImageIcon, Video, Trash2, Copy } from "lucide-react";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
+} from "@/components/ui/dialog";
+import { Rocket, Brain, ChevronDown, CheckCircle2, XCircle, Clock, Loader2, ExternalLink, AlertTriangle, Sparkles, Image as ImageIcon, Video, Trash2, Copy, Upload, X } from "lucide-react";
 import { useClientProfiles } from "@/hooks/useClientProfiles";
 import { useMetaAds } from "@/hooks/useMetaAds";
 import { supabase } from "@/integrations/supabase/client";
@@ -99,11 +102,24 @@ export default function LancarCampanha() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [scaleTarget, setScaleTarget] = useState<DraftRecord | null>(null);
   const [isScaling, setIsScaling] = useState(false);
+  const [uploadOpen, setUploadOpen] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [recentAssets, setRecentAssets] = useState<{ id: string; file_name: string; file_url: string; file_type: string; description: string | null }[]>([]);
+  const [selectedAssetUrl, setSelectedAssetUrl] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Load draft history filtered by profile
   useEffect(() => {
     if (!user?.id) return;
     loadDrafts();
+  }, [user?.id, activeProfile?.id]);
+
+  // Load recent assets
+  useEffect(() => {
+    if (!user?.id || !activeProfile?.id) return;
+    loadRecentAssets();
   }, [user?.id, activeProfile?.id]);
 
   const loadDrafts = async () => {
@@ -119,6 +135,86 @@ export default function LancarCampanha() {
     const { data } = await query;
     if (data) setDrafts(data as unknown as DraftRecord[]);
   };
+
+  const loadRecentAssets = async () => {
+    const { data } = await supabase
+      .from("creative_assets")
+      .select("id, file_name, file_url, file_type, description")
+      .eq("user_id", user!.id)
+      .eq("profile_id", activeProfile!.id)
+      .order("created_at", { ascending: false })
+      .limit(12);
+    if (data) setRecentAssets(data);
+  };
+
+  const handleFileUpload = async (files: FileList | File[]) => {
+    if (!user?.id || !activeProfile?.id) return;
+    const fileArray = Array.from(files);
+    const allowed = ["image/jpeg", "image/png", "video/mp4", "video/quicktime"];
+    const valid = fileArray.filter(f => allowed.includes(f.type));
+    if (valid.length === 0) {
+      toast({ title: "Formato inválido", description: "Aceitos: JPG, PNG, MP4, MOV", variant: "destructive" });
+      return;
+    }
+
+    setIsUploading(true);
+    setUploadProgress(0);
+
+    for (let i = 0; i < valid.length; i++) {
+      const file = valid[i];
+      const ext = file.name.split(".").pop();
+      const path = `${user.id}/${activeProfile.id}/${crypto.randomUUID()}.${ext}`;
+
+      setUploadProgress(Math.round(((i) / valid.length) * 100));
+
+      const { error: uploadErr } = await supabase.storage.from("creative-assets").upload(path, file);
+      if (uploadErr) {
+        toast({ title: "Erro no upload", description: uploadErr.message, variant: "destructive" });
+        continue;
+      }
+
+      const { data: publicUrl } = supabase.storage.from("creative-assets").getPublicUrl(path);
+      const fileType = file.type.startsWith("video") ? "video" : "image";
+
+      const { data: inserted, error: insertErr } = await supabase.from("creative_assets").insert({
+        user_id: user.id,
+        profile_id: activeProfile.id,
+        file_name: file.name,
+        file_url: publicUrl.publicUrl,
+        file_type: fileType,
+        source_tag: "uploaded",
+      }).select("id").single();
+
+      if (insertErr || !inserted) continue;
+
+      // Trigger AI indexing
+      supabase.functions.invoke("index-creative-asset", {
+        body: {
+          assetId: inserted.id,
+          profileId: activeProfile.id,
+          fileUrl: publicUrl.publicUrl,
+          fileType,
+          fileName: file.name,
+        },
+      }).then(({ data }) => {
+        if (data?.description) {
+          setRecentAssets(prev => prev.map(a => a.id === inserted.id ? { ...a, description: data.description } : a));
+        }
+      }).catch(() => {});
+    }
+
+    setUploadProgress(100);
+    toast({ title: "✅ Upload concluído!", description: `${valid.length} ativo(s) enviado(s) e indexação IA iniciada.` });
+    setIsUploading(false);
+    setUploadOpen(false);
+    loadRecentAssets();
+  };
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (e.dataTransfer.files.length > 0) handleFileUpload(e.dataTransfer.files);
+  }, [user?.id, activeProfile?.id]);
 
   const handleGenerateAI = async () => {
     setIsGenerating(true);
@@ -283,7 +379,7 @@ export default function LancarCampanha() {
           rollback: result.rollback || false,
         });
       } else {
-        addLog("Campanha criada com sucesso!", "done");
+        addLog("🚀 Campanha Destravada: Público Advantage+ configurado e limites de idade ajustados.", "done");
         if (result.meta_campaign_id) addLog(`ID: ${result.meta_campaign_id}`, "done");
         setPublishStep("Campanha publicada com sucesso!");
         setPublishProgress(100);
@@ -663,37 +759,48 @@ export default function LancarCampanha() {
                 </CardTitle>
                 <CardDescription>A IA analisa seus ativos e recomenda o melhor criativo para esta campanha.</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-3">
-                <Button
-                  onClick={async () => {
-                    if (!activeProfile) return;
-                    setIsChoosingCreative(true);
-                    setCreativeBrain(null);
-                    try {
-                      const { data, error } = await supabase.functions.invoke("ai-creative-brain", {
-                        body: {
-                          profileId: activeProfile.id,
-                          objective,
-                          campaignContext: draft?.campaign_name,
-                        },
-                      });
-                      if (error) throw error;
-                      if (data?.error) throw new Error(data.error);
-                      setCreativeBrain(data);
-                      toast({ title: "🧠 Criativo recomendado!", description: data.recommendation?.recommended_asset_name });
-                    } catch (e: any) {
-                      toast({ title: "Erro no Cérebro de Criativos", description: e.message, variant: "destructive" });
-                    } finally {
-                      setIsChoosingCreative(false);
-                    }
-                  }}
-                  disabled={isChoosingCreative}
-                  variant="outline"
-                  className="gap-2"
-                >
-                  {isChoosingCreative ? <Loader2 className="w-4 h-4 animate-spin" /> : <Brain className="w-4 h-4" />}
-                  {isChoosingCreative ? "Analisando criativos..." : "Escolher Criativo com IA"}
-                </Button>
+              <CardContent className="space-y-4">
+                <div className="flex gap-2">
+                  <Button
+                    onClick={async () => {
+                      if (!activeProfile) return;
+                      setIsChoosingCreative(true);
+                      setCreativeBrain(null);
+                      try {
+                        const { data, error } = await supabase.functions.invoke("ai-creative-brain", {
+                          body: {
+                            profileId: activeProfile.id,
+                            objective,
+                            campaignContext: draft?.campaign_name,
+                          },
+                        });
+                        if (error) throw error;
+                        if (data?.error) throw new Error(data.error);
+                        setCreativeBrain(data);
+                        // Auto-inject recommended creative
+                        if (data.recommendation?.recommended_asset_url) {
+                          setSelectedAssetUrl(data.recommendation.recommended_asset_url);
+                          localStorage.setItem(`mtx_injected_creative_${activeProfile.id}`, JSON.stringify({ url: data.recommendation.recommended_asset_url }));
+                        }
+                        toast({ title: "🧠 Criativo recomendado!", description: data.recommendation?.recommended_asset_name });
+                      } catch (e: any) {
+                        toast({ title: "Erro no Cérebro de Criativos", description: e.message, variant: "destructive" });
+                      } finally {
+                        setIsChoosingCreative(false);
+                      }
+                    }}
+                    disabled={isChoosingCreative}
+                    variant="outline"
+                    className="gap-2"
+                  >
+                    {isChoosingCreative ? <Loader2 className="w-4 h-4 animate-spin" /> : <Brain className="w-4 h-4" />}
+                    {isChoosingCreative ? "Analisando criativos..." : "Escolher Criativo com IA"}
+                  </Button>
+                  <Button variant="outline" className="gap-2" onClick={() => setUploadOpen(true)}>
+                    <Upload className="w-4 h-4" />
+                    📤 Subir Novo Ativo
+                  </Button>
+                </div>
 
                 {creativeBrain?.recommendation && (
                   <div className="rounded-lg border bg-card p-4 space-y-3">
@@ -733,6 +840,42 @@ export default function LancarCampanha() {
                     </p>
                   </div>
                 )}
+
+                {/* Recent Assets Grid */}
+                {recentAssets.length > 0 && (
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground mb-2">Ativos Recentes ({recentAssets.length})</p>
+                    <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+                      {recentAssets.map((asset) => (
+                        <button
+                          key={asset.id}
+                          onClick={() => {
+                            setSelectedAssetUrl(asset.file_url);
+                            localStorage.setItem(`mtx_injected_creative_${activeProfile!.id}`, JSON.stringify({ url: asset.file_url }));
+                            toast({ title: "Criativo selecionado", description: asset.file_name });
+                          }}
+                          className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all hover:opacity-80 ${
+                            selectedAssetUrl === asset.file_url ? "border-primary ring-2 ring-primary/30" : "border-border"
+                          }`}
+                          title={asset.description || asset.file_name}
+                        >
+                          {asset.file_type === "video" ? (
+                            <div className="w-full h-full bg-secondary flex items-center justify-center">
+                              <Video className="w-6 h-6 text-muted-foreground/50" />
+                            </div>
+                          ) : (
+                            <img src={asset.file_url} alt={asset.file_name} className="w-full h-full object-cover" />
+                          )}
+                          {asset.description && (
+                            <div className="absolute bottom-0 left-0 right-0 bg-background/80 px-1 py-0.5">
+                              <span className="text-[10px] text-primary">✨ IA</span>
+                            </div>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -743,6 +886,45 @@ export default function LancarCampanha() {
             </div>
           </div>
         )}
+
+        {/* Upload Modal */}
+        <Dialog open={uploadOpen} onOpenChange={setUploadOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>📤 Subir Novo Ativo</DialogTitle>
+              <DialogDescription>Arraste ou selecione fotos e vídeos para o Cérebro de Criativos.</DialogDescription>
+            </DialogHeader>
+            <div
+              onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+              onDragLeave={() => setIsDragging(false)}
+              onDrop={handleDrop}
+              onClick={() => fileInputRef.current?.click()}
+              className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-all ${
+                isDragging ? "border-primary bg-primary/10" : "border-border hover:border-primary/50"
+              }`}
+            >
+              <Upload className="w-10 h-10 mx-auto mb-3 text-muted-foreground" />
+              <p className="text-sm font-medium">Arraste arquivos aqui ou clique para selecionar</p>
+              <p className="text-xs text-muted-foreground mt-1">JPG, PNG, MP4, MOV — máx. 20MB</p>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".jpg,.jpeg,.png,.mp4,.mov"
+                multiple
+                className="hidden"
+                onChange={(e) => {
+                  if (e.target.files?.length) handleFileUpload(e.target.files);
+                }}
+              />
+            </div>
+            {isUploading && (
+              <div className="space-y-2">
+                <Progress value={uploadProgress} className="h-2" />
+                <p className="text-xs text-muted-foreground text-center">{uploadProgress}% — Enviando e indexando com IA...</p>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
 
         {/* Step 3 */}
         {step === 3 && draft && (
