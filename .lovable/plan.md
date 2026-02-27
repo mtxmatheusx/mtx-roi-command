@@ -1,35 +1,63 @@
 
 
-## Plano: Fix `is_adset_budget_sharing_enabled` + Melhorias
+## Plano: Status de Campanhas + Log de Automação + Sync Global + Correções
 
-### 1. Fix do parâmetro na criação de campanha
+### 1. Edge Function — Adicionar `campaign_id`, `effective_status` ao fetch
 
-**Arquivo: `supabase/functions/create-meta-campaign/index.ts`**
+**`supabase/functions/meta-ads-sync/index.ts`**
+- Adicionar `campaign_id` e `effective_status` aos fields do fetch de campanhas
+- Retornar esses campos no response para cada campaign row
+- O campo `effective_status` da Meta API retorna: `ACTIVE`, `PAUSED`, `DELETED`, `ARCHIVED`, etc.
 
-Na criação da campanha (Step 1), adicionar `is_adset_budget_sharing_enabled: false` ao body do POST para `/campaigns`. Isso informa à Meta que o orçamento será definido no nível do AdSet, não da campanha — resolvendo o erro reportado.
+### 2. `useMetaAds.ts` — Expor status real + invalidar cache ao trocar perfil
 
-```typescript
-body: JSON.stringify({
-  name: draft.campaign_name,
-  objective: draft.objective,
-  status: "PAUSED",
-  special_ad_categories: [],
-  is_adset_budget_sharing_enabled: false, // ← NOVO
-  access_token: accessToken,
-}),
-```
+- Adicionar `effectiveStatus` ao `MetaAdsCampaign` e mapear para `Campaign.status` baseado no valor da API:
+  - `ACTIVE` → `active`
+  - `PAUSED` → `paused`
+  - Outros → `paused`
+- Remover lógica atual que infere status a partir de spend/ROAS
+- `queryKey` já inclui `adAccountId`, portanto trocar perfil já invalida cache automaticamente
 
-### 2. Gemini API Key — já funciona
+### 3. `mockData.ts` — Adicionar campo `effectiveStatus` ao Campaign type
 
-O campo já é editável: clicar "Adicionar" → colar a chave → "Salvar Configurações". Não há bug. O fluxo atual persiste no banco corretamente.
+- Adicionar `effectiveStatus?: string` ao type `Campaign`
 
-### 3. Thumbnails de criativos — já implementado
+### 4. `CampaignsTable.tsx` — Coluna Status com badges + Toggle de filtro
 
-A edge function `meta-ads-sync` já busca `creative{thumbnail_url,image_url}` e o frontend já renderiza `<img>` quando `thumbnailUrl` existe. Se as thumbnails não aparecem, é porque o token pode não ter permissão ou os criativos não têm imagens associadas na Meta.
+- Adicionar coluna "Status" com badges: `[ATIVO]` verde neon, `[PAUSADO]` cinza
+- Adicionar `Switch` toggle "Mostrar apenas ativas" acima da tabela
+- Filtrar campanhas com base no toggle
 
-### Arquivos Modificados
+### 5. Campanhas, Criativos, Simulador — Botão "Forçar Atualização" replicado
 
-| Arquivo | Mudança |
-|---|---|
-| `supabase/functions/create-meta-campaign/index.ts` | Adicionar `is_adset_budget_sharing_enabled: false` no payload de criação da campanha |
+- **`Campanhas.tsx`**: Adicionar `useClientProfiles` + `DateRangePicker` + botão Refresh com `forceRefetch()` e timestamp independente
+- **`Criativos.tsx`**: Adicionar botão Refresh com `forceRefetch()` e timestamp independente
+- **`Simulador.tsx`**: Consumir `useMetaAds` para pegar CPA e Ticket Médio reais; adicionar botão Refresh
+
+### 6. `Configuracoes.tsx` — Limpar campos duplicados
+
+- A seção "Controle de Teto Financeiro" tem campos CPA Meta, Ticket Médio e Limite Escala duplicados. Remover a duplicação, mantendo apenas Budget Máximo + Frequência nessa seção.
+
+### 7. `Index.tsx` — Indicador "Monitoramento Ativo" + Log de Automação
+
+- Adicionar pill pulsante no topo: `"● Monitoramento Ativo em Tempo Real"` com animação pulse neon
+- Criar seção "Log de Automação" abaixo das campanhas com entries geradas client-side:
+  - A cada renderização/refetch, gerar entry: `"Check realizado às HH:MM — ROI atual: X.XX — Nenhuma ação necessária"`
+  - Se alguma campanha tiver CPA > 2× meta com 0 vendas: `"AÇÃO: Campanha [Nome] sinalizada por CPA alto"`
+  - Armazenar últimos 20 logs em state local
+
+### 8. Não necessita migração SQL
+
+Budget frequency e budget_maximo já existem no schema. Nenhuma alteração de banco necessária.
+
+### Arquivos modificados
+- `supabase/functions/meta-ads-sync/index.ts` — campos effective_status
+- `src/lib/mockData.ts` — type Campaign atualizado  
+- `src/hooks/useMetaAds.ts` — mapear status real
+- `src/components/CampaignsTable.tsx` — badges status + toggle filtro
+- `src/pages/Campanhas.tsx` — botão refresh + profiles
+- `src/pages/Criativos.tsx` — botão refresh
+- `src/pages/Simulador.tsx` — dados reais + botão refresh
+- `src/pages/Index.tsx` — indicador pulse + log de automação
+- `src/pages/Configuracoes.tsx` — remover campos duplicados
 
