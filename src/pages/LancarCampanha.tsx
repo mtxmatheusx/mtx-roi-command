@@ -909,6 +909,7 @@ export default function LancarCampanha() {
                     <TableHead>Objetivo</TableHead>
                     <TableHead>Budget</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -928,11 +929,99 @@ export default function LancarCampanha() {
                             <Icon className="w-3 h-3" /> {sc.label}
                           </span>
                         </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            {d.status === "failed" && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 hover:bg-destructive/20 hover:text-destructive"
+                                onClick={() => setDeleteTarget(d)}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            )}
+                            {d.status === "published" && d.meta_campaign_id && d.meta_adset_id && d.meta_ad_id && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 hover:bg-primary/20 hover:text-primary"
+                                onClick={() => setScaleTarget(d)}
+                              >
+                                <Copy className="w-4 h-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
                       </TableRow>
                     );
                   })}
                 </TableBody>
               </Table>
+
+              {/* Delete Confirmation Modal */}
+              <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle className="flex items-center gap-2">
+                      <Trash2 className="w-5 h-5 text-destructive" />
+                      🗑️ Limpar Rastro no Meta Ads?
+                    </AlertDialogTitle>
+                    <AlertDialogDescription className="text-left space-y-2">
+                      <p>Isso vai deletar a campanha base permanentemente do seu gerenciador do Facebook e remover este registro do painel.</p>
+                      {deleteTarget?.meta_campaign_id && (
+                        <p className="font-mono text-xs text-muted-foreground">ID: {deleteTarget.meta_campaign_id}</p>
+                      )}
+                      <p className="font-medium">{deleteTarget?.campaign_name}</p>
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={() => deleteTarget && handleDeleteDraft(deleteTarget)}
+                      disabled={isDeleting}
+                      className="bg-destructive hover:bg-destructive/90 text-destructive-foreground gap-2"
+                    >
+                      {isDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                      Apagar Definitivamente
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+
+              {/* Clone & Scale Modal */}
+              <AlertDialog open={!!scaleTarget} onOpenChange={(open) => !open && setScaleTarget(null)}>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle className="flex items-center gap-2">
+                      <Rocket className="w-5 h-5 text-primary" />
+                      🚀 Escalar Campanha Vencedora
+                    </AlertDialogTitle>
+                    <AlertDialogDescription className="text-left space-y-3">
+                      <p><strong>Campanha Original:</strong> {scaleTarget?.campaign_name}</p>
+                      <p><strong>Orçamento Atual:</strong> R$ {Number(scaleTarget?.daily_budget || 0).toLocaleString("pt-BR")}/dia</p>
+                      <p>A IA aplicará a regra de escala segura (+20% de orçamento) para não resetar o algoritmo da Meta.</p>
+                      <div className="bg-primary/10 border border-primary/20 rounded-lg p-3 text-center">
+                        <p className="text-xs text-muted-foreground">Novo Orçamento Projetado</p>
+                        <p className="text-xl font-bold text-primary">
+                          R$ {(Number(scaleTarget?.daily_budget || 0) * 1.20).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}/dia
+                        </p>
+                      </div>
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel disabled={isScaling}>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={() => scaleTarget && handleCloneScale(scaleTarget)}
+                      disabled={isScaling}
+                      className="gap-2"
+                    >
+                      {isScaling ? <Loader2 className="w-4 h-4 animate-spin" /> : <Copy className="w-4 h-4" />}
+                      Clonar e Injetar Verba
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </CardContent>
           </Card>
         )}
