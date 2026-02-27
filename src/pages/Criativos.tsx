@@ -11,19 +11,16 @@ import { Star, Video, Image, LayoutGrid, Loader2, AlertTriangle, RefreshCw, Uplo
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import DateRangePicker from "@/components/DateRangePicker";
 
 const typeIcon = { video: Video, image: Image, carousel: LayoutGrid };
 const statusConfig = {
   winner: { label: "Winner", className: "bg-neon-green/15 text-neon-green" },
   testing: { label: "Testando", className: "bg-neon-yellow/15 text-neon-yellow" },
   saturated: { label: "Saturado", className: "bg-neon-red/15 text-neon-red" },
-};
-
-const defaultRange: DateRange = {
-  since: format(subDays(new Date(), 6), "yyyy-MM-dd"),
-  until: format(new Date(), "yyyy-MM-dd"),
 };
 
 function getCreativeStatus(roas: number, spend: number): Creative["status"] {
@@ -46,7 +43,13 @@ export default function CriativosPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { adAccountId, cpaMeta, ticketMedio, metaAccessToken, activeProfile } = useClientProfiles();
-  const { creatives, isLoading, isUsingMock, forceRefetch, fetchedAt } = useMetaAds(defaultRange, { adAccountId, cpaMeta, ticketMedio, accessToken: metaAccessToken });
+
+  const [dateRange, setDateRange] = useState<DateRange>({
+    since: format(subDays(new Date(), 6), "yyyy-MM-dd"),
+    until: format(new Date(), "yyyy-MM-dd"),
+  });
+
+  const { creatives, isLoading, isUsingMock, forceRefetch, fetchedAt, previous } = useMetaAds(dateRange, { adAccountId, cpaMeta, ticketMedio, accessToken: metaAccessToken });
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [assetDescription, setAssetDescription] = useState("");
@@ -118,7 +121,6 @@ export default function CriativosPage() {
 
   const handleDeleteAsset = async (asset: CreativeAsset) => {
     try {
-      // Extract path from URL
       const urlParts = asset.file_url.split("/creative-assets/");
       if (urlParts[1]) {
         await supabase.storage.from("creative-assets").remove([urlParts[1]]);
@@ -131,19 +133,26 @@ export default function CriativosPage() {
     }
   };
 
+  // Compute average ROAS from previous period for fatigue detection
+  const prevAvgRoas = previous && previous.roas ? previous.roas : null;
+
   const displayCreatives: Array<{
     id: string; name: string; type: "video" | "image" | "carousel";
     status: Creative["status"]; spend: number; roas: number; ctr: number;
-    purchases: number; purchaseValue: number;
+    purchases: number; purchaseValue: number; thumbnailUrl?: string | null;
+    isFatigued: boolean;
   }> = creatives.length > 0
     ? creatives.map((c, i) => ({
         id: String(i + 1), name: c.adName, type: "video" as const,
         status: getCreativeStatus(c.roas, c.spend), spend: c.spend, roas: c.roas,
         ctr: c.ctr, purchases: c.purchases, purchaseValue: c.purchaseValue,
+        thumbnailUrl: c.thumbnailUrl,
+        isFatigued: prevAvgRoas !== null && prevAvgRoas > 0 && c.roas < prevAvgRoas * 0.75 && c.spend > 50,
       }))
     : mockCreatives.map((c) => ({
         id: c.id, name: c.name, type: c.type, status: c.status,
         spend: 0, roas: 0, ctr: c.ctr, purchases: c.conversions, purchaseValue: 0,
+        thumbnailUrl: null, isFatigued: false,
       }));
 
   const [winners, setWinners] = useState<Set<string>>(new Set());
@@ -162,7 +171,8 @@ export default function CriativosPage() {
             {isUsingMock ? "Dados de demonstração" : "Performance real por anúncio"} · Analise e identifique os melhores performers
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
+          <DateRangePicker value={dateRange} onChange={setDateRange} />
           {fetchedAt && (
             <span className="text-xs text-muted-foreground hidden sm:inline">
               Última atualização: {new Date(fetchedAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
@@ -245,9 +255,26 @@ export default function CriativosPage() {
             return (
               <motion.div key={creative.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
                 className={`bg-card rounded-xl border overflow-hidden ${isWinner ? "border-glow-green glow-green" : "border-border"}`}>
-                <div className="h-40 bg-secondary flex items-center justify-center">
-                  <Icon className="w-12 h-12 text-muted-foreground/30" />
-                </div>
+                {/* Thumbnail or placeholder */}
+                {creative.thumbnailUrl ? (
+                  <div className="h-40 bg-secondary overflow-hidden relative">
+                    <img src={creative.thumbnailUrl} alt={creative.name} className="w-full h-full object-cover" />
+                    {creative.isFatigued && (
+                      <Badge variant="destructive" className="absolute top-2 left-2 text-xs gap-1">
+                        ⚠️ POSSÍVEL FADIGA
+                      </Badge>
+                    )}
+                  </div>
+                ) : (
+                  <div className="h-40 bg-secondary flex items-center justify-center relative">
+                    <Icon className="w-12 h-12 text-muted-foreground/30" />
+                    {creative.isFatigued && (
+                      <Badge variant="destructive" className="absolute top-2 left-2 text-xs gap-1">
+                        ⚠️ POSSÍVEL FADIGA
+                      </Badge>
+                    )}
+                  </div>
+                )}
                 <div className="p-5">
                   <div className="flex items-start justify-between mb-3">
                     <div className="min-w-0 flex-1 mr-2"><h3 className="font-semibold text-sm truncate">{creative.name}</h3></div>

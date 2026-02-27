@@ -41,6 +41,7 @@ export interface MetaCreative {
   cpc: number;
   impressions: number;
   clicks: number;
+  thumbnailUrl?: string | null;
 }
 
 export interface DailyDataPoint {

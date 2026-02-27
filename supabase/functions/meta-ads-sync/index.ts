@@ -165,7 +165,7 @@ Deno.serve(async (req) => {
     ].join(",");
 
     const adFields = [
-      "ad_name", "spend", "cpm", "ctr", "cpc",
+      "ad_id", "ad_name", "spend", "cpm", "ctr", "cpc",
       "actions", "action_values", "impressions", "clicks",
       "cost_per_action_type", "purchase_roas",
     ].join(",");
