@@ -95,6 +95,10 @@ export default function LancarCampanha() {
   const [isChoosingCreative, setIsChoosingCreative] = useState(false);
   const [confirmPublishOpen, setConfirmPublishOpen] = useState(false);
   const [useAndromeda, setUseAndromeda] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<DraftRecord | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [scaleTarget, setScaleTarget] = useState<DraftRecord | null>(null);
+  const [isScaling, setIsScaling] = useState(false);
 
   // Load draft history filtered by profile
   useEffect(() => {
