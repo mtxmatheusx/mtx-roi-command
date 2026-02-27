@@ -11,7 +11,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { profileId, quantity = 1, context = "" } = await req.json();
+    const { profileId, quantity = 1, context = "", masterPrompt = "", referenceImageUrl = "" } = await req.json();
     if (!profileId) {
       return new Response(JSON.stringify({ error: "profileId is required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
