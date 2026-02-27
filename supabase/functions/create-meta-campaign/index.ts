@@ -84,7 +84,7 @@ serve(async (req) => {
     if (!adAccountId || adAccountId === "act_") {
       await supabase.from("campaign_drafts").update({ status: "failed", error_message: "Ad Account ID não configurado" }).eq("id", draftId);
       return new Response(JSON.stringify({ error: "Ad Account ID não configurado." }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
