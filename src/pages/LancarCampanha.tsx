@@ -540,14 +540,39 @@ export default function LancarCampanha() {
                 )}
 
                 {publishResult && !publishResult.success && (
-                  <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-4 space-y-2">
+                  <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-4 space-y-3">
                     <p className="text-destructive font-semibold flex items-center gap-2">
-                      <XCircle className="w-4 h-4" /> Erro na publicação
+                      <XCircle className="w-4 h-4" /> {publishResult.error_user_title || "Erro na publicação"}
                     </p>
+                    {publishResult.error_user_msg && (
+                      <p className="text-sm text-muted-foreground">{publishResult.error_user_msg}</p>
+                    )}
                     <p className="text-xs text-muted-foreground whitespace-pre-line">{publishResult.error}</p>
+                    {publishResult.step && (
+                      <p className="text-xs text-amber-400">Etapa com falha: {publishResult.step === "campaign" ? "Campanha" : publishResult.step === "adset" ? "Conjunto de Anúncios" : publishResult.step === "ad" ? "Anúncio" : publishResult.step}</p>
+                    )}
                     {publishResult.meta_campaign_id && (
                       <p className="text-xs text-amber-400">⚠️ Campanha parcialmente criada (ID: {publishResult.meta_campaign_id}). Verifique no Gerenciador de Anúncios.</p>
                     )}
+                    {publishResult.fbtrace_id && (
+                      <p className="text-xs text-muted-foreground/60 font-mono">fbtrace_id: {publishResult.fbtrace_id}</p>
+                    )}
+                  </div>
+                )}
+
+                {/* Publish step log */}
+                {publishLogs.length > 0 && (
+                  <div className="border border-border rounded-lg p-3 space-y-1 bg-secondary/30">
+                    <p className="text-xs font-semibold text-muted-foreground mb-2">Log de Publicação</p>
+                    {publishLogs.map((log, i) => (
+                      <div key={i} className="flex items-center gap-2 text-xs">
+                        <span className="text-muted-foreground/60 font-mono w-16 shrink-0">{log.time}</span>
+                        {log.status === "done" && <CheckCircle2 className="w-3 h-3 text-emerald-400 shrink-0" />}
+                        {log.status === "pending" && <Loader2 className="w-3 h-3 text-muted-foreground animate-spin shrink-0" />}
+                        {log.status === "error" && <XCircle className="w-3 h-3 text-destructive shrink-0" />}
+                        <span className={log.status === "error" ? "text-destructive" : "text-muted-foreground"}>{log.message}</span>
+                      </div>
+                    ))}
                   </div>
                 )}
               </CardContent>

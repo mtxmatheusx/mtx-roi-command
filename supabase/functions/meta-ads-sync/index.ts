@@ -146,8 +146,24 @@ Deno.serve(async (req) => {
           { status: isRateLimit ? 429 : 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
+
+      // Fetch token permissions
+      let permissions: string[] = [];
+      try {
+        const permUrl = `https://graph.facebook.com/v21.0/me/permissions?access_token=${accessToken}`;
+        const permRes = await fetch(permUrl);
+        const permData = await permRes.json();
+        if (permData?.data && Array.isArray(permData.data)) {
+          permissions = permData.data
+            .filter((p: { status: string }) => p.status === "granted")
+            .map((p: { permission: string }) => p.permission);
+        }
+      } catch {
+        // Permission check failed — continue without
+      }
+
       return new Response(
-        JSON.stringify({ success: true, total: testData?.data?.length ?? 0, fetchedAt: new Date().toISOString() }),
+        JSON.stringify({ success: true, total: testData?.data?.length ?? 0, permissions, fetchedAt: new Date().toISOString() }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
