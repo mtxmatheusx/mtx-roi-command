@@ -186,6 +186,18 @@ serve(async (req) => {
     await supabase.from("campaign_drafts").update({ meta_adset_id: metaAdSetId }).eq("id", draftId);
 
     // Step 3: Create Ad (creative inline)
+    const pageId = profile?.page_id;
+    if (!pageId || pageId.trim() === "") {
+      await supabase.from("campaign_drafts").update({ status: "failed", error_message: "Page ID do Facebook não configurado. Configure nas Configurações." }).eq("id", draftId);
+      return new Response(JSON.stringify({ error: "Page ID do Facebook não configurado. Configure nas Configurações.", step: "ad_validation", meta_campaign_id: metaCampaignId, meta_adset_id: metaAdSetId, steps }), {
+        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const ctaRaw = selectedCopy?.cta || "";
+    const ctaType = /compre|shop/i.test(ctaRaw) ? "SHOP_NOW" : "LEARN_MORE";
+    const linkUrl = (Array.isArray(profile?.product_urls) && profile.product_urls.length > 0) ? profile.product_urls[0] : "https://example.com";
+
     const adBody: Record<string, unknown> = {
       name: `${draft.campaign_name} - Anúncio 01`,
       adset_id: metaAdSetId,
@@ -193,10 +205,12 @@ serve(async (req) => {
       access_token: accessToken,
       creative: {
         object_story_spec: {
+          page_id: pageId,
           link_data: {
             message: selectedCopy?.primary_text || "Descubra como transformar seus resultados",
+            link: linkUrl,
             name: selectedCopy?.headline || draft.campaign_name,
-            call_to_action: { type: selectedCopy?.cta === "Saiba Mais" ? "LEARN_MORE" : "SHOP_NOW" },
+            call_to_action: { type: ctaType, value: { link: linkUrl } },
           },
         },
       },

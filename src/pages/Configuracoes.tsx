@@ -308,6 +308,11 @@ export default function Configuracoes() {
                 <Input id="pixelId" placeholder="123456789012345" value={form.pixelId} onChange={(e) => handleChange("pixelId", e.target.value)} className="font-mono text-sm" />
               </div>
             </div>
+            <div className="space-y-2 max-w-md">
+              <Label htmlFor="pageId">Facebook Page ID</Label>
+              <Input id="pageId" placeholder="123456789012345" value={form.pageId} onChange={(e) => handleChange("pageId", e.target.value)} className="font-mono text-sm" />
+              <p className="text-xs text-muted-foreground">ID da Página do Facebook vinculada à conta de anúncios. Obrigatório para criar anúncios.</p>
+            </div>
             <div className="flex items-center gap-3">
               <Button variant="outline" onClick={handleTestConnection} disabled={testResult === "loading"} className="gap-2">
                 {testResult === "loading" ? <Loader2 className="w-4 h-4 animate-spin" /> : null}Testar Conexão
