@@ -688,7 +688,7 @@ export default function LancarCampanha() {
 
             {!publishResult && (
               <div className="flex gap-3">
-                <Button onClick={handlePublish} disabled={isPublishing} className="gap-2 bg-neon-green/90 hover:bg-neon-green text-background font-bold">
+                <Button onClick={() => setConfirmPublishOpen(true)} disabled={isPublishing || !activeProfile} className="gap-2 bg-neon-green/90 hover:bg-neon-green text-background font-bold">
                   {isPublishing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Rocket className="w-4 h-4" />}
                   Aprovar Execução
                 </Button>
@@ -696,6 +696,51 @@ export default function LancarCampanha() {
                 <Button variant="ghost" onClick={() => setStep(2)}>Voltar</Button>
               </div>
             )}
+
+            {/* Confirmation Modal */}
+            <AlertDialog open={confirmPublishOpen} onOpenChange={setConfirmPublishOpen}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle className="flex items-center gap-2">
+                    <Rocket className="w-5 h-5 text-primary" />
+                    🚀 Resumo da Execução
+                  </AlertDialogTitle>
+                  <AlertDialogDescription className="space-y-3 text-left">
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div>
+                        <p className="text-muted-foreground text-xs">Cliente</p>
+                        <p className="font-semibold text-foreground">{activeProfile?.name || "—"}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-xs">Conta Meta</p>
+                        <p className="font-semibold text-foreground font-mono">{activeProfile?.ad_account_id}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-xs">Orçamento Diário</p>
+                        <p className="font-semibold text-foreground">R$ {dailyBudget.toLocaleString("pt-BR")}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-xs">Objetivo</p>
+                        <p className="font-semibold text-foreground">{objectiveLabels[objective]}</p>
+                      </div>
+                    </div>
+                    {draft && (
+                      <div className="border-t border-border pt-3">
+                        <p className="text-muted-foreground text-xs mb-1">Copy Selecionada</p>
+                        <p className="text-sm font-semibold text-foreground">{draft.copy_options[selectedCopyIdx]?.headline}</p>
+                      </div>
+                    )}
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction onClick={() => { setConfirmPublishOpen(false); handlePublish(); }} className="gap-2 bg-neon-green/90 hover:bg-neon-green text-background font-bold">
+                    <Rocket className="w-4 h-4" />
+                    Confirmar e Subir
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
 
             {publishResult && (
               <Button onClick={resetWizard} variant="outline">Criar Nova Campanha</Button>
