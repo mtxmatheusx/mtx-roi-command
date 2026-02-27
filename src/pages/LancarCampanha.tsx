@@ -136,6 +136,86 @@ export default function LancarCampanha() {
     if (data) setDrafts(data as unknown as DraftRecord[]);
   };
 
+  const loadRecentAssets = async () => {
+    const { data } = await supabase
+      .from("creative_assets")
+      .select("id, file_name, file_url, file_type, description")
+      .eq("user_id", user!.id)
+      .eq("profile_id", activeProfile!.id)
+      .order("created_at", { ascending: false })
+      .limit(12);
+    if (data) setRecentAssets(data);
+  };
+
+  const handleFileUpload = async (files: FileList | File[]) => {
+    if (!user?.id || !activeProfile?.id) return;
+    const fileArray = Array.from(files);
+    const allowed = ["image/jpeg", "image/png", "video/mp4", "video/quicktime"];
+    const valid = fileArray.filter(f => allowed.includes(f.type));
+    if (valid.length === 0) {
+      toast({ title: "Formato inválido", description: "Aceitos: JPG, PNG, MP4, MOV", variant: "destructive" });
+      return;
+    }
+
+    setIsUploading(true);
+    setUploadProgress(0);
+
+    for (let i = 0; i < valid.length; i++) {
+      const file = valid[i];
+      const ext = file.name.split(".").pop();
+      const path = `${user.id}/${activeProfile.id}/${crypto.randomUUID()}.${ext}`;
+
+      setUploadProgress(Math.round(((i) / valid.length) * 100));
+
+      const { error: uploadErr } = await supabase.storage.from("creative-assets").upload(path, file);
+      if (uploadErr) {
+        toast({ title: "Erro no upload", description: uploadErr.message, variant: "destructive" });
+        continue;
+      }
+
+      const { data: publicUrl } = supabase.storage.from("creative-assets").getPublicUrl(path);
+      const fileType = file.type.startsWith("video") ? "video" : "image";
+
+      const { data: inserted, error: insertErr } = await supabase.from("creative_assets").insert({
+        user_id: user.id,
+        profile_id: activeProfile.id,
+        file_name: file.name,
+        file_url: publicUrl.publicUrl,
+        file_type: fileType,
+        source_tag: "uploaded",
+      }).select("id").single();
+
+      if (insertErr || !inserted) continue;
+
+      // Trigger AI indexing
+      supabase.functions.invoke("index-creative-asset", {
+        body: {
+          assetId: inserted.id,
+          profileId: activeProfile.id,
+          fileUrl: publicUrl.publicUrl,
+          fileType,
+          fileName: file.name,
+        },
+      }).then(({ data }) => {
+        if (data?.description) {
+          setRecentAssets(prev => prev.map(a => a.id === inserted.id ? { ...a, description: data.description } : a));
+        }
+      }).catch(() => {});
+    }
+
+    setUploadProgress(100);
+    toast({ title: "✅ Upload concluído!", description: `${valid.length} ativo(s) enviado(s) e indexação IA iniciada.` });
+    setIsUploading(false);
+    setUploadOpen(false);
+    loadRecentAssets();
+  };
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (e.dataTransfer.files.length > 0) handleFileUpload(e.dataTransfer.files);
+  }, [user?.id, activeProfile?.id]);
+
   const handleGenerateAI = async () => {
     setIsGenerating(true);
     try {
