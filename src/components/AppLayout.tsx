@@ -1,5 +1,6 @@
 import { ReactNode } from "react";
 import AppSidebar from "./AppSidebar";
+import AIChatPanel from "./AIChatPanel";
 
 export default function AppLayout({ children }: { children: ReactNode }) {
   return (
@@ -8,6 +9,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       <main className="ml-64 p-8">
         {children}
       </main>
+      <AIChatPanel />
     </div>
   );
 }

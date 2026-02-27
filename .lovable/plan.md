@@ -1,69 +1,63 @@
 
 
-## Plan: Gestor IA — Chat Lateral + Aba Diagnóstico
+## Plano: Status de Campanhas + Log de Automação + Sync Global + Correções
 
-This is a large request spanning 4 major systems. To deliver with quality, I'll implement it in phases. **Phase 1** covers the two most impactful features that can be built immediately with existing infrastructure.
+### 1. Edge Function — Adicionar `campaign_id`, `effective_status` ao fetch
 
----
+**`supabase/functions/meta-ads-sync/index.ts`**
+- Adicionar `campaign_id` e `effective_status` aos fields do fetch de campanhas
+- Retornar esses campos no response para cada campaign row
+- O campo `effective_status` da Meta API retorna: `ACTIVE`, `PAUSED`, `DELETED`, `ARCHIVED`, etc.
 
-### Phase 1 (this implementation)
+### 2. `useMetaAds.ts` — Expor status real + invalidar cache ao trocar perfil
 
-#### 1. Edge Function: `ai-chat` — Backend for AI conversations
-- New edge function `supabase/functions/ai-chat/index.ts`
-- Uses Lovable AI Gateway (`google/gemini-3-flash-preview`) via `LOVABLE_API_KEY` (already configured)
-- Accepts `{ messages, campaignData?, mode }` where mode is `"chat"` or `"diagnostico"`
-- For `"diagnostico"` mode: injects a system prompt with Alex Hormozi/Storybrand frameworks, Meta Ads best practices, and the user's actual campaign metrics (CPA, CTR, CPM, ROI, spend, purchases)
-- For `"chat"` mode: system prompt as "Gestor de Trafego IA da MTX Estrategias" with context about the user's campaigns
-- Streams responses via SSE for real-time token rendering
-- Handles 429/402 errors with user-friendly messages
-- Update `supabase/config.toml` to register the function with `verify_jwt = false`
+- Adicionar `effectiveStatus` ao `MetaAdsCampaign` e mapear para `Campaign.status` baseado no valor da API:
+  - `ACTIVE` → `active`
+  - `PAUSED` → `paused`
+  - Outros → `paused`
+- Remover lógica atual que infere status a partir de spend/ROAS
+- `queryKey` já inclui `adAccountId`, portanto trocar perfil já invalida cache automaticamente
 
-#### 2. Chat Lateral — "Conversar com o Gestor IA"
-- New component `src/components/AIChatPanel.tsx`
-- Floating button (bottom-right) that opens a slide-over panel
-- Message history with user/assistant bubbles, markdown rendering via simple formatting
-- Sends current campaign summary (total spend, ROI, CPA, top campaigns) as context with each request
-- Streams AI responses token-by-token
-- Persists conversation in component state (resets on page refresh)
-- Dark mode styling consistent with existing DM Sans / neon theme
+### 3. `mockData.ts` — Adicionar campo `effectiveStatus` ao Campaign type
 
-#### 3. Aba "Diagnóstico da IA" — New page `/diagnostico`
-- New page `src/pages/Diagnostico.tsx`
-- Sends current metrics (CPA, CTR, CPM, ROI, spend, purchases per campaign) to the `ai-chat` edge function in `"diagnostico"` mode
-- Displays AI-generated diagnostic report with sections: Resumo Executivo, Alertas Imediatos, Recomendacoes de Otimizacao, Estrategia de Criativos
-- "Gerar Diagnostico" button triggers the analysis
-- Shows loading state during generation, renders result with markdown formatting
-- Add route `/diagnostico` and sidebar nav item with Brain icon
+- Adicionar `effectiveStatus?: string` ao type `Campaign`
 
-#### 4. Sidebar + Router updates
-- Add "Diagnóstico IA" nav item to `AppSidebar.tsx` (Brain icon)
-- Add route in `App.tsx`
-- Add `AIChatPanel` to `AppLayout.tsx` so it appears on all pages
+### 4. `CampaignsTable.tsx` — Coluna Status com badges + Toggle de filtro
 
-### Files Created
-| File | Purpose |
-|---|---|
-| `supabase/functions/ai-chat/index.ts` | AI edge function (streaming) |
-| `src/components/AIChatPanel.tsx` | Floating chat panel |
-| `src/pages/Diagnostico.tsx` | AI diagnostics page |
+- Adicionar coluna "Status" com badges: `[ATIVO]` verde neon, `[PAUSADO]` cinza
+- Adicionar `Switch` toggle "Mostrar apenas ativas" acima da tabela
+- Filtrar campanhas com base no toggle
 
-### Files Modified
-| File | Change |
-|---|---|
-| `supabase/config.toml` | Register `ai-chat` function |
-| `src/App.tsx` | Add `/diagnostico` route |
-| `src/components/AppSidebar.tsx` | Add Diagnostico nav item |
-| `src/components/AppLayout.tsx` | Add AIChatPanel |
+### 5. Campanhas, Criativos, Simulador — Botão "Forçar Atualização" replicado
 
-### Technical Details
-- AI model: `google/gemini-3-flash-preview` (fast, good reasoning, no extra API key needed)
-- Streaming: SSE with line-by-line parsing, token-by-token rendering
-- System prompt includes Hormozi/Storybrand frameworks for creative suggestions
-- Campaign data injected as structured context (not stored in DB, sent per-request)
-- No database changes needed for Phase 1
+- **`Campanhas.tsx`**: Adicionar `useClientProfiles` + `DateRangePicker` + botão Refresh com `forceRefetch()` e timestamp independente
+- **`Criativos.tsx`**: Adicionar botão Refresh com `forceRefetch()` e timestamp independente
+- **`Simulador.tsx`**: Consumir `useMetaAds` para pegar CPA e Ticket Médio reais; adicionar botão Refresh
 
-### Future Phases (separate messages)
-- **Phase 2**: Monthly Review page with charts + AI analysis (cron job on day 1)
-- **Phase 3**: Campaign creation via Meta API (write permissions)
-- **Phase 4**: Weekly knowledge update cron + asset library analysis
+### 6. `Configuracoes.tsx` — Limpar campos duplicados
+
+- A seção "Controle de Teto Financeiro" tem campos CPA Meta, Ticket Médio e Limite Escala duplicados. Remover a duplicação, mantendo apenas Budget Máximo + Frequência nessa seção.
+
+### 7. `Index.tsx` — Indicador "Monitoramento Ativo" + Log de Automação
+
+- Adicionar pill pulsante no topo: `"● Monitoramento Ativo em Tempo Real"` com animação pulse neon
+- Criar seção "Log de Automação" abaixo das campanhas com entries geradas client-side:
+  - A cada renderização/refetch, gerar entry: `"Check realizado às HH:MM — ROI atual: X.XX — Nenhuma ação necessária"`
+  - Se alguma campanha tiver CPA > 2× meta com 0 vendas: `"AÇÃO: Campanha [Nome] sinalizada por CPA alto"`
+  - Armazenar últimos 20 logs em state local
+
+### 8. Não necessita migração SQL
+
+Budget frequency e budget_maximo já existem no schema. Nenhuma alteração de banco necessária.
+
+### Arquivos modificados
+- `supabase/functions/meta-ads-sync/index.ts` — campos effective_status
+- `src/lib/mockData.ts` — type Campaign atualizado  
+- `src/hooks/useMetaAds.ts` — mapear status real
+- `src/components/CampaignsTable.tsx` — badges status + toggle filtro
+- `src/pages/Campanhas.tsx` — botão refresh + profiles
+- `src/pages/Criativos.tsx` — botão refresh
+- `src/pages/Simulador.tsx` — dados reais + botão refresh
+- `src/pages/Index.tsx` — indicador pulse + log de automação
+- `src/pages/Configuracoes.tsx` — remover campos duplicados
 

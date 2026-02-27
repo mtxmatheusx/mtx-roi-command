@@ -1,11 +1,12 @@
 import { NavLink as RouterNavLink } from "react-router-dom";
-import { BarChart3, Zap, Target, ImageIcon, Settings, LogOut } from "lucide-react";
+import { BarChart3, Zap, Target, ImageIcon, Settings, LogOut, Brain } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import ProfileSelector from "@/components/ProfileSelector";
 
 const navItems = [
   { to: "/", label: "Dashboard", icon: BarChart3 },
   { to: "/campanhas", label: "Campanhas", icon: Target },
+  { to: "/diagnostico", label: "Diagnóstico IA", icon: Brain },
   { to: "/simulador", label: "Simulador", icon: Zap },
   { to: "/criativos", label: "Criativos", icon: ImageIcon },
 ];
