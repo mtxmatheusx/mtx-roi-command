@@ -272,10 +272,13 @@ Deno.serve(async (req) => {
 
     const adIdx = fetches.length - 1;
     let creatives: unknown[] = [];
+    const adIdToName: Record<string, Record<string, unknown>> = {};
     if (results[adIdx]?.data && Array.isArray(results[adIdx].data)) {
       creatives = results[adIdx].data.map((r: Record<string, unknown>) => {
         const parsed = parseCampaignRow(r);
+        if (r?.ad_id) adIdToName[r.ad_id as string] = r;
         return {
+          adId: r?.ad_id || undefined,
           adName: r?.ad_name || "Sem nome",
           spend: parsed.spend,
           purchases: parsed.purchases,
@@ -285,8 +288,41 @@ Deno.serve(async (req) => {
           cpc: parsed.cpc,
           impressions: parsed.impressions,
           clicks: parsed.clicks,
+          thumbnailUrl: null as string | null,
         };
       });
+    }
+
+    // Fetch ad creative thumbnails
+    if (creatives.length > 0) {
+      try {
+        const thumbUrl = `https://graph.facebook.com/v21.0/${adAccountId}/ads?fields=id,name,creative{thumbnail_url,image_url}&limit=50&access_token=${accessToken}`;
+        const thumbRes = await fetch(thumbUrl);
+        const thumbData = await thumbRes.json();
+        if (thumbData?.data && Array.isArray(thumbData.data)) {
+          const thumbMap: Record<string, string> = {};
+          for (const ad of thumbData.data) {
+            const url = ad?.creative?.thumbnail_url || ad?.creative?.image_url;
+            if (ad?.id && url) thumbMap[ad.id] = url;
+          }
+          creatives = (creatives as Array<Record<string, unknown>>).map((c) => {
+            const adId = c.adId as string;
+            if (adId && thumbMap[adId]) {
+              return { ...c, thumbnailUrl: thumbMap[adId] };
+            }
+            // Try matching by name
+            for (const ad of thumbData.data) {
+              if (ad?.name === c.adName) {
+                const url = ad?.creative?.thumbnail_url || ad?.creative?.image_url;
+                if (url) return { ...c, thumbnailUrl: url };
+              }
+            }
+            return c;
+          });
+        }
+      } catch {
+        // Thumbnail fetch failed — continue without them
+      }
     }
 
     return new Response(
