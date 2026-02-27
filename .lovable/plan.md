@@ -1,62 +1,63 @@
 
 
-## Diagnóstico do Erro "Edge Function returned a non-2xx status code"
+## Plano: Status de Campanhas + Log de Automação + Sync Global + Correções
 
-O problema é claro: a edge function `create-meta-campaign` retorna status HTTP 400 quando a Meta API rejeita a requisição. O SDK do Supabase (`supabase.functions.invoke()`) trata qualquer resposta non-2xx como erro, descartando o body JSON com os detalhes reais. O frontend só vê a mensagem genérica "Edge Function returned a non-2xx status code" em vez do erro real da Meta (ex: "O orçamento mínimo é R$ 6,00", "Token expirado", etc.).
+### 1. Edge Function — Adicionar `campaign_id`, `effective_status` ao fetch
 
-## Correção
+**`supabase/functions/meta-ads-sync/index.ts`**
+- Adicionar `campaign_id` e `effective_status` aos fields do fetch de campanhas
+- Retornar esses campos no response para cada campaign row
+- O campo `effective_status` da Meta API retorna: `ACTIVE`, `PAUSED`, `DELETED`, `ARCHIVED`, etc.
 
-### 1. Edge Function: retornar sempre HTTP 200
+### 2. `useMetaAds.ts` — Expor status real + invalidar cache ao trocar perfil
 
-**File: `supabase/functions/create-meta-campaign/index.ts`**
+- Adicionar `effectiveStatus` ao `MetaAdsCampaign` e mapear para `Campaign.status` baseado no valor da API:
+  - `ACTIVE` → `active`
+  - `PAUSED` → `paused`
+  - Outros → `paused`
+- Remover lógica atual que infere status a partir de spend/ROAS
+- `queryKey` já inclui `adAccountId`, portanto trocar perfil já invalida cache automaticamente
 
-Alterar todas as respostas de erro da Meta API (token inválido, falha na campanha, falha no adset, falha no ad) de `status: 400` para `status: 200`, mantendo `{ error: "...", step: "..." }` no body. Assim o SDK não descarta o body e o frontend consegue ler `result.error` e `result.step`.
+### 3. `mockData.ts` — Adicionar campo `effectiveStatus` ao Campaign type
 
-Respostas que mudam de 400 → 200:
-- Token inválido (line 97-99)
-- Token não configurado (line 78-80)
-- Ad Account não configurado (line 86-88)
-- Erro ao criar campanha (line 125-127)
-- Erro ao criar adset (line 166-168)
-- Erro ao criar ad (line 205-207)
+- Adicionar `effectiveStatus?: string` ao type `Campaign`
 
-Manter `status: 401` apenas para autenticação do usuário (JWT) e `status: 500` para erros inesperados.
+### 4. `CampaignsTable.tsx` — Coluna Status com badges + Toggle de filtro
 
-### 2. Frontend: melhorar exibição do erro
+- Adicionar coluna "Status" com badges: `[ATIVO]` verde neon, `[PAUSADO]` cinza
+- Adicionar `Switch` toggle "Mostrar apenas ativas" acima da tabela
+- Filtrar campanhas com base no toggle
 
-**File: `src/pages/LancarCampanha.tsx`**
+### 5. Campanhas, Criativos, Simulador — Botão "Forçar Atualização" replicado
 
-Na linha 191, em vez de `throw publishError`, tentar extrair o body JSON do erro para exibir a mensagem real da Meta:
+- **`Campanhas.tsx`**: Adicionar `useClientProfiles` + `DateRangePicker` + botão Refresh com `forceRefetch()` e timestamp independente
+- **`Criativos.tsx`**: Adicionar botão Refresh com `forceRefetch()` e timestamp independente
+- **`Simulador.tsx`**: Consumir `useMetaAds` para pegar CPA e Ticket Médio reais; adicionar botão Refresh
 
-```typescript
-if (publishError) {
-  // Try to parse the error context for detailed Meta error
-  let detailedError = publishError.message;
-  try {
-    if (publishError.context) {
-      const errBody = await publishError.context.json();
-      detailedError = errBody?.error || detailedError;
-    }
-  } catch {}
-  throw new Error(detailedError);
-}
-```
+### 6. `Configuracoes.tsx` — Limpar campos duplicados
 
-### Resultado Esperado
+- A seção "Controle de Teto Financeiro" tem campos CPA Meta, Ticket Médio e Limite Escala duplicados. Remover a duplicação, mantendo apenas Budget Máximo + Frequência nessa seção.
 
-Em vez de ver "Edge Function returned a non-2xx status code", o usuário verá o erro real da Meta como:
-- "Token inválido ou sem permissão ads_management"
-- "O orçamento mínimo é R$ 6,00"
-- "O criativo precisa de uma imagem"
+### 7. `Index.tsx` — Indicador "Monitoramento Ativo" + Log de Automação
 
-Com a etapa exata que falhou (Campanha, Conjunto ou Anúncio).
+- Adicionar pill pulsante no topo: `"● Monitoramento Ativo em Tempo Real"` com animação pulse neon
+- Criar seção "Log de Automação" abaixo das campanhas com entries geradas client-side:
+  - A cada renderização/refetch, gerar entry: `"Check realizado às HH:MM — ROI atual: X.XX — Nenhuma ação necessária"`
+  - Se alguma campanha tiver CPA > 2× meta com 0 vendas: `"AÇÃO: Campanha [Nome] sinalizada por CPA alto"`
+  - Armazenar últimos 20 logs em state local
 
----
+### 8. Não necessita migração SQL
 
-### Files Modified
+Budget frequency e budget_maximo já existem no schema. Nenhuma alteração de banco necessária.
 
-| File | Change |
-|---|---|
-| `supabase/functions/create-meta-campaign/index.ts` | Retornar HTTP 200 para erros de negócio da Meta API |
-| `src/pages/LancarCampanha.tsx` | Extrair erro detalhado do context do FunctionsHttpError |
+### Arquivos modificados
+- `supabase/functions/meta-ads-sync/index.ts` — campos effective_status
+- `src/lib/mockData.ts` — type Campaign atualizado  
+- `src/hooks/useMetaAds.ts` — mapear status real
+- `src/components/CampaignsTable.tsx` — badges status + toggle filtro
+- `src/pages/Campanhas.tsx` — botão refresh + profiles
+- `src/pages/Criativos.tsx` — botão refresh
+- `src/pages/Simulador.tsx` — dados reais + botão refresh
+- `src/pages/Index.tsx` — indicador pulse + log de automação
+- `src/pages/Configuracoes.tsx` — remover campos duplicados
 

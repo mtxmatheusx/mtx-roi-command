@@ -76,7 +76,7 @@ serve(async (req) => {
     if (!accessToken) {
       await supabase.from("campaign_drafts").update({ status: "failed", error_message: "Token Meta não configurado" }).eq("id", draftId);
       return new Response(JSON.stringify({ error: "Token de acesso Meta não configurado. Configure nas Configurações." }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
@@ -84,7 +84,7 @@ serve(async (req) => {
     if (!adAccountId || adAccountId === "act_") {
       await supabase.from("campaign_drafts").update({ status: "failed", error_message: "Ad Account ID não configurado" }).eq("id", draftId);
       return new Response(JSON.stringify({ error: "Ad Account ID não configurado." }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
@@ -95,7 +95,7 @@ serve(async (req) => {
       const msg = `Token inválido ou sem permissão ads_management: ${metaError(tokenData)}`;
       await supabase.from("campaign_drafts").update({ status: "failed", error_message: msg }).eq("id", draftId);
       return new Response(JSON.stringify({ error: msg, step: "token_validation" }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
@@ -123,7 +123,7 @@ serve(async (req) => {
       const errorMsg = metaError(campaignData);
       await supabase.from("campaign_drafts").update({ status: "failed", error_message: errorMsg }).eq("id", draftId);
       return new Response(JSON.stringify({ error: errorMsg, step: "campaign" }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
@@ -164,7 +164,7 @@ serve(async (req) => {
       const errorMsg = metaError(adSetData);
       await supabase.from("campaign_drafts").update({ status: "failed", error_message: errorMsg, meta_campaign_id: metaCampaignId }).eq("id", draftId);
       return new Response(JSON.stringify({ error: errorMsg, step: "adset", meta_campaign_id: metaCampaignId, steps }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
@@ -203,7 +203,7 @@ serve(async (req) => {
         error_message: `Campanha e conjunto criados, mas erro no anúncio: ${errorMsg}`,
       }).eq("id", draftId);
       return new Response(JSON.stringify({ error: errorMsg, step: "ad", meta_campaign_id: metaCampaignId, meta_adset_id: metaAdSetId, steps }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
