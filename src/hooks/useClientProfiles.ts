@@ -9,6 +9,7 @@ export interface ClientProfile {
   name: string;
   ad_account_id: string;
   pixel_id: string;
+  page_id: string | null;
   cpa_meta: number;
   ticket_medio: number;
   limite_escala: number;
