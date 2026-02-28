@@ -359,7 +359,7 @@ export default function LancarCampanha() {
       }
 
       if (result?.error) {
-        const stepLabels: Record<string, string> = { campaign: "Criação da Campanha", adset: "Criação do Conjunto de Anúncios", ad: "Criação do Anúncio" };
+        const stepLabels: Record<string, string> = { campaign: "Criação da Campanha", adset: "Criação do Conjunto de Anúncios", ad: "Criação do Anúncio", media_upload: "Upload de Mídia", ad_validation: "Validação do Anúncio", token_validation: "Validação do Token" };
         const failedStep = result.step ? stepLabels[result.step] || result.step : "";
         addLog(`Falha em: ${failedStep || "Meta API"}`, "error");
         if (result.steps?.length) {
