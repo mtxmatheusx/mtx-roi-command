@@ -997,8 +997,8 @@ export default function LancarCampanha() {
                       <p className="text-sm text-muted-foreground">{publishResult.error_user_msg}</p>
                     )}
                     <p className="text-xs text-muted-foreground whitespace-pre-line">{publishResult.error}</p>
-                    {publishResult.step && (
-                      <p className="text-xs text-amber-400">Etapa com falha: {publishResult.step === "campaign" ? "Campanha" : publishResult.step === "adset" ? "Conjunto de Anúncios" : publishResult.step === "ad" ? "Anúncio" : publishResult.step}</p>
+                {publishResult.step && (
+                      <p className="text-xs text-amber-400">Etapa com falha: {publishResult.step === "campaign" ? "Campanha" : publishResult.step === "adset" ? "Conjunto de Anúncios" : publishResult.step === "ad" ? "Anúncio" : publishResult.step === "media_upload" ? "Upload de Mídia" : publishResult.step === "ad_validation" ? "Validação do Anúncio" : publishResult.step}</p>
                     )}
                     {publishResult.meta_campaign_id && !publishResult.rollback && (
                       <p className="text-xs text-amber-400">⚠️ Campanha parcialmente criada (ID: {publishResult.meta_campaign_id}). Verifique no Gerenciador de Anúncios.</p>

@@ -16,6 +16,7 @@ export default function AppSidebar() {
     { to: "/simulador", label: t("nav.simulator"), icon: Zap },
     { to: "/criativos", label: t("nav.creatives"), icon: ImageIcon },
     { to: "/auditoria-meta", label: t("nav.auditMeta"), icon: Shield },
+    { to: "/personagens-ugc", label: "Personagens UGC", icon: Users },
   ];
 
   return (
