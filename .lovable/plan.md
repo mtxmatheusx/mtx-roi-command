@@ -1,63 +1,93 @@
 
 
-## Plano: Status de Campanhas + Log de Automação + Sync Global + Correções
+## Plano: Fix Ad Creation + Video Upload + Page ID Validation + UGC Characters
 
-### 1. Edge Function — Adicionar `campaign_id`, `effective_status` ao fetch
+O problema principal: a Meta rejeita o anúncio porque o `page_id` não chega, ou o upload de mídia (imagem/vídeo) falha silenciosamente. Além disso, não há suporte a vídeo no pipeline de upload para Meta.
 
-**`supabase/functions/meta-ads-sync/index.ts`**
-- Adicionar `campaign_id` e `effective_status` aos fields do fetch de campanhas
-- Retornar esses campos no response para cada campaign row
-- O campo `effective_status` da Meta API retorna: `ACTIVE`, `PAUSED`, `DELETED`, `ARCHIVED`, etc.
+---
 
-### 2. `useMetaAds.ts` — Expor status real + invalidar cache ao trocar perfil
+### Task 1: Fix robustez do Ad Creation no `create-meta-campaign`
 
-- Adicionar `effectiveStatus` ao `MetaAdsCampaign` e mapear para `Campaign.status` baseado no valor da API:
-  - `ACTIVE` → `active`
-  - `PAUSED` → `paused`
-  - Outros → `paused`
-- Remover lógica atual que infere status a partir de spend/ROAS
-- `queryKey` já inclui `adAccountId`, portanto trocar perfil já invalida cache automaticamente
+**Arquivo:** `supabase/functions/create-meta-campaign/index.ts`
 
-### 3. `mockData.ts` — Adicionar campo `effectiveStatus` ao Campaign type
+**Problemas identificados:**
+- O upload de imagem usa `{ url: injectedUrl }` mas a Meta API espera o campo como `url` — isso pode funcionar para imagens mas precisa de logging detalhado
+- Não há suporte a vídeo (`advideos` endpoint)
+- Sem fallback: se não houver `injected_creative_url`, o anúncio é criado sem mídia visual — a Meta pode rejeitar
 
-- Adicionar `effectiveStatus?: string` ao type `Campaign`
+**Correções:**
+1. **Detectar tipo de mídia** (imagem vs vídeo) pelo URL/extensão
+2. **Upload de imagem**: `POST /{adAccountId}/adimages` com `{ url: "...", access_token }` — manter, mas adicionar log detalhado do response
+3. **Upload de vídeo**: `POST /{adAccountId}/advideos` com `{ file_url: "...", name: "...", access_token }` — capturar `video_id`
+4. **Construção dinâmica do creative**: Se `image_hash` → usar `link_data.image_hash`. Se `video_id` → usar `video_data` com `video_id` + `image_url` (thumbnail) dentro de `object_story_spec`
+5. **Retry para vídeo**: Se ad creation falha com "video still processing", aguardar 5s e tentar novamente (1 retry)
+6. **Log detalhado**: Logar o payload completo do ad body antes de enviar, e o response completo em caso de erro
 
-### 4. `CampaignsTable.tsx` — Coluna Status com badges + Toggle de filtro
+### Task 2: Validação de Page ID no frontend
 
-- Adicionar coluna "Status" com badges: `[ATIVO]` verde neon, `[PAUSADO]` cinza
-- Adicionar `Switch` toggle "Mostrar apenas ativas" acima da tabela
-- Filtrar campanhas com base no toggle
+**Arquivo:** `src/pages/LancarCampanha.tsx`
 
-### 5. Campanhas, Criativos, Simulador — Botão "Forçar Atualização" replicado
+- No Step 3 (Resumo para Aprovação), verificar se `activeProfile?.page_id` existe e não está vazio
+- Se ausente: desabilitar botão "Publicar" e exibir `AlertTriangle` com "⚠️ Vincule uma Página do Facebook nas Configurações para publicar"
+- Exibir o `page_id` mascarado no resumo para confirmação visual
 
-- **`Campanhas.tsx`**: Adicionar `useClientProfiles` + `DateRangePicker` + botão Refresh com `forceRefetch()` e timestamp independente
-- **`Criativos.tsx`**: Adicionar botão Refresh com `forceRefetch()` e timestamp independente
-- **`Simulador.tsx`**: Consumir `useMetaAds` para pegar CPA e Ticket Médio reais; adicionar botão Refresh
+### Task 3: Feedback de erro detalhado no publish log
 
-### 6. `Configuracoes.tsx` — Limpar campos duplicados
+**Arquivo:** `supabase/functions/create-meta-campaign/index.ts` + `src/pages/LancarCampanha.tsx`
 
-- A seção "Controle de Teto Financeiro" tem campos CPA Meta, Ticket Médio e Limite Escala duplicados. Remover a duplicação, mantendo apenas Budget Máximo + Frequência nessa seção.
+- Na edge function, retornar `step: "media_upload"` quando o upload de mídia falhar
+- No frontend, adicionar label para o step `media_upload`: "Upload de Mídia"
+- Mensagens específicas: "❌ Falha no Upload: O Facebook não aceitou o formato do arquivo." ou "❌ Falha de Vínculo: Página não autorizada."
 
-### 7. `Index.tsx` — Indicador "Monitoramento Ativo" + Log de Automação
+### Task 4: Tabela `ugc_characters` + Migration
 
-- Adicionar pill pulsante no topo: `"● Monitoramento Ativo em Tempo Real"` com animação pulse neon
-- Criar seção "Log de Automação" abaixo das campanhas com entries geradas client-side:
-  - A cada renderização/refetch, gerar entry: `"Check realizado às HH:MM — ROI atual: X.XX — Nenhuma ação necessária"`
-  - Se alguma campanha tiver CPA > 2× meta com 0 vendas: `"AÇÃO: Campanha [Nome] sinalizada por CPA alto"`
-  - Armazenar últimos 20 logs em state local
+**Migration SQL:**
+```sql
+CREATE TABLE public.ugc_characters (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL,
+  profile_id UUID,
+  name TEXT NOT NULL,
+  fixed_description TEXT NOT NULL DEFAULT '',
+  image_references TEXT[] DEFAULT '{}',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+ALTER TABLE public.ugc_characters ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users manage own ugc characters" ON public.ugc_characters FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+CREATE TRIGGER ugc_characters_updated_at BEFORE UPDATE ON public.ugc_characters FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+```
 
-### 8. Não necessita migração SQL
+### Task 5: Página "Personagens UGC" — sidebar + UI
 
-Budget frequency e budget_maximo já existem no schema. Nenhuma alteração de banco necessária.
+**Arquivos:** `src/pages/PersonagensUGC.tsx` (novo), `src/components/AppSidebar.tsx`, `src/App.tsx`
 
-### Arquivos modificados
-- `supabase/functions/meta-ads-sync/index.ts` — campos effective_status
-- `src/lib/mockData.ts` — type Campaign atualizado  
-- `src/hooks/useMetaAds.ts` — mapear status real
-- `src/components/CampaignsTable.tsx` — badges status + toggle filtro
-- `src/pages/Campanhas.tsx` — botão refresh + profiles
-- `src/pages/Criativos.tsx` — botão refresh
-- `src/pages/Simulador.tsx` — dados reais + botão refresh
-- `src/pages/Index.tsx` — indicador pulse + log de automação
-- `src/pages/Configuracoes.tsx` — remover campos duplicados
+- Nova rota `/personagens-ugc` com link "👥 Personagens UGC" na sidebar
+- Grid de cards com nome, descrição curta, preview de referências
+- Modal de criação: campos Nome, Galeria de Referência (upload múltiplo de fotos), Dossiê Físico (textarea)
+- Upload para bucket `creative-assets`, salvar URLs no array `image_references`
+- Delete: remover da tabela + remover arquivos do Storage
+
+### Task 6: Vínculo com Visual Forge
+
+**Arquivo:** `src/components/CreativeFactory.tsx`
+
+- Dropdown "👤 Selecionar Personagem UGC" — lista personagens do perfil ativo
+- Quando selecionado: concatenar `fixed_description` ao início do prompt mestre
+- Enviar `image_references` como `referenceImageUrl` (primeira imagem) para `generate-hyper-creative`
+- Badge "Modo Consistência Ativado" quando um personagem está selecionado
+
+---
+
+### Arquivos
+
+| Arquivo | Tipo |
+|---|---|
+| `supabase/functions/create-meta-campaign/index.ts` | Editar (video upload + logging + retry) |
+| `src/pages/LancarCampanha.tsx` | Editar (page_id validation + error labels) |
+| `src/pages/PersonagensUGC.tsx` | Novo |
+| `src/components/AppSidebar.tsx` | Editar (novo link) |
+| `src/App.tsx` | Editar (nova rota) |
+| `src/components/CreativeFactory.tsx` | Editar (dropdown UGC) |
+| Migration SQL | Novo (tabela `ugc_characters`) |
 
