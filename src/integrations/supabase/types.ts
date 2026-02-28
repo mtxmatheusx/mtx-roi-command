@@ -278,6 +278,47 @@ export type Database = {
         }
         Relationships: []
       }
+      ugc_characters: {
+        Row: {
+          created_at: string
+          fixed_description: string
+          id: string
+          image_references: string[] | null
+          name: string
+          profile_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          fixed_description?: string
+          id?: string
+          image_references?: string[] | null
+          name: string
+          profile_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          fixed_description?: string
+          id?: string
+          image_references?: string[] | null
+          name?: string
+          profile_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ugc_characters_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "client_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vsl_scripts: {
         Row: {
           angle: string

@@ -359,7 +359,7 @@ export default function LancarCampanha() {
       }
 
       if (result?.error) {
-        const stepLabels: Record<string, string> = { campaign: "Criação da Campanha", adset: "Criação do Conjunto de Anúncios", ad: "Criação do Anúncio" };
+        const stepLabels: Record<string, string> = { campaign: "Criação da Campanha", adset: "Criação do Conjunto de Anúncios", ad: "Criação do Anúncio", media_upload: "Upload de Mídia", ad_validation: "Validação do Anúncio", token_validation: "Validação do Token" };
         const failedStep = result.step ? stepLabels[result.step] || result.step : "";
         addLog(`Falha em: ${failedStep || "Meta API"}`, "error");
         if (result.steps?.length) {
@@ -929,6 +929,13 @@ export default function LancarCampanha() {
         {/* Step 3 */}
         {step === 3 && draft && (
           <div className="space-y-4">
+            {/* Page ID warning */}
+            {(!activeProfile?.page_id || activeProfile.page_id.trim() === "") && (
+              <div className="flex items-center gap-2 text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-lg px-4 py-3">
+                <AlertTriangle className="w-4 h-4 shrink-0" />
+                ⚠️ Vincule uma Página do Facebook nas Configurações para publicar. O botão "Aprovar Execução" está desabilitado.
+              </div>
+            )}
             <Card className="border-primary/30">
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
@@ -997,8 +1004,8 @@ export default function LancarCampanha() {
                       <p className="text-sm text-muted-foreground">{publishResult.error_user_msg}</p>
                     )}
                     <p className="text-xs text-muted-foreground whitespace-pre-line">{publishResult.error}</p>
-                    {publishResult.step && (
-                      <p className="text-xs text-amber-400">Etapa com falha: {publishResult.step === "campaign" ? "Campanha" : publishResult.step === "adset" ? "Conjunto de Anúncios" : publishResult.step === "ad" ? "Anúncio" : publishResult.step}</p>
+                {publishResult.step && (
+                      <p className="text-xs text-amber-400">Etapa com falha: {publishResult.step === "campaign" ? "Campanha" : publishResult.step === "adset" ? "Conjunto de Anúncios" : publishResult.step === "ad" ? "Anúncio" : publishResult.step === "media_upload" ? "Upload de Mídia" : publishResult.step === "ad_validation" ? "Validação do Anúncio" : publishResult.step}</p>
                     )}
                     {publishResult.meta_campaign_id && !publishResult.rollback && (
                       <p className="text-xs text-amber-400">⚠️ Campanha parcialmente criada (ID: {publishResult.meta_campaign_id}). Verifique no Gerenciador de Anúncios.</p>
@@ -1032,7 +1039,7 @@ export default function LancarCampanha() {
 
             {!publishResult && (
               <div className="flex gap-3">
-                <Button onClick={() => setConfirmPublishOpen(true)} disabled={isPublishing || !activeProfile} className="gap-2 bg-neon-green/90 hover:bg-neon-green text-background font-bold">
+                <Button onClick={() => setConfirmPublishOpen(true)} disabled={isPublishing || !activeProfile || !activeProfile?.page_id || activeProfile?.page_id?.trim() === ""} className="gap-2 bg-neon-green/90 hover:bg-neon-green text-background font-bold">
                   {isPublishing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Rocket className="w-4 h-4" />}
                   Aprovar Execução
                 </Button>

@@ -1,5 +1,5 @@
 import { NavLink as RouterNavLink } from "react-router-dom";
-import { BarChart3, Zap, Target, ImageIcon, Settings, LogOut, Brain, Rocket, Shield, Building2 } from "lucide-react";
+import { BarChart3, Zap, Target, ImageIcon, Settings, LogOut, Brain, Rocket, Shield, Building2, Users } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useTranslation } from "react-i18next";
 import ProfileSelector from "@/components/ProfileSelector";
@@ -16,6 +16,7 @@ export default function AppSidebar() {
     { to: "/simulador", label: t("nav.simulator"), icon: Zap },
     { to: "/criativos", label: t("nav.creatives"), icon: ImageIcon },
     { to: "/auditoria-meta", label: t("nav.auditMeta"), icon: Shield },
+    { to: "/personagens-ugc", label: "Personagens UGC", icon: Users },
   ];
 
   return (
