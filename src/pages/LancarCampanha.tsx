@@ -929,6 +929,13 @@ export default function LancarCampanha() {
         {/* Step 3 */}
         {step === 3 && draft && (
           <div className="space-y-4">
+            {/* Page ID warning */}
+            {(!activeProfile?.page_id || activeProfile.page_id.trim() === "") && (
+              <div className="flex items-center gap-2 text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-lg px-4 py-3">
+                <AlertTriangle className="w-4 h-4 shrink-0" />
+                ⚠️ Vincule uma Página do Facebook nas Configurações para publicar. O botão "Aprovar Execução" está desabilitado.
+              </div>
+            )}
             <Card className="border-primary/30">
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">

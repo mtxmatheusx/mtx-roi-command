@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { useClientProfiles } from "@/hooks/useClientProfiles";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,7 +12,8 @@ import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Loader2, Sparkles, Rocket, Trophy, ImageOff, Brain, Upload, X } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Loader2, Sparkles, Rocket, Trophy, ImageOff, Brain, Upload, X, Users } from "lucide-react";
 import { motion } from "framer-motion";
 import { formatCurrency } from "@/lib/mockData";
 
@@ -28,6 +29,13 @@ interface WinnerCreative {
 
 interface CreativeFactoryProps {
   winners: WinnerCreative[];
+}
+
+interface UGCCharacter {
+  id: string;
+  name: string;
+  fixed_description: string;
+  image_references: string[];
 }
 
 export default function CreativeFactory({ winners }: CreativeFactoryProps) {
@@ -53,6 +61,26 @@ export default function CreativeFactory({ winners }: CreativeFactoryProps) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
   const [generated, setGenerated] = useState<GeneratedAsset[]>([]);
+
+  // UGC Characters
+  const [ugcCharacters, setUgcCharacters] = useState<UGCCharacter[]>([]);
+  const [selectedCharacterId, setSelectedCharacterId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (activeProfile?.id && user?.id) {
+      supabase
+        .from("ugc_characters")
+        .select("id, name, fixed_description, image_references")
+        .eq("profile_id", activeProfile.id)
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .then(({ data }) => {
+          if (data) setUgcCharacters(data as UGCCharacter[]);
+        });
+    }
+  }, [activeProfile?.id, user?.id]);
+
+  const selectedCharacter = ugcCharacters.find(c => c.id === selectedCharacterId) || null;
 
   const uploadReferenceImage = useCallback(async (file: File) => {
     if (!activeProfile?.id || !user?.id) return;
@@ -110,7 +138,12 @@ export default function CreativeFactory({ winners }: CreativeFactoryProps) {
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-      setMasterPrompt(data.masterPrompt || "");
+      let prompt = data.masterPrompt || "";
+      // Prepend UGC character description if selected
+      if (selectedCharacter) {
+        prompt = `[PERSONAGEM UGC — Descrição Física Fixa]\n${selectedCharacter.fixed_description}\n\n${prompt}`;
+      }
+      setMasterPrompt(prompt);
     } catch (err) {
       toast({ title: "Erro na direção de arte", description: (err as Error).message, variant: "destructive" });
     } finally {
@@ -127,8 +160,11 @@ export default function CreativeFactory({ winners }: CreativeFactoryProps) {
     try {
       const progressInterval = setInterval(() => setProgress((p) => Math.min(p + 6, 88)), 2500);
 
+      // Use character's first image reference if available
+      const refImage = selectedCharacter?.image_references?.[0] || referenceImageUrl;
+
       const { data, error } = await supabase.functions.invoke("generate-hyper-creative", {
-        body: { profileId: activeProfile.id, quantity, masterPrompt: masterPrompt.trim(), referenceImageUrl },
+        body: { profileId: activeProfile.id, quantity, masterPrompt: masterPrompt.trim(), referenceImageUrl: refImage },
       });
 
       clearInterval(progressInterval);
@@ -209,6 +245,39 @@ export default function CreativeFactory({ winners }: CreativeFactoryProps) {
           <CardDescription>Fluxo de 2 etapas com human-in-the-loop para criativos de alta conversão</CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
+          {/* UGC Character Selector */}
+          {ugcCharacters.length > 0 && (
+            <div>
+              <label className="text-sm font-medium mb-2 block">👤 Selecionar Personagem UGC</label>
+              <Select
+                value={selectedCharacterId || "none"}
+                onValueChange={(v) => setSelectedCharacterId(v === "none" ? null : v)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Nenhum personagem selecionado" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Nenhum</SelectItem>
+                  {ugcCharacters.map(c => (
+                    <SelectItem key={c.id} value={c.id}>
+                      <span className="flex items-center gap-2">
+                        <Users className="w-3 h-3" /> {c.name}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {selectedCharacter && (
+                <div className="mt-2 flex items-center gap-2">
+                  <Badge className="bg-primary/15 text-primary text-xs gap-1">
+                    <Users className="w-3 h-3" /> Modo Consistência Ativado
+                  </Badge>
+                  <span className="text-[10px] text-muted-foreground truncate">{selectedCharacter.fixed_description.slice(0, 60)}...</span>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Drop Zone */}
           <div>
             <label className="text-sm font-medium mb-2 block">Imagem de referência (opcional)</label>
