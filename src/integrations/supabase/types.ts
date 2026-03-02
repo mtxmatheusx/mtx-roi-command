@@ -21,6 +21,7 @@ export type Database = {
           campaign_name: string
           copy_options: Json | null
           created_at: string
+          creative_urls: string[] | null
           daily_budget: number
           error_message: string | null
           id: string
@@ -41,6 +42,7 @@ export type Database = {
           campaign_name: string
           copy_options?: Json | null
           created_at?: string
+          creative_urls?: string[] | null
           daily_budget?: number
           error_message?: string | null
           id?: string
@@ -61,6 +63,7 @@ export type Database = {
           campaign_name?: string
           copy_options?: Json | null
           created_at?: string
+          creative_urls?: string[] | null
           daily_budget?: number
           error_message?: string | null
           id?: string
