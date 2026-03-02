@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -84,13 +85,14 @@ export default function LancarCampanha() {
   const [step, setStep] = useState(1);
   const [objective, setObjective] = useState("OUTCOME_SALES");
   const [dailyBudget, setDailyBudget] = useState(50);
+  const [campaignCount, setCampaignCount] = useState(1);
   const [draft, setDraft] = useState<DraftData | null>(null);
   const [selectedCopyIdx, setSelectedCopyIdx] = useState(0);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [publishStep, setPublishStep] = useState("");
   const [publishProgress, setPublishProgress] = useState(0);
-  const [publishResult, setPublishResult] = useState<{ success: boolean; meta_campaign_id?: string; ads_manager_url?: string; error?: string; error_user_title?: string; error_user_msg?: string; fbtrace_id?: string; step?: string; steps?: string[]; rollback?: boolean } | null>(null);
+  const [publishResult, setPublishResult] = useState<{ success: boolean; meta_campaign_id?: string; ads_manager_url?: string; error?: string; error_user_title?: string; error_user_msg?: string; fbtrace_id?: string; step?: string; steps?: string[]; rollback?: boolean; total_ads?: number; failed_ads?: number; campaign_results?: any[] } | null>(null);
   const [publishLogs, setPublishLogs] = useState<{ time: string; message: string; status: "done" | "pending" | "error" }[]>([]);
   const [drafts, setDrafts] = useState<DraftRecord[]>([]);
   const [reasoningOpen, setReasoningOpen] = useState(false);
@@ -106,7 +108,7 @@ export default function LancarCampanha() {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [recentAssets, setRecentAssets] = useState<{ id: string; file_name: string; file_url: string; file_type: string; description: string | null }[]>([]);
-  const [selectedAssetUrl, setSelectedAssetUrl] = useState<string | null>(null);
+  const [selectedAssetUrls, setSelectedAssetUrls] = useState<string[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -143,8 +145,14 @@ export default function LancarCampanha() {
       .eq("user_id", user!.id)
       .eq("profile_id", activeProfile!.id)
       .order("created_at", { ascending: false })
-      .limit(12);
+      .limit(50);
     if (data) setRecentAssets(data);
+  };
+
+  const toggleAssetUrl = (url: string) => {
+    setSelectedAssetUrls(prev =>
+      prev.includes(url) ? prev.filter(u => u !== url) : prev.length < 50 ? [...prev, url] : prev
+    );
   };
 
   const handleFileUpload = async (files: FileList | File[]) => {
@@ -283,7 +291,7 @@ export default function LancarCampanha() {
       copy_options: draft.copy_options as any,
       targeting_suggestion: draft.targeting_suggestion as any,
       ai_reasoning: draft.ai_reasoning,
-      andromeda_targeting: draft.andromeda_targeting ? draft.andromeda_targeting as any : null,
+      andromeda_targeting: useAndromeda && draft.andromeda_targeting ? draft.andromeda_targeting as any : null,
     });
     if (error) {
       toast({ title: "Erro ao salvar rascunho", description: error.message, variant: "destructive" });
@@ -304,89 +312,99 @@ export default function LancarCampanha() {
       setPublishLogs((prev) => [...prev, { time, message, status }]);
     };
 
+    const totalCampaigns = campaignCount;
+    const campaignResults: any[] = [];
+
     try {
-      // Save draft first
-      addLog("Salvando rascunho...", "pending");
-      setPublishStep("Salvando rascunho...");
-      setPublishProgress(10);
+      for (let ci = 0; ci < totalCampaigns; ci++) {
+        const suffix = totalCampaigns > 1 ? ` [${ci + 1}/${totalCampaigns}]` : "";
+        const campaignName = `${draft.campaign_name}${suffix}`;
 
-      // Read injected creative from localStorage
-      let injectedCreativeUrl: string | null = null;
-      try {
-        const stored = localStorage.getItem(`mtx_injected_creative_${activeProfile.id}`);
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          injectedCreativeUrl = parsed?.url || null;
-          localStorage.removeItem(`mtx_injected_creative_${activeProfile.id}`);
+        addLog(`${totalCampaigns > 1 ? `Campanha ${ci + 1}/${totalCampaigns}: ` : ""}Salvando rascunho...`, "pending");
+        setPublishStep(`Campanha ${ci + 1}/${totalCampaigns} — Salvando...`);
+        setPublishProgress(Math.round(((ci) / totalCampaigns) * 100));
+
+        const { data: inserted, error: insertErr } = await supabase.from("campaign_drafts").insert({
+          user_id: user.id,
+          profile_id: activeProfile.id,
+          status: "approved",
+          objective,
+          campaign_name: campaignName,
+          daily_budget: dailyBudget,
+          copy_options: [draft.copy_options[selectedCopyIdx]] as any,
+          targeting_suggestion: draft.targeting_suggestion as any,
+          ai_reasoning: draft.ai_reasoning,
+          andromeda_targeting: useAndromeda && draft.andromeda_targeting ? draft.andromeda_targeting as any : null,
+          injected_creative_url: selectedAssetUrls.length === 1 ? selectedAssetUrls[0] : null,
+          creative_urls: selectedAssetUrls.length > 0 ? selectedAssetUrls : [],
+        } as any).select("id").single();
+
+        if (insertErr || !inserted) {
+          addLog(`Erro ao salvar rascunho${suffix}`, "error");
+          campaignResults.push({ success: false, error: insertErr?.message, name: campaignName });
+          continue;
         }
-      } catch {}
 
-      const { data: inserted, error: insertErr } = await supabase.from("campaign_drafts").insert({
-        user_id: user.id,
-        profile_id: activeProfile.id,
-        status: "approved",
-        objective,
-        campaign_name: draft.campaign_name,
-        daily_budget: dailyBudget,
-        copy_options: [draft.copy_options[selectedCopyIdx]] as any,
-        targeting_suggestion: draft.targeting_suggestion as any,
-        ai_reasoning: draft.ai_reasoning,
-        andromeda_targeting: useAndromeda && draft.andromeda_targeting ? draft.andromeda_targeting as any : null,
-        injected_creative_url: injectedCreativeUrl,
-      } as any).select("id").single();
+        addLog(`Rascunho salvo${suffix}`, "done");
+        addLog(`Enviando para Meta API${suffix}...`, "pending");
+        setPublishStep(`Campanha ${ci + 1}/${totalCampaigns} — Criando na Meta...`);
 
-      if (insertErr || !inserted) throw new Error(insertErr?.message || "Erro ao salvar");
-      addLog("Rascunho salvo", "done");
+        const { data: result, error: publishError } = await supabase.functions.invoke("create-meta-campaign", {
+          body: {
+            draftId: inserted.id,
+            creativeUrls: selectedAssetUrls.length > 0 ? selectedAssetUrls : undefined,
+          },
+        });
 
-      addLog("Validando token e act_ID...", "pending");
-      setPublishStep("Criando Campanha na Meta...");
-      setPublishProgress(30);
-      addLog("Enviando payload para Meta API...", "pending");
+        if (publishError) {
+          addLog(`Erro de rede${suffix}: ${publishError.message}`, "error");
+          campaignResults.push({ success: false, error: publishError.message, name: campaignName });
+          continue;
+        }
 
-      const { data: result, error: publishError } = await supabase.functions.invoke("create-meta-campaign", {
-        body: { draftId: inserted.id },
-      });
+        if (result?.error) {
+          const stepLabels: Record<string, string> = { campaign: "Campanha", adset: "Conjunto", ad: "Anúncio", media_upload: "Upload", ad_validation: "Validação", token_validation: "Token" };
+          const failedStep = result.step ? stepLabels[result.step] || result.step : "";
+          addLog(`Falha${suffix}: ${failedStep} — ${result.error}`, "error");
+          if (result.rollback) addLog(`Rollback executado${suffix}`, "done");
+          campaignResults.push({ success: false, error: result.error, step: result.step, name: campaignName });
+        } else {
+          const adCount = result.total_ads || 1;
+          addLog(`✅ Campanha${suffix} publicada! ${adCount} anúncio(s) criados`, "done");
+          if (result.failed_ads > 0) addLog(`⚠️ ${result.failed_ads} anúncio(s) falharam`, "error");
+          campaignResults.push({
+            success: true,
+            meta_campaign_id: result.meta_campaign_id,
+            ads_manager_url: result.ads_manager_url,
+            total_ads: adCount,
+            failed_ads: result.failed_ads || 0,
+            name: campaignName,
+          });
+        }
 
-      if (publishError) {
-        let detailedError = publishError.message;
-        try {
-          if ((publishError as any).context) {
-            const errBody = await (publishError as any).context.json();
-            detailedError = errBody?.error || detailedError;
-          }
-        } catch {}
-        throw new Error(detailedError);
+        setPublishProgress(Math.round(((ci + 1) / totalCampaigns) * 100));
       }
 
-      if (result?.error) {
-        const stepLabels: Record<string, string> = { campaign: "Criação da Campanha", adset: "Criação do Conjunto de Anúncios", ad: "Criação do Anúncio", media_upload: "Upload de Mídia", ad_validation: "Validação do Anúncio", token_validation: "Validação do Token" };
-        const failedStep = result.step ? stepLabels[result.step] || result.step : "";
-        addLog(`Falha em: ${failedStep || "Meta API"}`, "error");
-        if (result.steps?.length) {
-          result.steps.forEach((s: string) => addLog(`${stepLabels[s] || s} concluída`, "done"));
-        }
-        setPublishStep(`Falha em: ${failedStep || "Meta API"}`);
-        setPublishProgress(100);
-        setPublishResult({
-          success: false,
-          error: result.error,
-          error_user_title: result.error_user_title,
-          error_user_msg: result.error_user_msg,
-          fbtrace_id: result.fbtrace_id,
-          step: result.step,
-          steps: result.steps,
-          meta_campaign_id: result.meta_campaign_id,
-          rollback: result.rollback || false,
-        });
-      } else {
-        addLog("🚀 Campanha Destravada: Público Advantage+ configurado e limites de idade ajustados.", "done");
-        if (result.meta_campaign_id) addLog(`ID: ${result.meta_campaign_id}`, "done");
-        setPublishStep("Campanha publicada com sucesso!");
-        setPublishProgress(100);
+      // Aggregate results
+      const successes = campaignResults.filter(r => r.success);
+      const failures = campaignResults.filter(r => !r.success);
+
+      if (successes.length > 0) {
+        setPublishStep(`${successes.length}/${totalCampaigns} campanha(s) publicadas!`);
         setPublishResult({
           success: true,
-          meta_campaign_id: result.meta_campaign_id,
-          ads_manager_url: result.ads_manager_url,
+          meta_campaign_id: successes[0].meta_campaign_id,
+          ads_manager_url: successes[0].ads_manager_url,
+          total_ads: successes.reduce((sum: number, r: any) => sum + (r.total_ads || 0), 0),
+          failed_ads: failures.length,
+          campaign_results: campaignResults,
+        });
+      } else {
+        setPublishStep("Todas as campanhas falharam");
+        setPublishResult({
+          success: false,
+          error: failures.map((f: any) => f.error).join(" | "),
+          campaign_results: campaignResults,
         });
       }
 
@@ -407,6 +425,8 @@ export default function LancarCampanha() {
     setPublishResult(null);
     setPublishProgress(0);
     setPublishStep("");
+    setSelectedAssetUrls([]);
+    setCampaignCount(1);
   };
 
   const handleDeleteDraft = async (d: DraftRecord) => {
@@ -519,10 +539,10 @@ export default function LancarCampanha() {
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">Configuração da Campanha</CardTitle>
-              <CardDescription>Defina o objetivo e orçamento, ou deixe a IA sugerir tudo.</CardDescription>
+              <CardDescription>Defina o objetivo, orçamento e quantidade de campanhas.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label>Objetivo</Label>
                   <Select value={objective} onValueChange={setObjective}>
@@ -538,7 +558,17 @@ export default function LancarCampanha() {
                   <Label>Orçamento Diário (R$)</Label>
                   <Input type="number" value={dailyBudget} onChange={(e) => setDailyBudget(Number(e.target.value))} min={1} />
                 </div>
+                <div className="space-y-2">
+                  <Label>Qtd. Campanhas (1-5)</Label>
+                  <Input type="number" value={campaignCount} onChange={(e) => setCampaignCount(Math.max(1, Math.min(5, Number(e.target.value))))} min={1} max={5} />
+                </div>
               </div>
+              {campaignCount > 1 && (
+                <div className="flex items-center gap-2 text-xs text-primary bg-primary/10 border border-primary/20 rounded-lg px-4 py-2">
+                  <Rocket className="w-4 h-4 shrink-0" />
+                  {campaignCount} campanhas independentes serão criadas em paralelo, cada uma com seu próprio conjunto e anúncios.
+                </div>
+              )}
               <div className="flex gap-3 pt-2">
                 <Button onClick={handleGenerateAI} disabled={isGenerating} className="gap-2">
                   {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Brain className="w-4 h-4" />}
@@ -573,6 +603,9 @@ export default function LancarCampanha() {
                   value={draft.campaign_name}
                   onChange={(e) => setDraft({ ...draft, campaign_name: e.target.value })}
                 />
+                {campaignCount > 1 && (
+                  <p className="text-xs text-muted-foreground mt-1">Cada campanha receberá sufixo [1/{campaignCount}], [2/{campaignCount}], etc.</p>
+                )}
               </CardContent>
             </Card>
 
@@ -750,17 +783,17 @@ export default function LancarCampanha() {
               </Collapsible>
             )}
 
-            {/* Creative Brain */}
+            {/* Creative Brain + Multi-select */}
             <Card className="border-dashed border-primary/30">
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
                   <Sparkles className="w-5 h-5 text-primary" />
                   🧠 Cérebro de Criativos
                 </CardTitle>
-                <CardDescription>A IA analisa seus ativos e recomenda o melhor criativo para esta campanha.</CardDescription>
+                <CardDescription>Selecione até 50 criativos para criar 1 anúncio por ativo no mesmo conjunto.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap">
                   <Button
                     onClick={async () => {
                       if (!activeProfile) return;
@@ -777,10 +810,11 @@ export default function LancarCampanha() {
                         if (error) throw error;
                         if (data?.error) throw new Error(data.error);
                         setCreativeBrain(data);
-                        // Auto-inject recommended creative
                         if (data.recommendation?.recommended_asset_url) {
-                          setSelectedAssetUrl(data.recommendation.recommended_asset_url);
-                          localStorage.setItem(`mtx_injected_creative_${activeProfile.id}`, JSON.stringify({ url: data.recommendation.recommended_asset_url }));
+                          const url = data.recommendation.recommended_asset_url;
+                          if (!selectedAssetUrls.includes(url)) {
+                            setSelectedAssetUrls(prev => [...prev, url]);
+                          }
                         }
                         toast({ title: "🧠 Criativo recomendado!", description: data.recommendation?.recommended_asset_name });
                       } catch (e: any) {
@@ -800,6 +834,16 @@ export default function LancarCampanha() {
                     <Upload className="w-4 h-4" />
                     📤 Subir Novo Ativo
                   </Button>
+                  {selectedAssetUrls.length > 0 && (
+                    <Badge className="bg-primary/15 text-primary border-primary/30 text-sm px-3 py-1">
+                      {selectedAssetUrls.length} criativo(s) selecionado(s)
+                    </Badge>
+                  )}
+                  {selectedAssetUrls.length > 1 && (
+                    <Button variant="ghost" size="sm" className="text-xs text-muted-foreground" onClick={() => setSelectedAssetUrls([])}>
+                      <X className="w-3 h-3 mr-1" /> Limpar seleção
+                    </Button>
+                  )}
                 </div>
 
                 {creativeBrain?.recommendation && (
@@ -841,38 +885,63 @@ export default function LancarCampanha() {
                   </div>
                 )}
 
-                {/* Recent Assets Grid */}
+                {/* Recent Assets Grid — Multi-select */}
                 {recentAssets.length > 0 && (
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground mb-2">Ativos Recentes ({recentAssets.length})</p>
-                    <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
-                      {recentAssets.map((asset) => (
-                        <button
-                          key={asset.id}
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-sm font-medium text-muted-foreground">Ativos Recentes ({recentAssets.length})</p>
+                      {recentAssets.length > 1 && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-xs"
                           onClick={() => {
-                            setSelectedAssetUrl(asset.file_url);
-                            localStorage.setItem(`mtx_injected_creative_${activeProfile!.id}`, JSON.stringify({ url: asset.file_url }));
-                            toast({ title: "Criativo selecionado", description: asset.file_name });
+                            if (selectedAssetUrls.length === recentAssets.length) {
+                              setSelectedAssetUrls([]);
+                            } else {
+                              setSelectedAssetUrls(recentAssets.slice(0, 50).map(a => a.file_url));
+                            }
                           }}
-                          className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all hover:opacity-80 ${
-                            selectedAssetUrl === asset.file_url ? "border-primary ring-2 ring-primary/30" : "border-border"
-                          }`}
-                          title={asset.description || asset.file_name}
                         >
-                          {asset.file_type === "video" ? (
-                            <div className="w-full h-full bg-secondary flex items-center justify-center">
-                              <Video className="w-6 h-6 text-muted-foreground/50" />
+                          {selectedAssetUrls.length === recentAssets.length ? "Desmarcar todos" : "Selecionar todos"}
+                        </Button>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+                      {recentAssets.map((asset) => {
+                        const isSelected = selectedAssetUrls.includes(asset.file_url);
+                        return (
+                          <button
+                            key={asset.id}
+                            onClick={() => toggleAssetUrl(asset.file_url)}
+                            className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all hover:opacity-80 ${
+                              isSelected ? "border-primary ring-2 ring-primary/30" : "border-border"
+                            }`}
+                            title={asset.description || asset.file_name}
+                          >
+                            {asset.file_type === "video" ? (
+                              <div className="w-full h-full bg-secondary flex items-center justify-center">
+                                <Video className="w-6 h-6 text-muted-foreground/50" />
+                              </div>
+                            ) : (
+                              <img src={asset.file_url} alt={asset.file_name} className="w-full h-full object-cover" />
+                            )}
+                            {/* Checkbox overlay */}
+                            <div className="absolute top-1 left-1">
+                              <div className={`w-5 h-5 rounded border-2 flex items-center justify-center text-xs font-bold ${
+                                isSelected ? "bg-primary border-primary text-primary-foreground" : "bg-background/70 border-border"
+                              }`}>
+                                {isSelected && "✓"}
+                              </div>
                             </div>
-                          ) : (
-                            <img src={asset.file_url} alt={asset.file_name} className="w-full h-full object-cover" />
-                          )}
-                          {asset.description && (
-                            <div className="absolute bottom-0 left-0 right-0 bg-background/80 px-1 py-0.5">
-                              <span className="text-[10px] text-primary">✨ IA</span>
-                            </div>
-                          )}
-                        </button>
-                      ))}
+                            {asset.description && (
+                              <div className="absolute bottom-0 left-0 right-0 bg-background/80 px-1 py-0.5">
+                                <span className="text-[10px] text-primary">✨ IA</span>
+                              </div>
+                            )}
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
@@ -961,7 +1030,39 @@ export default function LancarCampanha() {
                     <span className="text-muted-foreground">Perfil:</span>
                     <p className="font-semibold">{activeProfile?.name || "—"}</p>
                   </div>
+                  {campaignCount > 1 && (
+                    <div>
+                      <span className="text-muted-foreground">Campanhas:</span>
+                      <p className="font-semibold">{campaignCount} independentes</p>
+                    </div>
+                  )}
+                  <div>
+                    <span className="text-muted-foreground">Criativos:</span>
+                    <p className="font-semibold">{selectedAssetUrls.length || 0} selecionado(s)</p>
+                  </div>
                 </div>
+
+                {selectedAssetUrls.length > 0 && (
+                  <div className="border-t border-border pt-3">
+                    <p className="text-xs text-muted-foreground mb-2">Criativos selecionados ({selectedAssetUrls.length}):</p>
+                    <div className="flex gap-1 flex-wrap">
+                      {selectedAssetUrls.slice(0, 10).map((url, i) => (
+                        <div key={i} className="w-10 h-10 rounded border border-border overflow-hidden">
+                          {/\.(mp4|mov|webm)/i.test(url) ? (
+                            <div className="w-full h-full bg-secondary flex items-center justify-center"><Video className="w-4 h-4 text-muted-foreground/50" /></div>
+                          ) : (
+                            <img src={url} alt="" className="w-full h-full object-cover" />
+                          )}
+                        </div>
+                      ))}
+                      {selectedAssetUrls.length > 10 && (
+                        <div className="w-10 h-10 rounded border border-border bg-secondary flex items-center justify-center text-xs text-muted-foreground">
+                          +{selectedAssetUrls.length - 10}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 <div className="border-t border-border pt-3">
                   <p className="text-xs text-muted-foreground mb-1">Copy selecionada:</p>
@@ -983,10 +1084,22 @@ export default function LancarCampanha() {
                 {publishResult?.success && (
                   <div className="bg-neon-green/10 border border-neon-green/30 rounded-lg p-4 space-y-2">
                     <p className="text-neon-green font-semibold flex items-center gap-2">
-                      <CheckCircle2 className="w-4 h-4" /> Campanha publicada com sucesso!
+                      <CheckCircle2 className="w-4 h-4" /> {publishResult.total_ads || 1} anúncio(s) publicados com sucesso!
                     </p>
-                    <p className="text-xs text-muted-foreground">ID: {publishResult.meta_campaign_id}</p>
-                    {publishResult.ads_manager_url && (
+                    {publishResult.failed_ads && publishResult.failed_ads > 0 && (
+                      <p className="text-xs text-amber-400">⚠️ {publishResult.failed_ads} campanha(s) falharam</p>
+                    )}
+                    {publishResult.campaign_results?.filter((r: any) => r.success).map((r: any, i: number) => (
+                      <div key={i} className="text-xs text-muted-foreground">
+                        <span className="font-medium">{r.name}</span> — ID: {r.meta_campaign_id}
+                        {r.ads_manager_url && (
+                          <a href={r.ads_manager_url} target="_blank" rel="noopener noreferrer" className="text-primary ml-2 hover:underline">
+                            Abrir <ExternalLink className="w-3 h-3 inline" />
+                          </a>
+                        )}
+                      </div>
+                    ))}
+                    {!publishResult.campaign_results && publishResult.ads_manager_url && (
                       <a href={publishResult.ads_manager_url} target="_blank" rel="noopener noreferrer"
                         className="text-xs text-primary flex items-center gap-1 hover:underline">
                         Abrir no Gerenciador de Anúncios <ExternalLink className="w-3 h-3" />
@@ -1004,11 +1117,8 @@ export default function LancarCampanha() {
                       <p className="text-sm text-muted-foreground">{publishResult.error_user_msg}</p>
                     )}
                     <p className="text-xs text-muted-foreground whitespace-pre-line">{publishResult.error}</p>
-                {publishResult.step && (
+                    {publishResult.step && (
                       <p className="text-xs text-amber-400">Etapa com falha: {publishResult.step === "campaign" ? "Campanha" : publishResult.step === "adset" ? "Conjunto de Anúncios" : publishResult.step === "ad" ? "Anúncio" : publishResult.step === "media_upload" ? "Upload de Mídia" : publishResult.step === "ad_validation" ? "Validação do Anúncio" : publishResult.step}</p>
-                    )}
-                    {publishResult.meta_campaign_id && !publishResult.rollback && (
-                      <p className="text-xs text-amber-400">⚠️ Campanha parcialmente criada (ID: {publishResult.meta_campaign_id}). Verifique no Gerenciador de Anúncios.</p>
                     )}
                     {publishResult.rollback && (
                       <p className="text-xs text-muted-foreground">🧹 Campanha parcial apagada automaticamente para manter o gerenciador limpo.</p>
@@ -1074,11 +1184,28 @@ export default function LancarCampanha() {
                         <p className="text-muted-foreground text-xs">Objetivo</p>
                         <p className="font-semibold text-foreground">{objectiveLabels[objective]}</p>
                       </div>
+                      {campaignCount > 1 && (
+                        <div>
+                          <p className="text-muted-foreground text-xs">Campanhas</p>
+                          <p className="font-semibold text-foreground">{campaignCount} independentes</p>
+                        </div>
+                      )}
+                      <div>
+                        <p className="text-muted-foreground text-xs">Criativos</p>
+                        <p className="font-semibold text-foreground">{selectedAssetUrls.length || "Nenhum"} ativo(s)</p>
+                      </div>
                     </div>
                     {draft && (
                       <div className="border-t border-border pt-3">
                         <p className="text-muted-foreground text-xs mb-1">Copy Selecionada</p>
                         <p className="text-sm font-semibold text-foreground">{draft.copy_options[selectedCopyIdx]?.headline}</p>
+                      </div>
+                    )}
+                    {selectedAssetUrls.length > 0 && campaignCount > 0 && (
+                      <div className="bg-primary/10 border border-primary/20 rounded-lg p-3 text-center">
+                        <p className="text-xs text-muted-foreground">Total de anúncios a criar</p>
+                        <p className="text-xl font-bold text-primary">{selectedAssetUrls.length * campaignCount}</p>
+                        <p className="text-xs text-muted-foreground">{campaignCount} campanha(s) × {selectedAssetUrls.length} criativo(s)</p>
                       </div>
                     )}
                   </AlertDialogDescription>
