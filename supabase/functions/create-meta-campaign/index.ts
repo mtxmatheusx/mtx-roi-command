@@ -17,6 +17,12 @@ function isVideoUrl(url: string): boolean {
   return /\.(mp4|mov|webm|avi|mkv)(\?|$)/i.test(url);
 }
 
+function fail(msg: string, extra: Record<string, unknown> = {}) {
+  return new Response(JSON.stringify({ error: msg, ...extra }), {
+    status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -25,9 +31,7 @@ serve(async (req) => {
   try {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ error: "Não autorizado" }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return fail("Não autorizado");
     }
 
     const supabase = createClient(
@@ -44,21 +48,16 @@ serve(async (req) => {
       userId = claimsData.claims.sub;
     } catch {
       const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError || !user) {
-        return new Response(JSON.stringify({ error: "Não autorizado" }), {
-          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
+      if (userError || !user) return fail("Não autorizado");
       userId = user.id;
     }
 
-    const { draftId } = await req.json();
-    if (!draftId) {
-      return new Response(JSON.stringify({ error: "draftId é obrigatório" }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    const body = await req.json();
+    const { draftId, creativeUrls } = body;
 
+    if (!draftId) return fail("draftId é obrigatório");
+
+    // Fetch draft + profile
     const { data: draft, error: draftError } = await supabase
       .from("campaign_drafts")
       .select("*, client_profiles(*)")
@@ -66,39 +65,29 @@ serve(async (req) => {
       .eq("user_id", userId)
       .single();
 
-    if (draftError || !draft) {
-      return new Response(JSON.stringify({ error: "Rascunho não encontrado" }), {
-        status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    if (draftError || !draft) return fail("Rascunho não encontrado");
 
     const profile = draft.client_profiles;
     const accessToken = profile?.meta_access_token || Deno.env.get("META_ACCESS_TOKEN");
 
     if (!accessToken) {
       await supabase.from("campaign_drafts").update({ status: "failed", error_message: "Token Meta não configurado" }).eq("id", draftId);
-      return new Response(JSON.stringify({ error: "Token de acesso Meta não configurado. Configure nas Configurações." }), {
-        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return fail("Token de acesso Meta não configurado. Configure nas Configurações.");
     }
 
     const adAccountId = profile?.ad_account_id;
     if (!adAccountId || adAccountId === "act_") {
       await supabase.from("campaign_drafts").update({ status: "failed", error_message: "Ad Account ID não configurado" }).eq("id", draftId);
-      return new Response(JSON.stringify({ error: "Ad Account ID não configurado." }), {
-        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return fail("Ad Account ID não configurado.");
     }
 
     // Validate token
     const tokenCheck = await fetch(`${META_API}/me?access_token=${accessToken}&fields=id`);
     const tokenData = await tokenCheck.json();
     if (tokenData.error) {
-      const msg = `Token inválido ou sem permissão ads_management: ${metaError(tokenData)}`;
+      const msg = `Token inválido: ${metaError(tokenData)}`;
       await supabase.from("campaign_drafts").update({ status: "failed", error_message: msg }).eq("id", draftId);
-      return new Response(JSON.stringify({ error: msg, step: "token_validation" }), {
-        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return fail(msg, { step: "token_validation" });
     }
 
     await supabase.from("campaign_drafts").update({ status: "approved" }).eq("id", draftId);
@@ -106,7 +95,7 @@ serve(async (req) => {
     const steps: string[] = [];
     const selectedCopy = Array.isArray(draft.copy_options) && draft.copy_options.length > 0 ? draft.copy_options[0] : null;
 
-    // Step 1: Create Campaign
+    // ─── Step 1: Create Campaign ─────────────────────────────────
     const campaignRes = await fetch(`${META_API}/${adAccountId}/campaigns`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -124,22 +113,30 @@ serve(async (req) => {
     if (campaignData.error) {
       const errorMsg = metaError(campaignData);
       await supabase.from("campaign_drafts").update({ status: "failed", error_message: errorMsg }).eq("id", draftId);
-      return new Response(JSON.stringify({ error: errorMsg, step: "campaign" }), {
-        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return fail(errorMsg, { step: "campaign" });
     }
 
     const metaCampaignId = campaignData.id;
     steps.push(`Campanha criada: ${metaCampaignId}`);
     await supabase.from("campaign_drafts").update({ meta_campaign_id: metaCampaignId }).eq("id", draftId);
 
-    // Step 2: Create Ad Set
+    // Helper: rollback campaign on failure
+    async function rollbackCampaign() {
+      try {
+        await fetch(`${META_API}/${metaCampaignId}?access_token=${accessToken}`, { method: "DELETE" });
+        console.log(`Rollback: deleted campaign ${metaCampaignId}`);
+      } catch (e) {
+        console.error("Rollback failed:", e);
+      }
+    }
+
+    // ─── Step 2: Create Ad Set ─────────────────────────────────
     const dailyBudgetCents = Math.round((draft.daily_budget || 50) * 100);
     const isConversion = ["OUTCOME_SALES", "OUTCOME_LEADS"].includes(draft.objective);
     const pixelId = profile?.pixel_id;
     const andromedaTargeting = draft.andromeda_targeting as { age_min?: number; age_max?: number; genders?: number[]; semantic_seeds?: string[]; andromeda_exclusion?: string[] } | null;
 
-    // Resolve semantic_seeds to real Meta interest IDs
+    // Resolve semantic seeds to Meta interest IDs
     let resolvedInterests: { id: string; name: string }[] = [];
     if (andromedaTargeting?.semantic_seeds?.length) {
       for (const seed of andromedaTargeting.semantic_seeds) {
@@ -155,18 +152,20 @@ serve(async (req) => {
       }
     }
 
-    // Build targeting — NO age_max when Advantage+ is active
+    // Build targeting — FIX: cap age_min at 25 when Advantage+ is active
     const targetingObj: Record<string, unknown> = { geo_locations: { countries: ["BR"] } };
     if (andromedaTargeting) {
-      if (andromedaTargeting.age_min) targetingObj.age_min = andromedaTargeting.age_min;
-      // Do NOT set age_max — Advantage+ rejects age_max < 65
+      // When Advantage+ is active, Meta rejects age_min > 25
+      if (andromedaTargeting.age_min && andromedaTargeting.age_min <= 25) {
+        targetingObj.age_min = andromedaTargeting.age_min;
+      }
+      // Never set age_max with Advantage+
       if (andromedaTargeting.genders?.length && !andromedaTargeting.genders.includes(0)) {
         targetingObj.genders = andromedaTargeting.genders;
       }
       if (resolvedInterests.length > 0) {
         targetingObj.flexible_spec = [{ interests: resolvedInterests }];
       }
-      // Advantage+ audience — MUST be inside targeting
       targetingObj.targeting_automation = { advantage_audience: Number(1) };
     }
 
@@ -194,10 +193,9 @@ serve(async (req) => {
         custom_event_type: draft.objective === "OUTCOME_LEADS" ? "LEAD" : "PURCHASE",
       };
     } else if (isConversion && (!pixelId || pixelId.trim() === "")) {
-      await supabase.from("campaign_drafts").update({ status: "failed", error_message: "Pixel ID é obrigatório para campanhas de conversão." }).eq("id", draftId);
-      return new Response(JSON.stringify({ error: "Pixel ID é obrigatório para campanhas de conversão.", step: "adset_validation" }), {
-        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      await supabase.from("campaign_drafts").update({ status: "failed", error_message: "Pixel ID obrigatório para conversão." }).eq("id", draftId);
+      await rollbackCampaign();
+      return fail("Pixel ID é obrigatório para campanhas de conversão.", { step: "adset_validation", rollback: true });
     }
 
     const adSetRes = await fetch(`${META_API}/${adAccountId}/adsets`, {
@@ -209,217 +207,208 @@ serve(async (req) => {
     const adSetData = await adSetRes.json();
     if (adSetData.error) {
       const errorMsg = metaError(adSetData);
-      try {
-        await fetch(`${META_API}/${metaCampaignId}?access_token=${accessToken}`, { method: "DELETE" });
-        console.log(`Rollback: deleted orphan campaign ${metaCampaignId}`);
-      } catch (rollbackErr) {
-        console.error("Rollback failed:", rollbackErr);
-      }
-      await supabase.from("campaign_drafts").update({ status: "failed", error_message: `${errorMsg} | Campanha parcial apagada automaticamente.`, meta_campaign_id: metaCampaignId }).eq("id", draftId);
-      return new Response(JSON.stringify({ error: `${errorMsg} | Campanha parcial apagada automaticamente.`, step: "adset", meta_campaign_id: metaCampaignId, steps, rollback: true }), {
-        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      await rollbackCampaign();
+      await supabase.from("campaign_drafts").update({ status: "failed", error_message: `${errorMsg} | Rollback executado.`, meta_campaign_id: metaCampaignId }).eq("id", draftId);
+      return fail(`${errorMsg} | Campanha parcial apagada automaticamente.`, { step: "adset", meta_campaign_id: metaCampaignId, steps, rollback: true });
     }
 
     const metaAdSetId = adSetData.id;
     steps.push(`Conjunto criado: ${metaAdSetId}`);
     await supabase.from("campaign_drafts").update({ meta_adset_id: metaAdSetId }).eq("id", draftId);
 
-    // Step 2.5: Upload media (image or video)
-    let imageHash: string | null = null;
-    let videoId: string | null = null;
-    const injectedUrl = draft.injected_creative_url;
-
-    if (injectedUrl) {
-      const mediaIsVideo = isVideoUrl(injectedUrl);
-      console.log(`Media detection: url=${injectedUrl}, isVideo=${mediaIsVideo}`);
-
-      if (mediaIsVideo) {
-        // Upload video
-        try {
-          const videoUploadRes = await fetch(`${META_API}/${adAccountId}/advideos`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              file_url: injectedUrl,
-              name: `Video_IA_${new Date().toISOString().slice(0, 10)}`,
-              access_token: accessToken,
-            }),
-          });
-          const videoUploadData = await videoUploadRes.json();
-          console.log("Video upload response:", JSON.stringify(videoUploadData));
-          if (videoUploadData.error) {
-            const msg = `❌ Falha no Upload de Vídeo: ${metaError(videoUploadData)}`;
-            await supabase.from("campaign_drafts").update({ status: "failed", error_message: msg }).eq("id", draftId);
-            return new Response(JSON.stringify({ error: msg, step: "media_upload", meta_campaign_id: metaCampaignId, meta_adset_id: metaAdSetId, steps }), {
-              status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
-            });
-          }
-          videoId = videoUploadData.id || null;
-          if (videoId) steps.push(`Video ID obtido: ${videoId}`);
-        } catch (vidErr) {
-          console.error("Video upload failed:", vidErr);
-          const msg = `❌ Falha no Upload: O Facebook não aceitou o formato do vídeo.`;
-          await supabase.from("campaign_drafts").update({ status: "failed", error_message: msg }).eq("id", draftId);
-          return new Response(JSON.stringify({ error: msg, step: "media_upload", meta_campaign_id: metaCampaignId, meta_adset_id: metaAdSetId, steps }), {
-            status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
-        }
-      } else {
-        // Upload image
-        try {
-          const imgUploadRes = await fetch(`${META_API}/${adAccountId}/adimages`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ url: injectedUrl, access_token: accessToken }),
-          });
-          const imgUploadData = await imgUploadRes.json();
-          console.log("Image upload response:", JSON.stringify(imgUploadData));
-          if (imgUploadData.error) {
-            const msg = `❌ Falha no Upload de Imagem: ${metaError(imgUploadData)}`;
-            await supabase.from("campaign_drafts").update({ status: "failed", error_message: msg }).eq("id", draftId);
-            return new Response(JSON.stringify({ error: msg, step: "media_upload", meta_campaign_id: metaCampaignId, meta_adset_id: metaAdSetId, steps }), {
-              status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
-            });
-          }
-          if (imgUploadData.images) {
-            const firstKey = Object.keys(imgUploadData.images)[0];
-            imageHash = imgUploadData.images[firstKey]?.hash || null;
-            if (imageHash) steps.push(`Image hash obtido: ${imageHash.substring(0, 12)}...`);
-          }
-        } catch (imgErr) {
-          console.error("Image upload failed:", imgErr);
-          const msg = `❌ Falha no Upload: O Facebook não aceitou o formato da imagem.`;
-          await supabase.from("campaign_drafts").update({ status: "failed", error_message: msg }).eq("id", draftId);
-          return new Response(JSON.stringify({ error: msg, step: "media_upload", meta_campaign_id: metaCampaignId, meta_adset_id: metaAdSetId, steps }), {
-            status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
-        }
-      }
-    }
-
-    // Step 3: Create Ad
+    // ─── Step 3: Create Ads (batch support, up to 50) ────────────
     const pageId = profile?.page_id;
     if (!pageId || pageId.trim() === "") {
-      await supabase.from("campaign_drafts").update({ status: "failed", error_message: "Page ID do Facebook não configurado." }).eq("id", draftId);
-      return new Response(JSON.stringify({ error: "❌ Falha de Vínculo: Página do Facebook não configurada. Configure nas Configurações.", step: "ad_validation", meta_campaign_id: metaCampaignId, meta_adset_id: metaAdSetId, steps }), {
-        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      await supabase.from("campaign_drafts").update({ status: "failed", error_message: "Page ID não configurado." }).eq("id", draftId);
+      return fail("Página do Facebook não configurada. Configure nas Configurações.", { step: "ad_validation", meta_campaign_id: metaCampaignId, meta_adset_id: metaAdSetId, steps });
+    }
+
+    // Build list of creative URLs
+    const allUrls: string[] = [];
+    if (Array.isArray(creativeUrls) && creativeUrls.length > 0) {
+      allUrls.push(...creativeUrls.slice(0, 50));
+    } else if (draft.injected_creative_url) {
+      allUrls.push(draft.injected_creative_url);
     }
 
     const ctaRaw = selectedCopy?.cta || "";
     const ctaType = /compre|shop/i.test(ctaRaw) ? "SHOP_NOW" : "LEARN_MORE";
     const linkUrl = (Array.isArray(profile?.product_urls) && profile.product_urls.length > 0) ? profile.product_urls[0] : "https://example.com";
 
-    // Build creative spec dynamically based on media type
-    let creativeSpec: Record<string, unknown>;
-
-    if (videoId) {
-      // Video creative
-      creativeSpec = {
-        object_story_spec: {
-          page_id: String(pageId),
-          video_data: {
-            video_id: String(videoId),
-            message: selectedCopy?.primary_text || "Descubra como transformar seus resultados",
-            title: selectedCopy?.headline || draft.campaign_name,
-            call_to_action: { type: ctaType, value: { link: linkUrl } },
-            link_description: selectedCopy?.headline || draft.campaign_name,
+    // Function to build creative spec for a given URL
+    function buildCreativeSpec(url: string | null): Record<string, unknown> {
+      if (url && isVideoUrl(url)) {
+        // For videos we still need to upload first — but use inline approach
+        // We'll handle video upload separately before this
+        return {
+          object_story_spec: {
+            page_id: String(pageId),
+            link_data: {
+              message: selectedCopy?.primary_text || "Descubra como transformar seus resultados",
+              link: linkUrl,
+              name: selectedCopy?.headline || draft.campaign_name,
+              call_to_action: { type: ctaType, value: { link: linkUrl } },
+              picture: url, // fallback for video thumbnail
+            },
           },
-        },
-      };
-    } else {
-      // Image creative (with or without image_hash)
+        };
+      }
+
+      // Image creative — FIX: use `picture` URL directly instead of /adimages upload
       const linkData: Record<string, unknown> = {
         message: selectedCopy?.primary_text || "Descubra como transformar seus resultados",
         link: linkUrl,
         name: selectedCopy?.headline || draft.campaign_name,
         call_to_action: { type: ctaType, value: { link: linkUrl } },
       };
-      if (imageHash) linkData.image_hash = imageHash;
+      if (url) linkData.picture = url;
 
-      creativeSpec = {
+      return {
         object_story_spec: { page_id: String(pageId), link_data: linkData },
       };
-      if (imageHash) {
-        creativeSpec.degrees_of_freedom_spec = {
-          creative_features_spec: { standard_enhancements: { enroll_status: "OPT_IN" } },
-        };
+    }
+
+    // Function to create a single ad with video support
+    async function createAd(url: string | null, adIndex: number): Promise<{ success: boolean; adId?: string; error?: string }> {
+      const adName = allUrls.length > 1
+        ? `${draft.campaign_name} - Anúncio ${String(adIndex + 1).padStart(2, "0")}`
+        : `${draft.campaign_name} - Anúncio 01`;
+
+      let creativeSpec: Record<string, unknown>;
+
+      // Handle video upload if needed
+      if (url && isVideoUrl(url)) {
+        try {
+          const videoUploadRes = await fetch(`${META_API}/${adAccountId}/advideos`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              file_url: url,
+              name: `Video_${adIndex + 1}_${new Date().toISOString().slice(0, 10)}`,
+              access_token: accessToken,
+            }),
+          });
+          const videoData = await videoUploadRes.json();
+          if (videoData.error) {
+            return { success: false, error: `Video upload falhou: ${metaError(videoData)}` };
+          }
+          const videoId = videoData.id;
+          if (videoId) {
+            creativeSpec = {
+              object_story_spec: {
+                page_id: String(pageId),
+                video_data: {
+                  video_id: String(videoId),
+                  message: selectedCopy?.primary_text || "Descubra como transformar seus resultados",
+                  title: selectedCopy?.headline || draft.campaign_name,
+                  call_to_action: { type: ctaType, value: { link: linkUrl } },
+                  link_description: selectedCopy?.headline || draft.campaign_name,
+                },
+              },
+            };
+          } else {
+            // Fallback to picture URL if video upload returns no ID
+            creativeSpec = buildCreativeSpec(url);
+          }
+        } catch (e) {
+          console.error("Video upload error:", e);
+          // Fallback to picture approach
+          creativeSpec = buildCreativeSpec(url);
+        }
+      } else {
+        creativeSpec = buildCreativeSpec(url);
+      }
+
+      const adBody = {
+        name: adName,
+        adset_id: metaAdSetId,
+        status: "PAUSED",
+        access_token: accessToken,
+        creative: creativeSpec,
+      };
+
+      console.log(`Creating ad ${adIndex + 1}:`, JSON.stringify(adBody));
+
+      // Retry logic for video processing
+      const maxRetries = (url && isVideoUrl(url)) ? 3 : 1;
+      let adData: any;
+
+      for (let attempt = 0; attempt < maxRetries; attempt++) {
+        if (attempt > 0) {
+          console.log(`Retry ${attempt} for ad ${adIndex + 1}, waiting 10s...`);
+          await new Promise(r => setTimeout(r, 10000));
+        }
+
+        const adRes = await fetch(`${META_API}/${adAccountId}/ads`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(adBody),
+        });
+        adData = await adRes.json();
+
+        if (!adData.error) break;
+
+        const errMsg = metaError(adData).toLowerCase();
+        if (attempt < maxRetries - 1 && (errMsg.includes("processing") || errMsg.includes("video"))) {
+          continue;
+        }
+      }
+
+      if (adData.error) {
+        return { success: false, error: metaError(adData) };
+      }
+
+      return { success: true, adId: adData.id };
+    }
+
+    // Create ads: if no URLs, create one ad without media
+    const urlsToProcess = allUrls.length > 0 ? allUrls : [null];
+    const adResults: { success: boolean; adId?: string; error?: string; url?: string | null }[] = [];
+    const metaAdIds: string[] = [];
+
+    for (let i = 0; i < urlsToProcess.length; i++) {
+      const url = urlsToProcess[i];
+      steps.push(`Criando anúncio ${i + 1}/${urlsToProcess.length}...`);
+      const result = await createAd(url, i);
+      adResults.push({ ...result, url });
+
+      if (result.success && result.adId) {
+        metaAdIds.push(result.adId);
+        steps.push(`Anúncio ${i + 1} criado: ${result.adId}`);
+      } else {
+        steps.push(`Anúncio ${i + 1} falhou: ${result.error}`);
       }
     }
 
-    const adBody: Record<string, unknown> = {
-      name: `${draft.campaign_name} - Anúncio 01`,
-      adset_id: metaAdSetId,
-      status: "PAUSED",
-      access_token: accessToken,
-      creative: creativeSpec,
-    };
+    const successCount = adResults.filter(r => r.success).length;
+    const failCount = adResults.filter(r => !r.success).length;
 
-    console.log("Ad body payload:", JSON.stringify(adBody));
-
-    // Try creating ad with retry for video processing
-    let adData: any;
-    let adRes: Response;
-    const maxRetries = videoId ? 2 : 1;
-
-    for (let attempt = 0; attempt < maxRetries; attempt++) {
-      if (attempt > 0) {
-        console.log(`Retry attempt ${attempt} — waiting 8s for video processing...`);
-        await new Promise((r) => setTimeout(r, 8000));
-      }
-
-      adRes = await fetch(`${META_API}/${adAccountId}/ads`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(adBody),
-      });
-
-      adData = await adRes.json();
-      console.log(`Ad creation response (attempt ${attempt + 1}):`, JSON.stringify(adData));
-
-      if (!adData.error) break;
-
-      // Only retry if it's a video processing error
-      const errMsg = metaError(adData).toLowerCase();
-      if (attempt < maxRetries - 1 && (errMsg.includes("processing") || errMsg.includes("video"))) {
-        steps.push(`Vídeo ainda processando, aguardando retry...`);
-        continue;
-      }
-    }
-
-    if (adData.error) {
-      const errorMsg = metaError(adData);
-      // Rollback
-      try {
-        await fetch(`${META_API}/${metaCampaignId}?access_token=${accessToken}`, { method: "DELETE" });
-        console.log(`Rollback: deleted orphan campaign ${metaCampaignId} after ad failure`);
-      } catch (rollbackErr) {
-        console.error("Rollback failed:", rollbackErr);
-      }
+    if (successCount === 0) {
+      // All ads failed — rollback
+      await rollbackCampaign();
+      const errorMsg = adResults.map(r => r.error).filter(Boolean).join(" | ");
       await supabase.from("campaign_drafts").update({
         status: "failed",
-        error_message: `Erro no anúncio: ${errorMsg} | Campanha parcial apagada automaticamente.`,
+        error_message: `Todos os anúncios falharam: ${errorMsg} | Rollback executado.`,
       }).eq("id", draftId);
-      return new Response(JSON.stringify({ error: `${errorMsg} | Campanha parcial apagada automaticamente.`, step: "ad", meta_campaign_id: metaCampaignId, meta_adset_id: metaAdSetId, steps, rollback: true }), {
-        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return fail(`Todos os anúncios falharam: ${errorMsg}`, { step: "ad", meta_campaign_id: metaCampaignId, meta_adset_id: metaAdSetId, steps, rollback: true });
     }
 
-    const metaAdId = adData.id;
-    steps.push(`Anúncio criado: ${metaAdId}`);
-
+    // At least some ads succeeded
     await supabase.from("campaign_drafts").update({
       status: "published",
-      meta_ad_id: metaAdId,
-      error_message: null,
+      meta_ad_id: metaAdIds[0] || null,
+      error_message: failCount > 0 ? `${failCount} anúncio(s) falharam de ${urlsToProcess.length}` : null,
     }).eq("id", draftId);
 
     return new Response(JSON.stringify({
       success: true,
       meta_campaign_id: metaCampaignId,
       meta_adset_id: metaAdSetId,
-      meta_ad_id: metaAdId,
+      meta_ad_ids: metaAdIds,
+      meta_ad_id: metaAdIds[0] || null,
+      total_ads: successCount,
+      failed_ads: failCount,
       steps,
       ads_manager_url: `https://business.facebook.com/adsmanager/manage/campaigns?act=${adAccountId.replace("act_", "")}&selected_campaign_ids=${metaCampaignId}`,
     }), {

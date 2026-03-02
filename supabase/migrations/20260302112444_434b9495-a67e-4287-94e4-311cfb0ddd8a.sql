@@ -1,0 +1,1 @@
+ALTER TABLE public.campaign_drafts ADD COLUMN IF NOT EXISTS creative_urls text[] DEFAULT '{}';
