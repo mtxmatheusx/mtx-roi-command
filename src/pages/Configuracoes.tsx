@@ -52,7 +52,7 @@ export default function Configuracoes() {
     name: "", adAccountId: "act_", pixelId: "", pageId: "",
     cpaMeta: "45", ticketMedio: "697", limiteEscala: "15",
     budgetMaximo: "0", budgetFrequency: "monthly" as "daily" | "weekly" | "monthly",
-    metaAccessToken: "", geminiApiKey: "",
+    metaAccessToken: "", geminiApiKey: "", apiBaseUrl: "",
   });
   const [tokenEditing, setTokenEditing] = useState(false);
   const [geminiEditing, setGeminiEditing] = useState(false);
@@ -135,6 +135,7 @@ export default function Configuracoes() {
         budgetMaximo: String(activeProfile.budget_maximo ?? 0),
         budgetFrequency: (activeProfile.budget_frequency ?? "monthly") as "daily" | "weekly" | "monthly",
         metaAccessToken: "", geminiApiKey: "",
+        apiBaseUrl: (activeProfile as any).api_base_url || "",
       });
       setTokenEditing(false);
       setGeminiEditing(false);
@@ -166,6 +167,7 @@ export default function Configuracoes() {
         id: activeProfile.id, name: parsed.data.name, ad_account_id: parsed.data.adAccountId,
         pixel_id: parsed.data.pixelId || "", page_id: form.pageId || null, cpa_meta: parsed.data.cpaMeta, ticket_medio: parsed.data.ticketMedio,
         limite_escala: parsed.data.limiteEscala, budget_maximo: parsed.data.budgetMaximo, budget_frequency: parsed.data.budgetFrequency,
+        api_base_url: form.apiBaseUrl.trim() || null,
       };
       if (tokenEditing && form.metaAccessToken) updateData.meta_access_token = form.metaAccessToken;
       else if (tokenEditing && !form.metaAccessToken) updateData.meta_access_token = null;
@@ -472,7 +474,34 @@ export default function Configuracoes() {
           </CardContent>
         </Card>
 
-        {/* Gemini API Key */}
+        {/* API Externa */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg"><Globe className="w-5 h-5 text-primary" />API Externa (Meta Ads Wrapper)</CardTitle>
+            <CardDescription>URL do servidor permanente para gestão avançada de campanhas.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="apiBaseUrl">URL da API</Label>
+              <Input
+                id="apiBaseUrl"
+                placeholder="https://seu-servidor.com"
+                value={form.apiBaseUrl}
+                onChange={(e) => handleChange("apiBaseUrl", e.target.value)}
+                className="font-mono text-sm"
+              />
+              <p className="text-xs text-muted-foreground">Endereço do servidor que hospeda a API wrapper do Meta Ads. Salve as configurações para aplicar.</p>
+            </div>
+            {form.apiBaseUrl && (
+              <div className={`flex items-center gap-2 p-3 rounded-lg border ${form.apiBaseUrl ? "bg-emerald-500/10 border-emerald-500/20" : "bg-secondary border-border"}`}>
+                <Globe className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span className="text-sm text-emerald-400">API configurada: {form.apiBaseUrl}</span>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg"><Brain className={`w-5 h-5 ${hasGeminiKey ? "text-emerald-400" : "text-muted-foreground"}`} />🧠 Inteligência Artificial (Gemini)</CardTitle>
