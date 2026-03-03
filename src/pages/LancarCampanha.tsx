@@ -413,10 +413,12 @@ export default function LancarCampanha() {
 
       loadDrafts();
     } catch (e: any) {
-      addLog(`Erro: ${e.message}`, "error");
-      setPublishStep(`Erro: ${e.message}`);
+      const errMsg = e?.message || "Erro desconhecido";
+      addLog(`Erro crítico: ${errMsg}`, "error");
+      setPublishStep(`Erro: ${errMsg}`);
       setPublishProgress(100);
-      setPublishResult({ success: false, error: e.message });
+      setPublishResult({ success: false, error: errMsg });
+      toast({ title: "❌ Erro crítico na publicação", description: errMsg, variant: "destructive" });
     } finally {
       setIsPublishing(false);
     }
