@@ -360,6 +360,7 @@ export default function LancarCampanha() {
 
         if (publishError) {
           addLog(`Erro de rede${suffix}: ${publishError.message}`, "error");
+          toast({ title: "❌ Erro de conexão", description: publishError.message, variant: "destructive" });
           campaignResults.push({ success: false, error: publishError.message, name: campaignName });
           continue;
         }
