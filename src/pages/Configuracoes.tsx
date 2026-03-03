@@ -52,7 +52,7 @@ export default function Configuracoes() {
     name: "", adAccountId: "act_", pixelId: "", pageId: "",
     cpaMeta: "45", ticketMedio: "697", limiteEscala: "15",
     budgetMaximo: "0", budgetFrequency: "monthly" as "daily" | "weekly" | "monthly",
-    metaAccessToken: "", geminiApiKey: "",
+    metaAccessToken: "", geminiApiKey: "", apiBaseUrl: "",
   });
   const [tokenEditing, setTokenEditing] = useState(false);
   const [geminiEditing, setGeminiEditing] = useState(false);
