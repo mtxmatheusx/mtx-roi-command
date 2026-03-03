@@ -340,8 +340,10 @@ export default function LancarCampanha() {
         } as any).select("id").single();
 
         if (insertErr || !inserted) {
-          addLog(`Erro ao salvar rascunho${suffix}`, "error");
-          campaignResults.push({ success: false, error: insertErr?.message, name: campaignName });
+          const errMsg = insertErr?.message || "Erro desconhecido ao inserir rascunho";
+          addLog(`Erro ao salvar rascunho${suffix}: ${errMsg}`, "error");
+          toast({ title: "❌ Falha no banco de dados", description: errMsg, variant: "destructive" });
+          campaignResults.push({ success: false, error: errMsg, name: campaignName });
           continue;
         }
 
