@@ -135,6 +135,7 @@ export default function Configuracoes() {
         budgetMaximo: String(activeProfile.budget_maximo ?? 0),
         budgetFrequency: (activeProfile.budget_frequency ?? "monthly") as "daily" | "weekly" | "monthly",
         metaAccessToken: "", geminiApiKey: "",
+        apiBaseUrl: (activeProfile as any).api_base_url || "",
       });
       setTokenEditing(false);
       setGeminiEditing(false);
