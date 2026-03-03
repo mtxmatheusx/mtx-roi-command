@@ -91,6 +91,7 @@ export type Database = {
       client_profiles: {
         Row: {
           ad_account_id: string
+          api_base_url: string | null
           avatar_dossier: string | null
           budget_frequency: string
           budget_maximo: number
@@ -115,6 +116,7 @@ export type Database = {
         }
         Insert: {
           ad_account_id?: string
+          api_base_url?: string | null
           avatar_dossier?: string | null
           budget_frequency?: string
           budget_maximo?: number
@@ -139,6 +141,7 @@ export type Database = {
         }
         Update: {
           ad_account_id?: string
+          api_base_url?: string | null
           avatar_dossier?: string | null
           budget_frequency?: string
           budget_maximo?: number
