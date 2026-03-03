@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { subDays, format } from "date-fns";
 import { formatCurrency } from "@/lib/mockData";
@@ -11,34 +11,20 @@ import DateRangePicker from "@/components/DateRangePicker";
 import ActiveProfileHeader from "@/components/ActiveProfileHeader";
 import AppLayout from "@/components/AppLayout";
 import { Progress } from "@/components/ui/progress";
-import { DollarSign, TrendingUp, Target, BarChart3, Loader2, AlertTriangle, RefreshCw, Eye, MousePointerClick, ShoppingBag, ShieldCheck, OctagonAlert, Activity } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useToast } from "@/hooks/use-toast";
+import { metaApi } from "@/lib/metaApiClient";
+import DashboardTab from "@/components/dashboard/DashboardTab";
+import CreateCampaignTab from "@/components/dashboard/CreateCampaignTab";
+import CreateAudienceTab from "@/components/dashboard/CreateAudienceTab";
+import CreateAdTab from "@/components/dashboard/CreateAdTab";
+import { DollarSign, TrendingUp, Target, BarChart3, Loader2, AlertTriangle, RefreshCw, Eye, MousePointerClick, ShoppingBag, ShieldCheck, OctagonAlert, Activity, Plus, Users, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-interface Campaign {
-  id: string;
-  name: string;
-  objective: string;
-  spend: number;
-  revenue: number;
-  roas: number;
-  purchases: number;
-  costPerPurchase: number;
-  clicks: number;
-  ctr: number;
-}
-
-interface DailyData {
-  date: string;
-  spend: number;
-  revenue: number;
-  profit: number;
-  cpa: number;
-  roas: number;
-  purchases: number;
-  purchaseValue: number;
-  impressions: number;
-  clicks: number;
-  ctr: number;
+interface LogEntry {
+  time: string;
+  message: string;
+  type: "info" | "action";
 }
 
 const defaultRange: DateRange = {
@@ -51,18 +37,24 @@ function calcDelta(current: number, previous: number): number | null {
   return ((current - previous) / Math.abs(previous)) * 100;
 }
 
-interface LogEntry {
-  time: string;
-  message: string;
-  type: "info" | "action";
-}
-
 export default function Dashboard() {
+  const { toast } = useToast();
   const [dateRange, setDateRange] = useState<DateRange>(defaultRange);
-  const { adAccountId, cpaMeta, ticketMedio, budgetMaximo, budgetFrequency, activeProfile, metaAccessToken } = useClientProfiles();
+  const { adAccountId, cpaMeta, ticketMedio, budgetMaximo, budgetFrequency, activeProfile, metaAccessToken, apiBaseUrl } = useClientProfiles();
   const { campaigns, daily, previous, isLoading, isUsingMock, forceRefetch, fetchedAt, dataVerified, isRateLimited, isPermissionError, isCached } = useMetaAds(dateRange, { adAccountId, cpaMeta, ticketMedio, accessToken: metaAccessToken });
 
   const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [activeTab, setActiveTab] = useState("dashboard");
+  const [apiConfigured, setApiConfigured] = useState(false);
+
+  // Initialize external API connection on load
+  useEffect(() => {
+    if (apiBaseUrl && metaAccessToken) {
+      metaApi.configure(apiBaseUrl, metaAccessToken, { meta_token: metaAccessToken, ad_account_id: adAccountId })
+        .then(() => setApiConfigured(true))
+        .catch(() => setApiConfigured(false));
+    }
+  }, [apiBaseUrl, metaAccessToken, adAccountId]);
 
   const generateLogs = useCallback(() => {
     if (isLoading || campaigns.length === 0) return;
@@ -117,6 +109,11 @@ export default function Dashboard() {
           <span className="relative inline-flex rounded-full h-3 w-3 bg-neon-green"></span>
         </span>
         <span className="text-xs font-semibold text-neon-green tracking-wide uppercase">Monitoramento Ativo em Tempo Real</span>
+        {apiBaseUrl && (
+          <span className={`ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${apiConfigured ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" : "bg-amber-500/10 border-amber-500/20 text-amber-400"}`}>
+            {apiConfigured ? "API Conectada" : "API Desconectada"}
+          </span>
+        )}
       </div>
 
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -143,140 +140,63 @@ export default function Dashboard() {
 
       <div className="mb-6"><DateRangePicker value={dateRange} onChange={setDateRange} /></div>
 
-      {isPermissionError && (
-        <div className="mb-4 flex items-center gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-sm text-amber-400">
-          <AlertTriangle className="w-4 h-4 shrink-0" />
-          Conecte seu Token com permissão <strong className="mx-1">ads_read</strong> na Meta para visualizar dados reais. Atualize o token em <strong className="mx-1">Configurações</strong>.
-        </div>
-      )}
+      {/* Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <TabsList className="bg-card border border-border">
+          <TabsTrigger value="dashboard" className="gap-2"><BarChart3 className="w-4 h-4" />Dashboard</TabsTrigger>
+          <TabsTrigger value="create-campaign" className="gap-2"><Plus className="w-4 h-4" />Criar Campanha</TabsTrigger>
+          <TabsTrigger value="audiences" className="gap-2"><Users className="w-4 h-4" />Públicos</TabsTrigger>
+          <TabsTrigger value="ads" className="gap-2"><Zap className="w-4 h-4" />Anúncios</TabsTrigger>
+        </TabsList>
 
-      {isCached && (
-        <div className="mb-4 flex items-center gap-2 p-3 rounded-lg bg-primary/10 border border-primary/20 text-sm text-primary">
-          <AlertTriangle className="w-4 h-4 shrink-0" />
-          Exibindo dados reais do cache local (última sync: {fetchedAt ? new Date(fetchedAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) : "—"}). Aguarde para sincronizar novamente.
-        </div>
-      )}
+        <TabsContent value="dashboard">
+          <DashboardTab
+            campaigns={campaigns}
+            daily={daily}
+            previous={previous}
+            isLoading={isLoading}
+            isUsingMock={isUsingMock}
+            isRateLimited={isRateLimited}
+            isPermissionError={isPermissionError}
+            isCached={isCached}
+            dataVerified={dataVerified}
+            fetchedAt={fetchedAt}
+            budgetMaximo={budgetMaximo}
+            budgetFrequency={budgetFrequency}
+            cpaMeta={cpaMeta}
+            totalSpend={totalSpend}
+            totalRevenue={totalRevenue}
+            totalProfit={totalProfit}
+            totalPurchases={totalPurchases}
+            avgCPA={avgCPA}
+            roas={roas}
+            avgCPM={avgCPM}
+            avgCTR={avgCTR}
+            calcTicketMedio={calcTicketMedio}
+            deltaProfit={deltaProfit}
+            deltaSpend={deltaSpend}
+            deltaCPA={deltaCPA}
+            deltaROAS={deltaROAS}
+            deltaPurchases={deltaPurchases}
+            deltaCPM={deltaCPM}
+            deltaCTR={deltaCTR}
+            deltaTM={deltaTM}
+            logs={logs}
+          />
+        </TabsContent>
 
-      {isRateLimited && !isCached && (
-        <div className="mb-4 flex items-center gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-sm text-amber-400">
-          <AlertTriangle className="w-4 h-4 shrink-0" />
-          Limite de requisições da Meta atingido. Exibindo dados de demonstração. Aguarde alguns minutos e clique em <strong className="mx-1">Forçar Atualização</strong>.
-        </div>
-      )}
+        <TabsContent value="create-campaign">
+          <CreateCampaignTab apiBaseUrl={apiBaseUrl} metaAccessToken={metaAccessToken} adAccountId={adAccountId} />
+        </TabsContent>
 
-      {isUsingMock && !isRateLimited && !isPermissionError && !isCached && (
-        <div className="mb-4 flex items-center gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-sm text-amber-400">
-          <AlertTriangle className="w-4 h-4 shrink-0" />
-          Exibindo dados de demonstração. Configure o Ad Account ID em <strong className="mx-1">Configurações</strong> para ver dados reais.
-        </div>
-      )}
+        <TabsContent value="audiences">
+          <CreateAudienceTab apiBaseUrl={apiBaseUrl} metaAccessToken={metaAccessToken} adAccountId={adAccountId} />
+        </TabsContent>
 
-      {budgetMaximo > 0 && !isLoading && (() => {
-        const freqLabels: Record<string, string> = { daily: "Diário", weekly: "Semanal", monthly: "Mensal" };
-        const today = new Date().toISOString().slice(0, 10);
-        const thisMonth = today.slice(0, 7);
-        let spendNoPeriodo = totalSpend;
-        if (daily.length > 0) {
-          if (budgetFrequency === "daily") spendNoPeriodo = daily.filter(d => d.date === today).reduce((s, d) => s + d.spend, 0);
-          else if (budgetFrequency === "weekly") spendNoPeriodo = daily.filter(d => d.date >= format(subDays(new Date(), 6), "yyyy-MM-dd")).reduce((s, d) => s + d.spend, 0);
-          else spendNoPeriodo = daily.filter(d => d.date.startsWith(thisMonth)).reduce((s, d) => s + d.spend, 0);
-        }
-        const pct = Math.min((spendNoPeriodo / budgetMaximo) * 100, 100);
-        const exceeded = spendNoPeriodo >= budgetMaximo;
-        return (
-          <div className="mb-4 space-y-2">
-            {exceeded && (
-              <div className="flex items-center gap-2 p-4 rounded-lg bg-destructive/15 border border-destructive/30 text-sm font-semibold text-destructive">
-                <OctagonAlert className="w-5 h-5 shrink-0" />
-                🚨 Limite {freqLabels[budgetFrequency]} de {formatCurrency(budgetMaximo)} atingido. Escala suspensa.
-              </div>
-            )}
-            <div className="flex items-center gap-3">
-              <span className="text-xs text-muted-foreground whitespace-nowrap">{formatCurrency(spendNoPeriodo)} / {formatCurrency(budgetMaximo)} ({freqLabels[budgetFrequency]})</span>
-              <Progress value={pct} className={`h-2 flex-1 ${exceeded ? "[&>div]:bg-destructive" : pct > 80 ? "[&>div]:bg-amber-500" : "[&>div]:bg-neon-green"}`} />
-              <span className="text-xs font-bold">{pct.toFixed(0)}%</span>
-            </div>
-          </div>
-        );
-      })()}
-
-      {isLoading ? (
-        <div className="flex flex-col items-center justify-center py-20 gap-3">
-          <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">Sincronizando dados com Meta Ads...</p>
-        </div>
-      ) : (
-        <>
-          <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.5 }} className="mb-6 rounded-xl border border-glow-green glow-green bg-card p-8">
-            <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-2">Lucro Líquido Total</p>
-            <p className="text-5xl font-black tracking-tight text-neon-green">{formatCurrency(totalProfit)}</p>
-            <div className="flex items-center gap-3 mt-2">
-              <p className="text-sm text-muted-foreground">Receita {formatCurrency(totalRevenue)} · Investimento {formatCurrency(totalSpend)}</p>
-              {deltaProfit !== null && isFinite(deltaProfit) && (
-                <span className={`text-xs font-medium ${deltaProfit >= 0 ? "text-neon-green" : "text-neon-red"}`}>{deltaProfit > 0 ? "+" : ""}{deltaProfit.toFixed(1)}% vs anterior</span>
-              )}
-            </div>
-          </motion.div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-            <MetricCard title="Investimento Total" value={formatCurrency(totalSpend)} icon={<DollarSign className="w-4 h-4" />} delta={deltaSpend} invertDelta />
-            <MetricCard title="CPA Real" value={formatCurrency(avgCPA)} subtitle="Meta: R$ 200,00" variant={avgCPA > 200 * 1.2 ? "danger" : "default"} icon={<Target className="w-4 h-4" />} delta={deltaCPA} invertDelta />
-            <MetricCard title="ROAS" value={`${roas.toFixed(2)}x`} variant={roas > 3 ? "profit" : "default"} icon={<TrendingUp className="w-4 h-4" />} delta={deltaROAS} />
-            <MetricCard title="Compras Totais" value={String(totalPurchases)} icon={<BarChart3 className="w-4 h-4" />} delta={deltaPurchases} />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-            <MetricCard title="CPM" value={formatCurrency(avgCPM)} icon={<Eye className="w-4 h-4" />} delta={deltaCPM} invertDelta />
-            <MetricCard title="CTR" value={`${avgCTR.toFixed(2)}%`} variant={avgCTR < 1 ? "danger" : "default"} icon={<MousePointerClick className="w-4 h-4" />} delta={deltaCTR} />
-            <MetricCard title="Ticket Médio (AOV)" value={formatCurrency(calcTicketMedio)} icon={<ShoppingBag className="w-4 h-4" />} delta={deltaTM} />
-          </div>
-
-          <DashboardCharts daily={daily} cpaMeta={200} />
-
-          <CampaignsTable campaigns={campaigns} disableScale={(() => {
-            if (budgetMaximo <= 0) return false;
-            const today = new Date().toISOString().slice(0, 10);
-            const thisMonth = today.slice(0, 7);
-            let sp = totalSpend;
-            if (daily.length > 0) {
-              if (budgetFrequency === "daily") sp = daily.filter(d => d.date === today).reduce((s, d) => s + d.spend, 0);
-              else if (budgetFrequency === "weekly") sp = daily.filter(d => d.date >= format(subDays(new Date(), 6), "yyyy-MM-dd")).reduce((s, d) => s + d.spend, 0);
-              else sp = daily.filter(d => d.date.startsWith(thisMonth)).reduce((s, d) => s + d.spend, 0);
-            }
-            return sp >= budgetMaximo;
-          })()} />
-
-          {/* Automation Log */}
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }} className="mt-8 bg-card rounded-xl border border-border overflow-hidden">
-            <div className="p-6 border-b border-border flex items-center gap-2">
-              <Activity className="w-4 h-4 text-neon-green" />
-              <h2 className="text-lg font-bold">Log de Automação</h2>
-              <span className="text-xs text-muted-foreground ml-2">Últimas {logs.length} entradas</span>
-            </div>
-            <div className="max-h-64 overflow-y-auto">
-              {logs.length === 0 ? (
-                <p className="p-6 text-sm text-muted-foreground">Nenhum log registrado ainda. Os logs aparecerão após a primeira sincronização.</p>
-              ) : (
-                <div className="divide-y divide-border/50">
-                  {logs.map((log, i) => (
-                    <div key={i} className={`px-6 py-3 text-sm flex items-start gap-3 ${log.type === "action" ? "bg-destructive/5" : ""}`}>
-                      <span className="text-xs text-muted-foreground whitespace-nowrap font-mono">{log.time}</span>
-                      <span className={log.type === "action" ? "text-neon-red font-semibold" : "text-muted-foreground"}>{log.message}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </motion.div>
-
-          {!isUsingMock && dataVerified && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }} className="mt-8 flex items-center justify-center gap-2 py-3 text-xs text-neon-green">
-              <ShieldCheck className="w-4 h-4" />
-              <span>Dados Verificados com Meta Ads · Janela 7d click / 1d view</span>
-            </motion.div>
-          )}
-        </>
-      )}
+        <TabsContent value="ads">
+          <CreateAdTab apiBaseUrl={apiBaseUrl} metaAccessToken={metaAccessToken} adAccountId={adAccountId} />
+        </TabsContent>
+      </Tabs>
     </AppLayout>
   );
 }
