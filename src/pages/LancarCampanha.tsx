@@ -340,8 +340,10 @@ export default function LancarCampanha() {
         } as any).select("id").single();
 
         if (insertErr || !inserted) {
-          addLog(`Erro ao salvar rascunho${suffix}`, "error");
-          campaignResults.push({ success: false, error: insertErr?.message, name: campaignName });
+          const errMsg = insertErr?.message || "Erro desconhecido ao inserir rascunho";
+          addLog(`Erro ao salvar rascunho${suffix}: ${errMsg}`, "error");
+          toast({ title: "❌ Falha no banco de dados", description: errMsg, variant: "destructive" });
+          campaignResults.push({ success: false, error: errMsg, name: campaignName });
           continue;
         }
 
@@ -358,6 +360,7 @@ export default function LancarCampanha() {
 
         if (publishError) {
           addLog(`Erro de rede${suffix}: ${publishError.message}`, "error");
+          toast({ title: "❌ Erro de conexão", description: publishError.message, variant: "destructive" });
           campaignResults.push({ success: false, error: publishError.message, name: campaignName });
           continue;
         }
@@ -410,10 +413,12 @@ export default function LancarCampanha() {
 
       loadDrafts();
     } catch (e: any) {
-      addLog(`Erro: ${e.message}`, "error");
-      setPublishStep(`Erro: ${e.message}`);
+      const errMsg = e?.message || "Erro desconhecido";
+      addLog(`Erro crítico: ${errMsg}`, "error");
+      setPublishStep(`Erro: ${errMsg}`);
       setPublishProgress(100);
-      setPublishResult({ success: false, error: e.message });
+      setPublishResult({ success: false, error: errMsg });
+      toast({ title: "❌ Erro crítico na publicação", description: errMsg, variant: "destructive" });
     } finally {
       setIsPublishing(false);
     }
