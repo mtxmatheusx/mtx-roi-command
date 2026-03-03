@@ -474,7 +474,34 @@ export default function Configuracoes() {
           </CardContent>
         </Card>
 
-        {/* Gemini API Key */}
+        {/* API Externa */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg"><Globe className="w-5 h-5 text-primary" />API Externa (Meta Ads Wrapper)</CardTitle>
+            <CardDescription>URL do servidor permanente para gestão avançada de campanhas.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="apiBaseUrl">URL da API</Label>
+              <Input
+                id="apiBaseUrl"
+                placeholder="https://seu-servidor.com"
+                value={form.apiBaseUrl}
+                onChange={(e) => handleChange("apiBaseUrl", e.target.value)}
+                className="font-mono text-sm"
+              />
+              <p className="text-xs text-muted-foreground">Endereço do servidor que hospeda a API wrapper do Meta Ads. Salve as configurações para aplicar.</p>
+            </div>
+            {form.apiBaseUrl && (
+              <div className={`flex items-center gap-2 p-3 rounded-lg border ${form.apiBaseUrl ? "bg-emerald-500/10 border-emerald-500/20" : "bg-secondary border-border"}`}>
+                <Globe className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span className="text-sm text-emerald-400">API configurada: {form.apiBaseUrl}</span>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg"><Brain className={`w-5 h-5 ${hasGeminiKey ? "text-emerald-400" : "text-muted-foreground"}`} />🧠 Inteligência Artificial (Gemini)</CardTitle>
