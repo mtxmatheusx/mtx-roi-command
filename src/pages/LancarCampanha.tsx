@@ -69,11 +69,11 @@ const objectiveLabels: Record<string, string> = {
 };
 
 const statusConfig: Record<string, { label: string; className: string; icon: typeof CheckCircle2 }> = {
-  draft: { label: "Rascunho", className: "bg-secondary text-muted-foreground", icon: Clock },
-  approved: { label: "Aprovado", className: "bg-neon-yellow/15 text-neon-yellow", icon: Clock },
-  published: { label: "Publicado", className: "bg-neon-green/15 text-neon-green", icon: CheckCircle2 },
-  failed: { label: "Falhou", className: "bg-destructive/15 text-destructive", icon: XCircle },
-  rejected: { label: "Rejeitado", className: "bg-secondary text-muted-foreground", icon: XCircle },
+  draft: { label: "Rascunho", className: "bg-muted text-muted-foreground", icon: Clock },
+  approved: { label: "Aprovado", className: "bg-warning/10 text-warning", icon: Clock },
+  published: { label: "Publicado", className: "bg-success/10 text-success", icon: CheckCircle2 },
+  failed: { label: "Falhou", className: "bg-destructive/10 text-destructive", icon: XCircle },
+  rejected: { label: "Rejeitado", className: "bg-muted text-muted-foreground", icon: XCircle },
 };
 
 export default function LancarCampanha() {
@@ -496,7 +496,7 @@ export default function LancarCampanha() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold flex items-center gap-2">
-              <Rocket className="w-6 h-6 text-neon-red" />
+              <Rocket className="w-6 h-6 text-primary" />
               Lançar Campanha
             </h1>
             <p className="text-muted-foreground text-sm mt-1">Crie campanhas com assistência da IA e publique na Meta</p>
@@ -517,7 +517,7 @@ export default function LancarCampanha() {
         {/* Budget warning */}
         {budgetMaximo > 0 && (
           <div className="flex items-center gap-2 text-xs text-muted-foreground bg-secondary/50 rounded-lg px-4 py-2">
-            <AlertTriangle className="w-4 h-4 text-neon-yellow" />
+            <AlertTriangle className="w-4 h-4 text-warning" />
             Budget máximo {budgetFrequency}: R$ {budgetMaximo.toLocaleString("pt-BR")}
           </div>
         )}
@@ -624,7 +624,7 @@ export default function LancarCampanha() {
                   const copyTypeConfig: Record<string, { label: string; desc: string; className: string }> = {
                     direct_response: { label: "Direct Response", desc: "Foco na dor e oferta", className: "bg-destructive/15 text-destructive border-destructive/30" },
                     storytelling: { label: "Storytelling", desc: "Narrativa de transformação", className: "bg-blue-500/15 text-blue-400 border-blue-500/30" },
-                    social_proof: { label: "Social Proof", desc: "Resultados e autoridade", className: "bg-neon-green/15 text-neon-green border-neon-green/30" },
+                    social_proof: { label: "Social Proof", desc: "Resultados e autoridade", className: "bg-success/10 text-success border-success/20" },
                   };
                   const ct = copy.copy_type ? copyTypeConfig[copy.copy_type] : null;
                   return (
@@ -780,7 +780,7 @@ export default function LancarCampanha() {
                 </CollapsibleTrigger>
                 <CollapsibleContent>
                   <Card className="mt-2">
-                    <CardContent className="pt-4 prose prose-sm prose-invert max-w-none">
+                    <CardContent className="pt-4 prose prose-sm max-w-none">
                       <ReactMarkdown>{draft.ai_reasoning}</ReactMarkdown>
                     </CardContent>
                   </Card>
@@ -1013,7 +1013,7 @@ export default function LancarCampanha() {
             <Card className="border-primary/30">
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
-                  <CheckCircle2 className="w-5 h-5 text-neon-green" />
+                  <CheckCircle2 className="w-5 h-5 text-success" />
                   Resumo para Aprovação
                 </CardTitle>
               </CardHeader>
@@ -1087,8 +1087,8 @@ export default function LancarCampanha() {
                 )}
 
                 {publishResult?.success && (
-                  <div className="bg-neon-green/10 border border-neon-green/30 rounded-lg p-4 space-y-2">
-                    <p className="text-neon-green font-semibold flex items-center gap-2">
+                  <div className="bg-success/10 border border-success/20 rounded-lg p-4 space-y-2">
+                    <p className="text-success font-semibold flex items-center gap-2">
                       <CheckCircle2 className="w-4 h-4" /> {publishResult.total_ads || 1} anúncio(s) publicados com sucesso!
                     </p>
                     {publishResult.failed_ads && publishResult.failed_ads > 0 && (
@@ -1154,7 +1154,7 @@ export default function LancarCampanha() {
 
             {!publishResult && (
               <div className="flex gap-3">
-                <Button onClick={() => setConfirmPublishOpen(true)} disabled={isPublishing || !activeProfile || !activeProfile?.page_id || activeProfile?.page_id?.trim() === ""} className="gap-2 bg-neon-green/90 hover:bg-neon-green text-background font-bold">
+                <Button onClick={() => setConfirmPublishOpen(true)} disabled={isPublishing || !activeProfile || !activeProfile?.page_id || activeProfile?.page_id?.trim() === ""} className="gap-2 font-bold">
                   {isPublishing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Rocket className="w-4 h-4" />}
                   Aprovar Execução
                 </Button>

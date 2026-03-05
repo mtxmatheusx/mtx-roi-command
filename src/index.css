@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,51 +6,51 @@
 
 @layer base {
   :root {
-    --background: 220 20% 6%;
-    --foreground: 0 0% 95%;
+    --background: 0 0% 99%;
+    --foreground: 224 71% 4%;
 
-    --card: 220 18% 10%;
-    --card-foreground: 0 0% 95%;
+    --card: 0 0% 100%;
+    --card-foreground: 224 71% 4%;
 
-    --popover: 220 18% 10%;
-    --popover-foreground: 0 0% 95%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 224 71% 4%;
 
-    --primary: 0 90% 55%;
+    --primary: 220 70% 50%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 220 15% 16%;
-    --secondary-foreground: 0 0% 90%;
+    --secondary: 220 14% 96%;
+    --secondary-foreground: 220 9% 46%;
 
-    --muted: 220 12% 14%;
-    --muted-foreground: 220 10% 55%;
+    --muted: 220 14% 96%;
+    --muted-foreground: 220 9% 46%;
 
-    --accent: 155 60% 45%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 220 14% 96%;
+    --accent-foreground: 220 9% 20%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 15% 18%;
-    --input: 220 15% 18%;
-    --ring: 0 90% 55%;
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 220 70% 50%;
 
-    --radius: 0.75rem;
+    --radius: 0.5rem;
 
-    --neon-red: 0 90% 55%;
-    --neon-red-glow: 0 100% 60%;
-    --neon-green: 155 60% 45%;
-    --neon-green-glow: 155 80% 50%;
-    --neon-yellow: 45 100% 55%;
-    --neon-yellow-glow: 45 100% 65%;
+    --success: 142 71% 45%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+    --info: 220 70% 50%;
+    --info-foreground: 0 0% 100%;
 
-    --sidebar-background: 220 20% 8%;
-    --sidebar-foreground: 0 0% 90%;
-    --sidebar-primary: 0 90% 55%;
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 224 71% 4%;
+    --sidebar-primary: 220 70% 50%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 15% 14%;
-    --sidebar-accent-foreground: 0 0% 90%;
-    --sidebar-border: 220 15% 18%;
-    --sidebar-ring: 0 90% 55%;
+    --sidebar-accent: 220 14% 96%;
+    --sidebar-accent-foreground: 220 9% 20%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 220 70% 50%;
   }
 }
 
@@ -60,51 +60,20 @@
   }
   body {
     @apply bg-background text-foreground font-sans antialiased;
-    font-family: 'DM Sans', sans-serif;
   }
 }
 
 @layer utilities {
-  .glow-red {
-    box-shadow: 0 0 20px hsl(0 90% 55% / 0.15), 0 0 60px hsl(0 90% 55% / 0.05);
+  .text-success {
+    color: hsl(var(--success));
   }
-  .glow-green {
-    box-shadow: 0 0 20px hsl(155 60% 45% / 0.15), 0 0 60px hsl(155 60% 45% / 0.05);
+  .text-warning {
+    color: hsl(var(--warning));
   }
-  .glow-yellow {
-    box-shadow: 0 0 20px hsl(45 100% 55% / 0.15), 0 0 60px hsl(45 100% 55% / 0.05);
+  .bg-success {
+    background-color: hsl(var(--success));
   }
-  .border-glow-red {
-    border-color: hsl(0 90% 55% / 0.3);
-  }
-  .border-glow-green {
-    border-color: hsl(155 60% 45% / 0.3);
-  }
-  .text-neon-red {
-    color: hsl(var(--neon-red));
-  }
-  .text-neon-green {
-    color: hsl(var(--neon-green));
-  }
-  .text-neon-yellow {
-    color: hsl(var(--neon-yellow));
-  }
-  .bg-neon-red {
-    background-color: hsl(var(--neon-red));
-  }
-  .bg-neon-green {
-    background-color: hsl(var(--neon-green));
-  }
-  .bg-neon-yellow {
-    background-color: hsl(var(--neon-yellow));
-  }
-  .bg-surface {
-    background-color: hsl(220 18% 10%);
-  }
-  .bg-surface-elevated {
-    background-color: hsl(220 16% 13%);
-  }
-  .noise-bg {
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+  .bg-warning {
+    background-color: hsl(var(--warning));
   }
 }

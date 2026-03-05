@@ -33,12 +33,12 @@ export default function CampaignsTable({ campaigns, disableScale }: CampaignsTab
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="bg-card rounded-xl border border-border overflow-hidden"
+      className="bg-card rounded-lg border border-border overflow-hidden"
     >
-      <div className="p-6 border-b border-border flex items-center justify-between">
+      <div className="p-5 border-b border-border flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-bold">Campanhas Ativas</h2>
-          <p className="text-sm text-muted-foreground">Monitoramento em tempo real com motor de decisão MTX</p>
+          <h2 className="text-base font-semibold">Campanhas Ativas</h2>
+          <p className="text-sm text-muted-foreground">Monitoramento em tempo real</p>
         </div>
         <div className="flex items-center gap-2">
           <Switch id="active-only" checked={showActiveOnly} onCheckedChange={setShowActiveOnly} />
@@ -49,15 +49,15 @@ export default function CampaignsTable({ campaigns, disableScale }: CampaignsTab
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border text-muted-foreground">
-              <th className="text-left px-6 py-4 font-medium">Campanha</th>
-              <th className="text-left px-4 py-4 font-medium">Status API</th>
-              <th className="text-left px-4 py-4 font-medium">Alerta</th>
-              <th className="text-right px-4 py-4 font-medium">Investido</th>
-              <th className="text-right px-4 py-4 font-medium">CPA</th>
-              <th className="text-right px-4 py-4 font-medium">ROAS</th>
-              <th className="text-right px-4 py-4 font-medium">Lucro</th>
-              <th className="text-right px-4 py-4 font-medium">Compras</th>
-              <th className="text-center px-4 py-4 font-medium">Ações</th>
+              <th className="text-left px-5 py-3 font-medium text-xs">Campanha</th>
+              <th className="text-left px-4 py-3 font-medium text-xs">Status</th>
+              <th className="text-left px-4 py-3 font-medium text-xs">Alerta</th>
+              <th className="text-right px-4 py-3 font-medium text-xs">Investido</th>
+              <th className="text-right px-4 py-3 font-medium text-xs">CPA</th>
+              <th className="text-right px-4 py-3 font-medium text-xs">ROAS</th>
+              <th className="text-right px-4 py-3 font-medium text-xs">Lucro</th>
+              <th className="text-right px-4 py-3 font-medium text-xs">Compras</th>
+              <th className="text-center px-4 py-3 font-medium text-xs">Ações</th>
             </tr>
           </thead>
           <tbody>
@@ -66,36 +66,36 @@ export default function CampaignsTable({ campaigns, disableScale }: CampaignsTab
               const cpaAboveMeta = c.purchases > 0 && c.costPerPurchase > c.cpaMeta * 1.2;
               const isActive = c.status === 'active' || c.status === 'scaling';
               return (
-                <tr key={c.id} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
-                  <td className="px-6 py-4 font-medium max-w-[250px] truncate">{c.name}</td>
-                  <td className="px-4 py-4">
-                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${
+                <tr key={c.id} className="border-b border-border hover:bg-muted/50 transition-colors">
+                  <td className="px-5 py-3 font-medium max-w-[250px] truncate">{c.name}</td>
+                  <td className="px-4 py-3">
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${
                       isActive
-                        ? "bg-neon-green/15 text-neon-green border-neon-green/30"
-                        : "bg-secondary text-muted-foreground border-border"
+                        ? "bg-success/10 text-success border-success/20"
+                        : "bg-muted text-muted-foreground border-border"
                     }`}>
                       {isActive ? "ATIVO" : "PAUSADO"}
                     </span>
                   </td>
-                  <td className="px-4 py-4"><StatusBadge status={alert} /></td>
-                  <td className="text-right px-4 py-4 text-muted-foreground">{formatCurrency(c.spend)}</td>
-                  <td className={`text-right px-4 py-4 font-semibold ${cpaAboveMeta ? 'text-neon-red' : 'text-foreground'}`}>
+                  <td className="px-4 py-3"><StatusBadge status={alert} /></td>
+                  <td className="text-right px-4 py-3 text-muted-foreground">{formatCurrency(c.spend)}</td>
+                  <td className={`text-right px-4 py-3 font-medium ${cpaAboveMeta ? 'text-destructive' : 'text-foreground'}`}>
                     {c.purchases > 0 ? formatCurrency(c.costPerPurchase) : '—'}
                     {cpaAboveMeta && <span className="text-xs ml-1">⚠</span>}
                   </td>
-                  <td className={`text-right px-4 py-4 font-bold ${c.roi > 3 ? 'text-neon-green' : c.roi > 1 ? 'text-foreground' : 'text-neon-red'}`}>
+                  <td className={`text-right px-4 py-3 font-semibold ${c.roi > 3 ? 'text-success' : c.roi > 1 ? 'text-foreground' : 'text-destructive'}`}>
                     {c.roi > 0 ? `${c.roi.toFixed(2)}x` : '—'}
                   </td>
-                  <td className={`text-right px-4 py-4 font-bold ${c.profit > 0 ? 'text-neon-green' : 'text-neon-red'}`}>
+                  <td className={`text-right px-4 py-3 font-semibold ${c.profit > 0 ? 'text-success' : 'text-destructive'}`}>
                     {formatCurrency(c.profit)}
                   </td>
-                  <td className="text-right px-4 py-4">{c.purchases}</td>
-                  <td className="text-center px-4 py-4">
-                    <div className="flex items-center justify-center gap-2">
+                  <td className="text-right px-4 py-3">{c.purchases}</td>
+                  <td className="text-center px-4 py-3">
+                    <div className="flex items-center justify-center gap-1">
                       <button
                         onClick={() => handlePause(c.id)}
                         disabled={c.status === 'paused'}
-                        className="p-2 rounded-lg bg-secondary hover:bg-destructive/20 hover:text-neon-red transition-colors disabled:opacity-30"
+                        className="p-1.5 rounded-md hover:bg-destructive/10 hover:text-destructive transition-colors disabled:opacity-30"
                         title="Pausar"
                       >
                         <Pause className="w-3.5 h-3.5" />
@@ -103,7 +103,7 @@ export default function CampaignsTable({ campaigns, disableScale }: CampaignsTab
                       <button
                         onClick={() => handleScale(c.id)}
                         disabled={disableScale || (alert !== 'escalando' && alert !== 'lucrativa')}
-                        className="p-2 rounded-lg bg-secondary hover:bg-accent/20 hover:text-neon-green transition-colors disabled:opacity-30"
+                        className="p-1.5 rounded-md hover:bg-success/10 hover:text-success transition-colors disabled:opacity-30"
                         title={disableScale ? "Budget máximo atingido" : "Escalar +15%"}
                       >
                         <TrendingUp className="w-3.5 h-3.5" />

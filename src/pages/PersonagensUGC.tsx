@@ -129,7 +129,7 @@ export default function PersonagensUGC() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold flex items-center gap-2">
-              <Users className="w-6 h-6 text-neon-red" />
+              <Users className="w-6 h-6 text-primary" />
               👥 Personagens UGC
             </h1>
             <p className="text-muted-foreground text-sm mt-1">Salve personas com referências visuais para consistência nos criativos</p>

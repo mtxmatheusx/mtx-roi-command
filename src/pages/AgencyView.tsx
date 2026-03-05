@@ -129,7 +129,7 @@ export default function AgencyView() {
 
   const sortedMetrics = [...metrics].sort((a, b) => b.roas - a.roas);
 
-  const alertColors = { success: "border-neon-green/40 bg-neon-green/5 text-neon-green", warning: "border-neon-yellow/40 bg-neon-yellow/5 text-neon-yellow", danger: "border-neon-red/40 bg-neon-red/5 text-neon-red" };
+  const alertColors = { success: "border-success/30 bg-success/5 text-success", warning: "border-warning/30 bg-warning/5 text-warning", danger: "border-destructive/30 bg-destructive/5 text-destructive" };
   const alertIcons = { success: "✅", warning: "⚠️", danger: "🚨" };
 
   return (
@@ -167,15 +167,15 @@ export default function AgencyView() {
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
               <Card><CardContent className="pt-6">
                 <div className="flex items-center justify-between">
-                  <div><p className="text-xs text-muted-foreground font-medium">Faturamento Estimado</p><p className="text-2xl font-bold mt-1 text-neon-green">{formatCurrency(totalRevenue)}</p></div>
-                  <TrendingUp className="h-8 w-8 text-neon-green/30" />
+                  <div><p className="text-xs text-muted-foreground font-medium">Faturamento Estimado</p><p className="text-2xl font-bold mt-1 text-success">{formatCurrency(totalRevenue)}</p></div>
+                  <TrendingUp className="h-8 w-8 text-success/30" />
                 </div>
               </CardContent></Card>
             </motion.div>
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
               <Card><CardContent className="pt-6">
                 <div className="flex items-center justify-between">
-                  <div><p className="text-xs text-muted-foreground font-medium">ROAS Global</p><p className={`text-2xl font-bold mt-1 ${globalRoas >= 2 ? "text-neon-green" : globalRoas >= 1 ? "text-neon-yellow" : "text-neon-red"}`}>{globalRoas.toFixed(2)}x</p></div>
+                  <div><p className="text-xs text-muted-foreground font-medium">ROAS Global</p><p className={`text-2xl font-bold mt-1 ${globalRoas >= 2 ? "text-success" : globalRoas >= 1 ? "text-warning" : "text-destructive"}`}>{globalRoas.toFixed(2)}x</p></div>
                   <Activity className="h-8 w-8 text-muted-foreground/30" />
                 </div>
               </CardContent></Card>
@@ -186,11 +186,11 @@ export default function AgencyView() {
                   <div>
                     <p className="text-xs text-muted-foreground font-medium">Saúde da Operação</p>
                     <div className="flex items-center gap-2 mt-1">
-                      <Badge variant="outline" className="text-neon-green border-neon-green/40">{activeAccounts} Ativas</Badge>
+                      <Badge variant="outline" className="text-success border-success/30">{activeAccounts} Ativas</Badge>
                       {errorAccounts > 0 && <Badge variant="destructive">{errorAccounts} Erro</Badge>}
                     </div>
                   </div>
-                  <AlertTriangle className={`h-8 w-8 ${errorAccounts > 0 ? "text-neon-red/50" : "text-neon-green/30"}`} />
+                  <AlertTriangle className={`h-8 w-8 ${errorAccounts > 0 ? "text-destructive/50" : "text-success/30"}`} />
                 </div>
               </CardContent></Card>
             </motion.div>
@@ -228,11 +228,11 @@ export default function AgencyView() {
                       <TableCell className="font-bold text-muted-foreground">{i + 1}</TableCell>
                       <TableCell className="font-medium">{m.profileName}</TableCell>
                       <TableCell className="text-right">{formatCurrency(m.spend)}</TableCell>
-                      <TableCell className="text-right text-neon-green">{formatCurrency(m.revenue)}</TableCell>
-                      <TableCell className={`text-right font-bold ${m.roas >= 2 ? "text-neon-green" : m.roas >= 1 ? "text-neon-yellow" : "text-neon-red"}`}>{m.roas.toFixed(2)}x</TableCell>
+                      <TableCell className="text-right text-success">{formatCurrency(m.revenue)}</TableCell>
+                      <TableCell className={`text-right font-bold ${m.roas >= 2 ? "text-success" : m.roas >= 1 ? "text-warning" : "text-destructive"}`}>{m.roas.toFixed(2)}x</TableCell>
                       <TableCell className="text-right">{m.purchases}</TableCell>
                       <TableCell>
-                        <Badge variant={m.status === "active" ? "outline" : "destructive"} className={m.status === "active" ? "text-neon-green border-neon-green/40" : ""}>
+                        <Badge variant={m.status === "active" ? "outline" : "destructive"} className={m.status === "active" ? "text-success border-success/30" : ""}>
                           {m.status === "active" ? "Ativo" : m.status === "error" ? "Erro" : "Sem dados"}
                         </Badge>
                       </TableCell>

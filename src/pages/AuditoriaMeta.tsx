@@ -33,9 +33,9 @@ type AuditedRecommendation = {
 };
 
 const verdictConfig = {
-  APROVADO: { icon: CheckCircle2, className: "bg-neon-green/15 text-neon-green border-neon-green/30", label: "✅ APROVADO PELA MTX" },
-  COM_RESSALVAS: { icon: AlertTriangle, className: "bg-neon-yellow/15 text-neon-yellow border-neon-yellow/30", label: "⚠️ APLICAR COM RESSALVAS" },
-  REJEITADO: { icon: XCircle, className: "bg-destructive/15 text-destructive border-destructive/30", label: "❌ REJEITADO: RISCO DE ROI" },
+  APROVADO: { icon: CheckCircle2, className: "bg-success/10 text-success border-success/20", label: "✅ APROVADO PELA MTX" },
+  COM_RESSALVAS: { icon: AlertTriangle, className: "bg-warning/10 text-warning border-warning/20", label: "⚠️ APLICAR COM RESSALVAS" },
+  REJEITADO: { icon: XCircle, className: "bg-destructive/10 text-destructive border-destructive/20", label: "❌ REJEITADO: RISCO DE ROI" },
 };
 
 export default function AuditoriaMeta() {
@@ -122,7 +122,7 @@ export default function AuditoriaMeta() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold flex items-center gap-2">
-              <Shield className="w-6 h-6 text-neon-red" />
+              <Shield className="w-6 h-6 text-primary" />
               Auditoria Meta AI
             </h1>
             <p className="text-muted-foreground text-sm mt-1">
@@ -144,7 +144,7 @@ export default function AuditoriaMeta() {
         </div>
 
         {!activeProfile && (
-          <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-sm text-amber-400">
+          <div className="flex items-center gap-2 p-3 rounded-lg bg-warning/10 border border-warning/20 text-sm text-warning">
             <AlertTriangle className="w-4 h-4 shrink-0" />
             Selecione um perfil de cliente para buscar recomendações da Meta.
           </div>
@@ -167,7 +167,7 @@ export default function AuditoriaMeta() {
             const VerdictIcon = vConfig?.icon || Shield;
             return (
               <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
-                <Card className={item.verdict ? "border-l-4" : ""} style={item.verdict ? { borderLeftColor: item.verdict.verdict === "APROVADO" ? "hsl(var(--neon-green))" : item.verdict.verdict === "REJEITADO" ? "hsl(var(--destructive))" : "hsl(var(--neon-yellow))" } : undefined}>
+                <Card className={item.verdict ? "border-l-4" : ""} style={item.verdict ? { borderLeftColor: item.verdict.verdict === "APROVADO" ? "hsl(142 71% 45%)" : item.verdict.verdict === "REJEITADO" ? "hsl(0 84% 60%)" : "hsl(38 92% 50%)" } : undefined}>
                   <CardContent className="p-5 space-y-4">
                     {/* What Meta wants */}
                     <div>
@@ -213,13 +213,13 @@ export default function AuditoriaMeta() {
                         </Button>
                       )}
                       {item.verdict?.verdict === "APROVADO" && (
-                        <Button size="sm" variant="default" className="gap-2 bg-neon-green/20 text-neon-green hover:bg-neon-green/30 border border-neon-green/30">
+                        <Button size="sm" variant="default" className="gap-2 bg-success/10 text-success hover:bg-success/20 border border-success/20">
                           <CheckCircle2 className="w-3 h-3" />
                           Aplicar na Meta
                         </Button>
                       )}
                       {item.verdict?.verdict === "COM_RESSALVAS" && (
-                        <Button size="sm" variant="outline" className="gap-2 border-neon-yellow/30 text-neon-yellow hover:bg-neon-yellow/10">
+                        <Button size="sm" variant="outline" className="gap-2 border-warning/20 text-warning hover:bg-warning/10">
                           <AlertTriangle className="w-3 h-3" />
                           Aplicar com Cuidado
                         </Button>

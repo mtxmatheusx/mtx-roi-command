@@ -127,33 +127,39 @@ export default function AIChatPanel() {
       {!open && (
         <button
           onClick={() => setOpen(true)}
-          className="fixed bottom-6 right-6 z-50 h-14 w-14 rounded-full bg-primary flex items-center justify-center shadow-lg hover:scale-105 transition-transform glow-red"
+          className="fixed bottom-6 right-6 z-50 h-12 w-12 rounded-full bg-primary flex items-center justify-center shadow-lg hover:shadow-xl hover:scale-105 transition-all"
         >
-          <Brain className="h-6 w-6 text-primary-foreground" />
+          <Brain className="h-5 w-5 text-primary-foreground" />
         </button>
       )}
 
       {/* Panel */}
       {open && (
-        <div className="fixed bottom-0 right-0 z-50 w-full sm:w-[420px] h-[600px] sm:h-[680px] sm:bottom-6 sm:right-6 bg-card border border-border rounded-t-xl sm:rounded-xl shadow-2xl flex flex-col overflow-hidden">
+        <div className="fixed bottom-0 right-0 z-50 w-full sm:w-[400px] h-[560px] sm:h-[640px] sm:bottom-6 sm:right-6 bg-card border border-border rounded-t-xl sm:rounded-xl shadow-2xl flex flex-col overflow-hidden">
           {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-card">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-border">
             <div className="flex items-center gap-2">
-              <Brain className="h-5 w-5 text-neon-red" />
-              <span className="font-semibold text-sm">Gestor IA</span>
-              <span className="text-xs text-muted-foreground">MTX Estratégias</span>
+              <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
+                <Brain className="h-4 w-4 text-primary" />
+              </div>
+              <div>
+                <span className="font-medium text-sm text-foreground">Gestor IA</span>
+                <p className="text-[11px] text-muted-foreground">MTX Estratégias</p>
+              </div>
             </div>
-            <button onClick={() => setOpen(false)} className="text-muted-foreground hover:text-foreground">
+            <button onClick={() => setOpen(false)} className="text-muted-foreground hover:text-foreground transition-colors">
               <X className="h-4 w-4" />
             </button>
           </div>
 
           {/* Messages */}
-          <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4">
+          <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3">
             {messages.length === 0 && (
               <div className="text-center text-muted-foreground text-sm mt-8">
-                <Brain className="h-10 w-10 mx-auto mb-3 text-neon-red opacity-40" />
-                <p className="font-medium">Olá! Sou seu Gestor de Tráfego IA.</p>
+                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-3">
+                  <Brain className="h-5 w-5 text-primary" />
+                </div>
+                <p className="font-medium text-foreground">Olá! Sou seu Gestor de Tráfego IA.</p>
                 <p className="mt-1 text-xs">Pergunte sobre suas campanhas, peça sugestões de criativos ou estratégias de otimização.</p>
               </div>
             )}
@@ -163,11 +169,11 @@ export default function AIChatPanel() {
                   className={`max-w-[85%] rounded-lg px-3 py-2 text-sm ${
                     m.role === "user"
                       ? "bg-primary text-primary-foreground"
-                      : "bg-secondary text-secondary-foreground"
+                      : "bg-muted text-foreground"
                   }`}
                 >
                   {m.role === "assistant" ? (
-                    <div className="prose prose-sm prose-invert max-w-none [&_p]:my-1 [&_ul]:my-1 [&_li]:my-0.5">
+                    <div className="prose prose-sm max-w-none [&_p]:my-1 [&_ul]:my-1 [&_li]:my-0.5">
                       <ReactMarkdown>{m.content}</ReactMarkdown>
                     </div>
                   ) : (
@@ -178,7 +184,7 @@ export default function AIChatPanel() {
             ))}
             {loading && messages[messages.length - 1]?.role !== "assistant" && (
               <div className="flex justify-start">
-                <div className="bg-secondary rounded-lg px-3 py-2">
+                <div className="bg-muted rounded-lg px-3 py-2">
                   <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                 </div>
               </div>

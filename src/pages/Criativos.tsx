@@ -20,9 +20,9 @@ import CreativeFactory from "@/components/CreativeFactory";
 
 const typeIcon = { video: Video, image: Image, carousel: LayoutGrid };
 const statusConfig = {
-  winner: { label: "Winner", className: "bg-neon-green/15 text-neon-green" },
-  testing: { label: "Testando", className: "bg-neon-yellow/15 text-neon-yellow" },
-  saturated: { label: "Saturado", className: "bg-neon-red/15 text-neon-red" },
+  winner: { label: "Winner", className: "bg-success/10 text-success" },
+  testing: { label: "Testando", className: "bg-warning/10 text-warning" },
+  saturated: { label: "Saturado", className: "bg-destructive/10 text-destructive" },
 };
 
 function getCreativeStatus(roas: number, spend: number): Creative["status"] {
@@ -290,7 +290,7 @@ export default function CriativosPage() {
             </div>
           )}
           {scrapeResult && (
-            <div className="flex items-center gap-2 text-sm text-neon-green">
+            <div className="flex items-center gap-2 text-sm text-success">
               ✅ {scrapeResult.total_found} mídias encontradas, {scrapeResult.total_saved} salvas na biblioteca.
             </div>
           )}
@@ -305,7 +305,7 @@ export default function CriativosPage() {
       />
 
       {isUsingMock && (
-        <div className="mb-4 flex items-center gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-sm text-amber-400">
+        <div className="mb-4 flex items-center gap-2 p-3 rounded-lg bg-warning/10 border border-warning/20 text-sm text-warning">
           <AlertTriangle className="w-4 h-4 shrink-0" />
           Exibindo dados de demonstração. Configure o Ad Account ID em <strong className="mx-1">Configurações</strong>.
         </div>
@@ -324,7 +324,7 @@ export default function CriativosPage() {
             const Icon = typeIcon[creative.type] || Video;
             return (
               <motion.div key={creative.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
-                className={`bg-card rounded-xl border overflow-hidden ${isWinner ? "border-glow-green glow-green" : "border-border"}`}>
+                className={`bg-card rounded-lg border overflow-hidden ${isWinner ? "border-success/30" : "border-border"}`}>
                 {/* Thumbnail or placeholder */}
                 {creative.thumbnailUrl ? (
                   <div className="h-40 bg-secondary overflow-hidden relative">
@@ -353,7 +353,7 @@ export default function CriativosPage() {
                   <div className="grid grid-cols-3 gap-3 mb-4 text-center">
                     <div>
                       <p className="text-xs text-muted-foreground">ROAS</p>
-                      <p className={`text-lg font-bold ${creative.roas > 3 ? "text-neon-green" : creative.roas > 1 ? "text-neon-yellow" : "text-neon-red"}`}>{creative.roas.toFixed(2)}x</p>
+                      <p className={`text-lg font-bold ${creative.roas > 3 ? "text-success" : creative.roas > 1 ? "text-warning" : "text-destructive"}`}>{creative.roas.toFixed(2)}x</p>
                     </div>
                     <div><p className="text-xs text-muted-foreground">CTR</p><p className="text-lg font-bold">{creative.ctr.toFixed(1)}%</p></div>
                     <div><p className="text-xs text-muted-foreground">Compras</p><p className="text-lg font-bold">{creative.purchases}</p></div>
@@ -363,7 +363,7 @@ export default function CriativosPage() {
                   )}
                   <button onClick={() => toggleWinner(creative.id)}
                     className={`w-full py-2 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 ${
-                      isWinner ? "bg-accent/20 text-neon-green border border-glow-green" : "bg-secondary text-muted-foreground hover:text-foreground"}`}>
+                      isWinner ? "bg-success/10 text-success border border-success/20" : "bg-muted text-muted-foreground hover:text-foreground"}`}>
                     <Star className={`w-4 h-4 ${isWinner ? "fill-current" : ""}`} />
                     {isWinner ? "Winner" : "Marcar Winner"}
                   </button>

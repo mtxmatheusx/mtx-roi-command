@@ -261,7 +261,7 @@ export default function Diagnostico() {
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-2xl font-bold flex items-center gap-2">
-                  <Brain className="h-6 w-6 text-neon-red" />
+                  <Brain className="h-6 w-6 text-primary" />
                   {t("diagnostic.title")}
                 </h1>
                 <p className="text-muted-foreground text-sm mt-1">{t("diagnostic.subtitle")}</p>
@@ -292,13 +292,13 @@ export default function Diagnostico() {
               <Card ref={reportRef}>
                 <CardHeader>
                   <CardTitle className="text-lg flex items-center gap-2">
-                    <Brain className="h-5 w-5 text-neon-red" />
+                    <Brain className="h-5 w-5 text-primary" />
                     {t("diagnostic.reportTitle")}
                     {loading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="prose prose-sm prose-invert max-w-none [&_h3]:text-base [&_h3]:font-semibold [&_h3]:mt-6 [&_h3]:mb-2 [&_h2]:text-lg [&_h2]:font-bold [&_h2]:mt-8 [&_h2]:mb-3 [&_p]:my-2 [&_ul]:my-2 [&_li]:my-0.5 [&_strong]:text-foreground">
+                  <div className="prose prose-sm max-w-none [&_h3]:text-base [&_h3]:font-semibold [&_h3]:mt-6 [&_h3]:mb-2 [&_h2]:text-lg [&_h2]:font-bold [&_h2]:mt-8 [&_h2]:mb-3 [&_p]:my-2 [&_ul]:my-2 [&_li]:my-0.5 [&_strong]:text-foreground">
                     <ReactMarkdown>{report}</ReactMarkdown>
                   </div>
                 </CardContent>
