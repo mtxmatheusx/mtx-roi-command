@@ -290,7 +290,7 @@ export default function CriativosPage() {
             </div>
           )}
           {scrapeResult && (
-            <div className="flex items-center gap-2 text-sm text-neon-green">
+            <div className="flex items-center gap-2 text-sm text-success">
               ✅ {scrapeResult.total_found} mídias encontradas, {scrapeResult.total_saved} salvas na biblioteca.
             </div>
           )}
