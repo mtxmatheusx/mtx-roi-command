@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Eye, EyeOff, LogIn, Loader2 } from "lucide-react";
+import { Eye, EyeOff, ArrowRight, Loader2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -58,22 +58,24 @@ export default function Auth() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background noise-bg">
-      <div className="w-full max-w-md mx-4">
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="w-full max-w-sm mx-4">
         {/* Logo */}
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold tracking-tight">
-            <span className="text-neon-red">MTX</span>{" "}
-            <span className="text-foreground">Estratégias</span>
+        <div className="text-center mb-10">
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-primary text-primary-foreground font-bold text-lg mb-4">
+            M
+          </div>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+            MTX Estratégias
           </h1>
-          <p className="text-muted-foreground text-sm mt-2">ROI Command Center</p>
+          <p className="text-muted-foreground text-sm mt-1">ROI Command Center</p>
         </div>
 
         {/* Card */}
-        <div className="rounded-xl border border-neon-red/20 bg-card p-8 shadow-lg shadow-neon-red/5">
+        <div className="rounded-lg border border-border bg-card p-6 shadow-sm">
           {mode !== "forgot" ? (
-            <form onSubmit={handleSubmit} className="space-y-5">
-              <div className="space-y-2">
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-1.5">
                 <label className="text-sm font-medium text-foreground">Email</label>
                 <Input
                   type="email"
@@ -81,11 +83,11 @@ export default function Auth() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="border-border focus:border-neon-red/50"
+                  className="h-10"
                 />
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <label className="text-sm font-medium text-foreground">Senha</label>
                 <div className="relative">
                   <Input
@@ -94,7 +96,7 @@ export default function Auth() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
-                    className="pr-10 border-border focus:border-neon-red/50"
+                    className="pr-10 h-10"
                   />
                   <button
                     type="button"
@@ -109,17 +111,17 @@ export default function Auth() {
               <Button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-foreground text-background hover:bg-neon-red hover:text-foreground transition-all duration-300 font-semibold"
+                className="w-full h-10 font-medium gap-2"
               >
-                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogIn className="w-4 h-4" />}
+                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />}
                 {mode === "signup" ? "Criar Conta" : "Entrar"}
               </Button>
 
-              <div className="flex flex-col items-center gap-2">
+              <div className="flex flex-col items-center gap-1.5 pt-2">
                 <button
                   type="button"
                   onClick={() => setMode(mode === "login" ? "signup" : "login")}
-                  className="text-sm text-muted-foreground hover:text-neon-red transition-colors"
+                  className="text-sm text-muted-foreground hover:text-primary transition-colors"
                 >
                   {mode === "login" ? "Não tem conta? Criar conta" : "Já tem conta? Entrar"}
                 </button>
@@ -127,7 +129,7 @@ export default function Auth() {
                   <button
                     type="button"
                     onClick={() => setMode("forgot")}
-                    className="text-sm text-muted-foreground hover:text-neon-red transition-colors"
+                    className="text-sm text-muted-foreground hover:text-primary transition-colors"
                   >
                     Esqueci minha senha
                   </button>
@@ -135,7 +137,7 @@ export default function Auth() {
               </div>
             </form>
           ) : (
-            <form onSubmit={handleForgot} className="space-y-5">
+            <form onSubmit={handleForgot} className="space-y-4">
               <div className="text-center mb-2">
                 <h2 className="text-lg font-semibold text-foreground">Redefinir Senha</h2>
                 <p className="text-sm text-muted-foreground">
@@ -143,7 +145,7 @@ export default function Auth() {
                 </p>
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <label className="text-sm font-medium text-foreground">Email</label>
                 <Input
                   type="email"
@@ -151,14 +153,14 @@ export default function Auth() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="border-border focus:border-neon-red/50"
+                  className="h-10"
                 />
               </div>
 
               <Button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-foreground text-background hover:bg-neon-red hover:text-foreground transition-all duration-300 font-semibold"
+                className="w-full h-10 font-medium"
               >
                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
                 Enviar Link
@@ -167,7 +169,7 @@ export default function Auth() {
               <button
                 type="button"
                 onClick={() => setMode("login")}
-                className="w-full text-sm text-muted-foreground hover:text-neon-red transition-colors"
+                className="w-full text-sm text-muted-foreground hover:text-primary transition-colors"
               >
                 Voltar ao login
               </button>

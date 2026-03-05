@@ -34,7 +34,7 @@ export default function ActiveProfileHeader() {
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-      toast({ title: "🛑 Kill Switch Ativado", description: `${data.paused_count || 0} campanhas pausadas.` });
+      toast({ title: "Kill Switch Ativado", description: `${data.paused_count || 0} campanhas pausadas.` });
       setKillOpen(false);
       setKillConfirm("");
     } catch (err) {
@@ -47,23 +47,23 @@ export default function ActiveProfileHeader() {
   if (!profiles.length) return null;
 
   return (
-    <div className="mb-4 flex items-center gap-3 flex-wrap">
+    <div className="mb-6 flex items-center gap-3 flex-wrap">
       <div className="flex items-center gap-2 flex-1 min-w-[200px] max-w-sm">
-        <span className="relative flex h-2.5 w-2.5 shrink-0">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-          <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-400" />
+        <span className="relative flex h-2 w-2 shrink-0">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75" />
+          <span className="relative inline-flex rounded-full h-2 w-2 bg-success" />
         </span>
         <Select
           value={activeProfile?.id || ""}
           onValueChange={(id) => setActiveProfile(id)}
         >
-          <SelectTrigger className="h-9 text-sm font-semibold bg-card border-border">
+          <SelectTrigger className="h-9 text-sm font-medium">
             <SelectValue placeholder="Selecione um perfil" />
           </SelectTrigger>
           <SelectContent>
             {profiles.map((p) => (
               <SelectItem key={p.id} value={p.id}>
-                🟢 Ativo: {p.name}
+                {p.name}
               </SelectItem>
             ))}
           </SelectContent>
@@ -71,7 +71,7 @@ export default function ActiveProfileHeader() {
       </div>
 
       {activeProfile && (
-        <span className="text-xs text-muted-foreground hidden md:inline">
+        <span className="text-xs text-muted-foreground hidden md:inline font-mono">
           {activeProfile.ad_account_id}
         </span>
       )}
@@ -88,19 +88,17 @@ export default function ActiveProfileHeader() {
         </Button>
       )}
 
-      {/* Kill Switch Modal */}
       <AlertDialog open={killOpen} onOpenChange={setKillOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2 text-destructive">
               <ShieldAlert className="w-5 h-5" />
-              ⚠️ KILL SWITCH — {activeProfile?.name}
+              Kill Switch — {activeProfile?.name}
             </AlertDialogTitle>
             <AlertDialogDescription className="space-y-3">
               <p>
-                Você está prestes a pausar <strong>TODAS</strong> as campanhas, conjuntos e anúncios ativos de{" "}
-                <strong>{activeProfile?.name}</strong>. Isso interrompe imediatamente o gasto de verba na conta{" "}
-                <strong>{activeProfile?.ad_account_id}</strong>.
+                Você está prestes a pausar <strong>todas</strong> as campanhas ativas de{" "}
+                <strong>{activeProfile?.name}</strong>.
               </p>
               <p className="text-sm">
                 Digite <strong>PAUSAR</strong> para confirmar:

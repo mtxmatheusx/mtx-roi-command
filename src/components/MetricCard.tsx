@@ -8,22 +8,22 @@ interface MetricCardProps {
   subtitle?: string;
   variant?: "default" | "profit" | "danger" | "highlight";
   icon?: ReactNode;
-  delta?: number | null; // percentage change vs previous period
-  invertDelta?: boolean; // true = lower is better (e.g. CPA)
+  delta?: number | null;
+  invertDelta?: boolean;
 }
 
 const variantStyles = {
   default: "bg-card border-border",
-  profit: "bg-card border-glow-green glow-green",
-  danger: "bg-card border-glow-red glow-red",
-  highlight: "bg-card border-glow-red",
+  profit: "bg-card border-success/30",
+  danger: "bg-card border-destructive/30",
+  highlight: "bg-card border-primary/30",
 };
 
 const valueStyles = {
   default: "text-foreground",
-  profit: "text-neon-green",
-  danger: "text-neon-red",
-  highlight: "text-neon-red",
+  profit: "text-success",
+  danger: "text-destructive",
+  highlight: "text-primary",
 };
 
 export default function MetricCard({ title, value, subtitle, variant = "default", icon, delta, invertDelta }: MetricCardProps) {
@@ -33,19 +33,19 @@ export default function MetricCard({ title, value, subtitle, variant = "default"
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4 }}
-      className={`rounded-xl border p-6 ${variantStyles[variant]}`}
+      transition={{ duration: 0.3 }}
+      className={`rounded-lg border p-5 ${variantStyles[variant]}`}
     >
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{title}</span>
+      <div className="flex items-center justify-between mb-1.5">
+        <span className="text-xs font-medium text-muted-foreground">{title}</span>
         {icon && <span className="text-muted-foreground">{icon}</span>}
       </div>
-      <p className={`text-3xl font-bold tracking-tight ${valueStyles[variant]}`}>{value}</p>
+      <p className={`text-2xl font-semibold tracking-tight ${valueStyles[variant]}`}>{value}</p>
       <div className="flex items-center gap-2 mt-1">
         {hasDelta && (
-          <span className={`flex items-center gap-0.5 text-xs font-medium ${isPositive ? "text-neon-green" : isNegative ? "text-neon-red" : "text-muted-foreground"}`}>
+          <span className={`flex items-center gap-0.5 text-xs font-medium ${isPositive ? "text-success" : isNegative ? "text-destructive" : "text-muted-foreground"}`}>
             {isPositive ? <TrendingUp className="w-3 h-3" /> : isNegative ? <TrendingDown className="w-3 h-3" /> : null}
             {delta! > 0 ? "+" : ""}{delta!.toFixed(1)}%
             <span className="text-muted-foreground ml-1">vs anterior</span>

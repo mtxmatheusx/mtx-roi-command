@@ -20,22 +20,29 @@ export default function AppSidebar() {
   ];
 
   return (
-    <aside className="fixed left-0 top-0 h-screen w-64 bg-card border-r border-border flex flex-col z-50">
-      <div className="p-6 border-b border-border">
-        <h1 className="text-xl font-bold tracking-tight">
-          <span className="text-neon-red">MTX</span>{" "}
-          <span className="text-foreground">Estratégias</span>
-        </h1>
-        <p className="text-xs text-muted-foreground mt-1">ROI Command Center</p>
+    <aside className="fixed left-0 top-0 h-screen w-60 bg-card border-r border-border flex flex-col z-50">
+      {/* Logo */}
+      <div className="px-5 py-5 border-b border-border">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
+            <span className="text-primary-foreground font-bold text-sm">M</span>
+          </div>
+          <div>
+            <h1 className="text-sm font-semibold text-foreground leading-none">MTX Estratégias</h1>
+            <p className="text-[11px] text-muted-foreground mt-0.5">Command Center</p>
+          </div>
+        </div>
       </div>
-      <div className="px-4 pt-4 pb-2">
+
+      {/* Agency Link */}
+      <div className="px-3 pt-3 pb-1">
         <RouterNavLink
           to="/agencia"
           className={({ isActive }) =>
-            `flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 w-full ${
+            `flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
               isActive
-                ? "bg-primary/10 text-neon-red border-glow-red border glow-red"
-                : "text-muted-foreground hover:text-foreground hover:bg-secondary"
+                ? "bg-primary/10 text-primary"
+                : "text-muted-foreground hover:text-foreground hover:bg-accent"
             }`
           }
         >
@@ -43,18 +50,21 @@ export default function AppSidebar() {
           {t("nav.agencyView")}
         </RouterNavLink>
       </div>
+
       <ProfileSelector />
-      <nav className="flex-1 p-4 space-y-1">
+
+      {/* Nav */}
+      <nav className="flex-1 px-3 py-2 space-y-0.5 overflow-y-auto">
         {navItems.map((item) => (
           <RouterNavLink
             key={item.to}
             to={item.to}
             end={item.to === "/"}
             className={({ isActive }) =>
-              `flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${
+              `flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                 isActive
-                  ? "bg-primary/10 text-neon-red border-glow-red border glow-red"
-                  : "text-muted-foreground hover:text-foreground hover:bg-secondary"
+                  ? "bg-primary/10 text-primary"
+                  : "text-muted-foreground hover:text-foreground hover:bg-accent"
               }`
             }
           >
@@ -63,14 +73,16 @@ export default function AppSidebar() {
           </RouterNavLink>
         ))}
       </nav>
-      <div className="p-4 border-t border-border space-y-1">
+
+      {/* Footer */}
+      <div className="px-3 py-3 border-t border-border space-y-0.5">
         <RouterNavLink
           to="/configuracoes"
           className={({ isActive }) =>
-            `flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 w-full ${
+            `flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium transition-colors w-full ${
               isActive
-                ? "bg-primary/10 text-neon-red border-glow-red border glow-red"
-                : "text-muted-foreground hover:text-foreground hover:bg-secondary"
+                ? "bg-primary/10 text-primary"
+                : "text-muted-foreground hover:text-foreground hover:bg-accent"
             }`
           }
         >
@@ -79,7 +91,7 @@ export default function AppSidebar() {
         </RouterNavLink>
         <button
           onClick={signOut}
-          className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 w-full text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+          className="flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium transition-colors w-full text-muted-foreground hover:text-destructive hover:bg-destructive/10"
         >
           <LogOut className="w-4 h-4" />
           {t("nav.logout")}

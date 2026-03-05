@@ -6,13 +6,13 @@ import LanguageSelector from "./LanguageSelector";
 
 export default function AppLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-screen bg-background noise-bg">
+    <div className="min-h-screen bg-background">
       <AppSidebar />
-      <div className="ml-64">
-        <div className="flex justify-end items-center px-8 pt-4">
+      <div className="ml-60">
+        <header className="flex justify-end items-center px-8 py-3 border-b border-border bg-card">
           <LanguageSelector />
-        </div>
-        <main className="px-8 pb-8">
+        </header>
+        <main className="px-8 py-6">
           <ProfileTransitionGuard>
             {children}
           </ProfileTransitionGuard>
