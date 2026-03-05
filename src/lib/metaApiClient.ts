@@ -61,7 +61,7 @@ export interface MetaInsights {
 export interface CreateCampaignInput {
   name: string;
   objective: string;
-  daily_budget: number; // in cents
+  daily_budget: number;
   status?: string;
   ad_account_id: string;
 }
@@ -90,6 +90,14 @@ export interface CreateAudienceInput {
   ad_account_id: string;
 }
 
+export interface CreateLookalikeInput {
+  name: string;
+  source_audience_id: string;
+  country: string;
+  ratio?: number;
+  ad_account_id: string;
+}
+
 export interface ScaleBudgetInput {
   campaign_id: string;
   percentage: number;
@@ -105,6 +113,11 @@ export interface DuplicateCampaignInput {
 export interface ConfigInput {
   meta_token: string;
   ad_account_id?: string;
+}
+
+export interface OptimizeInput {
+  ad_account_id: string;
+  [key: string]: unknown;
 }
 
 // ── Helpers ────────────────────────────────────────────
@@ -154,6 +167,13 @@ function put<T>(baseUrl: string, path: string, token: string, body: unknown): Pr
   });
 }
 
+function patch<T>(baseUrl: string, path: string, token: string, body: unknown): Promise<T> {
+  return apiCall<T>(baseUrl, path, token, {
+    method: "PATCH",
+    body: JSON.stringify(body),
+  });
+}
+
 function del<T>(baseUrl: string, path: string, token: string): Promise<T> {
   return apiCall<T>(baseUrl, path, token, { method: "DELETE" });
 }
@@ -163,80 +183,93 @@ function del<T>(baseUrl: string, path: string, token: string): Promise<T> {
 export const metaApi = {
   // ─── Config ───
   configure: (baseUrl: string, token: string, input: ConfigInput) =>
-    post<{ status: string }>(baseUrl, "/config", token, input),
+    post<{ status: string }>(baseUrl, "/api/config", token, input),
 
   healthCheck: (baseUrl: string, token: string) =>
-    get<{ status: string }>(baseUrl, "/health", token),
+    get<{ status: string }>(baseUrl, "/api/health", token),
 
   // ─── Campaigns ───
   listCampaigns: (baseUrl: string, token: string, adAccountId: string) =>
-    get<MetaCampaign[]>(baseUrl, `/campaigns?ad_account_id=${adAccountId}`, token),
+    get<MetaCampaign[]>(baseUrl, `/api/campaigns?ad_account_id=${adAccountId}`, token),
 
   getCampaign: (baseUrl: string, token: string, campaignId: string) =>
-    get<MetaCampaign>(baseUrl, `/campaigns/${campaignId}`, token),
+    get<MetaCampaign>(baseUrl, `/api/campaigns/${campaignId}`, token),
 
   createCampaign: (baseUrl: string, token: string, input: CreateCampaignInput) =>
-    post<MetaCampaign>(baseUrl, "/campaigns", token, input),
+    post<MetaCampaign>(baseUrl, "/api/campaigns", token, input),
 
   updateCampaign: (baseUrl: string, token: string, campaignId: string, data: Partial<CreateCampaignInput>) =>
-    put<MetaCampaign>(baseUrl, `/campaigns/${campaignId}`, token, data),
+    patch<MetaCampaign>(baseUrl, `/api/campaigns/${campaignId}`, token, data),
 
   deleteCampaign: (baseUrl: string, token: string, campaignId: string) =>
-    del<{ success: boolean }>(baseUrl, `/campaigns/${campaignId}`, token),
+    del<{ success: boolean }>(baseUrl, `/api/campaigns/${campaignId}`, token),
 
   pauseCampaign: (baseUrl: string, token: string, campaignId: string) =>
-    put<MetaCampaign>(baseUrl, `/campaigns/${campaignId}`, token, { status: "PAUSED" }),
+    patch<MetaCampaign>(baseUrl, `/api/campaigns/${campaignId}`, token, { status: "PAUSED" }),
 
   activateCampaign: (baseUrl: string, token: string, campaignId: string) =>
-    put<MetaCampaign>(baseUrl, `/campaigns/${campaignId}`, token, { status: "ACTIVE" }),
+    patch<MetaCampaign>(baseUrl, `/api/campaigns/${campaignId}`, token, { status: "ACTIVE" }),
 
   // ─── Ad Sets ───
   listAdSets: (baseUrl: string, token: string, campaignId: string) =>
-    get<MetaAdSet[]>(baseUrl, `/adsets?campaign_id=${campaignId}`, token),
+    get<MetaAdSet[]>(baseUrl, `/api/adsets?campaign_id=${campaignId}`, token),
 
   createAdSet: (baseUrl: string, token: string, input: CreateAdSetInput) =>
-    post<MetaAdSet>(baseUrl, "/adsets", token, input),
+    post<MetaAdSet>(baseUrl, "/api/ads/adset", token, input),
 
   updateAdSet: (baseUrl: string, token: string, adsetId: string, data: Partial<CreateAdSetInput>) =>
-    put<MetaAdSet>(baseUrl, `/adsets/${adsetId}`, token, data),
+    patch<MetaAdSet>(baseUrl, `/api/adsets/${adsetId}`, token, data),
 
   deleteAdSet: (baseUrl: string, token: string, adsetId: string) =>
-    del<{ success: boolean }>(baseUrl, `/adsets/${adsetId}`, token),
+    del<{ success: boolean }>(baseUrl, `/api/adsets/${adsetId}`, token),
 
   // ─── Ads ───
   listAds: (baseUrl: string, token: string, adsetId: string) =>
-    get<MetaAd[]>(baseUrl, `/ads?adset_id=${adsetId}`, token),
+    get<MetaAd[]>(baseUrl, `/api/ads?adset_id=${adsetId}`, token),
 
   createAd: (baseUrl: string, token: string, input: CreateAdInput) =>
-    post<MetaAd>(baseUrl, "/ads", token, input),
+    post<MetaAd>(baseUrl, "/api/ads/ad", token, input),
+
+  createCreative: (baseUrl: string, token: string, input: Record<string, unknown>) =>
+    post<Record<string, unknown>>(baseUrl, "/api/ads/creative", token, input),
 
   updateAd: (baseUrl: string, token: string, adId: string, data: Partial<CreateAdInput>) =>
-    put<MetaAd>(baseUrl, `/ads/${adId}`, token, data),
+    patch<MetaAd>(baseUrl, `/api/ads/${adId}`, token, data),
 
   deleteAd: (baseUrl: string, token: string, adId: string) =>
-    del<{ success: boolean }>(baseUrl, `/ads/${adId}`, token),
+    del<{ success: boolean }>(baseUrl, `/api/ads/${adId}`, token),
 
   // ─── Audiences ───
   listAudiences: (baseUrl: string, token: string, adAccountId: string) =>
-    get<MetaAudience[]>(baseUrl, `/audiences?ad_account_id=${adAccountId}`, token),
+    get<MetaAudience[]>(baseUrl, `/api/audiences?ad_account_id=${adAccountId}`, token),
 
   createCustomAudience: (baseUrl: string, token: string, input: CreateAudienceInput) =>
-    post<MetaAudience>(baseUrl, "/audiences/custom", token, input),
+    post<MetaAudience>(baseUrl, "/api/audiences/custom", token, input),
+
+  createLookalikeAudience: (baseUrl: string, token: string, input: CreateLookalikeInput) =>
+    post<MetaAudience>(baseUrl, "/api/audiences/lookalike", token, input),
 
   deleteAudience: (baseUrl: string, token: string, audienceId: string) =>
-    del<{ success: boolean }>(baseUrl, `/audiences/${audienceId}`, token),
+    del<{ success: boolean }>(baseUrl, `/api/audiences/${audienceId}`, token),
 
   // ─── Scaling ───
   scaleBudget: (baseUrl: string, token: string, input: ScaleBudgetInput) =>
-    post<{ success: boolean; new_budget: number }>(baseUrl, "/scale/budget", token, input),
+    post<{ success: boolean; new_budget: number }>(baseUrl, "/api/scale/budget", token, input),
 
   duplicateCampaign: (baseUrl: string, token: string, input: DuplicateCampaignInput) =>
-    post<MetaCampaign>(baseUrl, "/scale/duplicate", token, input),
+    post<MetaCampaign>(baseUrl, "/api/scale/duplicate", token, input),
 
-  // ─── Insights ───
+  // ─── Insights / Metrics ───
+  getMetrics: (baseUrl: string, token: string, adAccountId: string) =>
+    get<MetaInsights[]>(baseUrl, `/api/metrics?ad_account_id=${adAccountId}`, token),
+
   getInsights: (baseUrl: string, token: string, adAccountId: string, since: string, until: string) =>
-    get<MetaInsights[]>(baseUrl, `/insights?ad_account_id=${adAccountId}&since=${since}&until=${until}`, token),
+    get<MetaInsights[]>(baseUrl, `/api/metrics?ad_account_id=${adAccountId}&since=${since}&until=${until}`, token),
 
   getCampaignInsights: (baseUrl: string, token: string, campaignId: string, since: string, until: string) =>
-    get<MetaInsights[]>(baseUrl, `/insights/campaign/${campaignId}?since=${since}&until=${until}`, token),
+    get<MetaInsights[]>(baseUrl, `/api/metrics/campaign/${campaignId}?since=${since}&until=${until}`, token),
+
+  // ─── AI Optimize ───
+  optimize: (baseUrl: string, token: string, input: OptimizeInput) =>
+    post<Record<string, unknown>>(baseUrl, "/api/ai/optimize", token, input),
 };
