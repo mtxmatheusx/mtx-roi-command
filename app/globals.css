@@ -1,0 +1,86 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 222 25% 4%;
+    --foreground: 210 20% 96%;
+    --card: 222 20% 6%;
+    --card-foreground: 210 20% 96%;
+    --popover: 222 20% 6%;
+    --popover-foreground: 210 20% 96%;
+    --primary: 0 100% 55%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 222 18% 10%;
+    --secondary-foreground: 210 20% 80%;
+    --muted: 222 18% 10%;
+    --muted-foreground: 215 14% 42%;
+    --accent: 222 18% 12%;
+    --accent-foreground: 210 20% 96%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 222 16% 11%;
+    --input: 222 16% 11%;
+    --ring: 0 100% 55%;
+    --radius: 0.75rem;
+  }
+}
+
+@layer base {
+  * { @apply border-border; }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    background-color: #060810;
+    background-image:
+      radial-gradient(ellipse 80% 50% at 50% -10%, rgba(255,23,68,0.08) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 40% at 80% 60%, rgba(0,180,255,0.04) 0%, transparent 50%),
+      url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+    background-attachment: fixed;
+    font-feature-settings: "rlig" 1, "calt" 1, "tnum" 1;
+  }
+
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 99px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.15); }
+}
+
+@layer utilities {
+  .glass {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.06);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+  .glass-hover {
+    transition: background 0.2s, border-color 0.2s;
+  }
+  .glass-hover:hover {
+    background: rgba(255,255,255,0.05);
+    border-color: rgba(255,255,255,0.1);
+  }
+  .glow-red {
+    box-shadow: 0 0 40px -8px rgba(255,23,68,0.35);
+  }
+  .glow-green {
+    box-shadow: 0 0 40px -8px rgba(0,230,118,0.25);
+  }
+  .glow-blue {
+    box-shadow: 0 0 40px -8px rgba(0,180,255,0.2);
+  }
+  .text-gradient-red {
+    background: linear-gradient(135deg, #ff1744 0%, #ff6b9d 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .text-gradient-green {
+    background: linear-gradient(135deg, #00e676 0%, #69f0ae 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .num { font-variant-numeric: tabular-nums; }
+}
