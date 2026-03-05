@@ -496,7 +496,7 @@ export default function LancarCampanha() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold flex items-center gap-2">
-              <Rocket className="w-6 h-6 text-neon-red" />
+              <Rocket className="w-6 h-6 text-primary" />
               Lançar Campanha
             </h1>
             <p className="text-muted-foreground text-sm mt-1">Crie campanhas com assistência da IA e publique na Meta</p>
