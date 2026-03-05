@@ -175,7 +175,7 @@ export default function AgencyView() {
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
               <Card><CardContent className="pt-6">
                 <div className="flex items-center justify-between">
-                  <div><p className="text-xs text-muted-foreground font-medium">ROAS Global</p><p className={`text-2xl font-bold mt-1 ${globalRoas >= 2 ? "text-neon-green" : globalRoas >= 1 ? "text-neon-yellow" : "text-neon-red"}`}>{globalRoas.toFixed(2)}x</p></div>
+                  <div><p className="text-xs text-muted-foreground font-medium">ROAS Global</p><p className={`text-2xl font-bold mt-1 ${globalRoas >= 2 ? "text-success" : globalRoas >= 1 ? "text-warning" : "text-destructive"}`}>{globalRoas.toFixed(2)}x</p></div>
                   <Activity className="h-8 w-8 text-muted-foreground/30" />
                 </div>
               </CardContent></Card>
