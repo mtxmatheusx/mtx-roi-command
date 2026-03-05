@@ -222,7 +222,7 @@ export default function CreativeFactory({ winners }: CreativeFactoryProps) {
                   <div className="p-2">
                     <p className="text-xs font-medium truncate">{w.name}</p>
                     <div className="flex items-center gap-1 mt-1">
-                      <Badge variant="outline" className="text-[10px] px-1 py-0 text-neon-green border-neon-green/30">
+                      <Badge variant="outline" className="text-[10px] px-1 py-0 text-success border-success/20">
                         {w.roas.toFixed(1)}x
                       </Badge>
                       <span className="text-[10px] text-muted-foreground">{formatCurrency(w.spend)}</span>
