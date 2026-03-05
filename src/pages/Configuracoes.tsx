@@ -582,7 +582,7 @@ export default function Configuracoes() {
             {productContext && !absorbResult && (
               <div className="bg-secondary/50 border border-border rounded-lg p-4">
                 <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide mb-2">Contexto atual</p>
-                <div className="prose prose-sm prose-invert max-w-none text-sm"><ReactMarkdown>{productContext}</ReactMarkdown></div>
+                <div className="prose prose-sm max-w-none text-sm"><ReactMarkdown>{productContext}</ReactMarkdown></div>
               </div>
             )}
           </CardContent>

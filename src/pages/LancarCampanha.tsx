@@ -1154,7 +1154,7 @@ export default function LancarCampanha() {
 
             {!publishResult && (
               <div className="flex gap-3">
-                <Button onClick={() => setConfirmPublishOpen(true)} disabled={isPublishing || !activeProfile || !activeProfile?.page_id || activeProfile?.page_id?.trim() === ""} className="gap-2 bg-neon-green/90 hover:bg-neon-green text-background font-bold">
+                <Button onClick={() => setConfirmPublishOpen(true)} disabled={isPublishing || !activeProfile || !activeProfile?.page_id || activeProfile?.page_id?.trim() === ""} className="gap-2 font-bold">
                   {isPublishing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Rocket className="w-4 h-4" />}
                   Aprovar Execução
                 </Button>
