@@ -353,7 +353,7 @@ export default function CriativosPage() {
                   <div className="grid grid-cols-3 gap-3 mb-4 text-center">
                     <div>
                       <p className="text-xs text-muted-foreground">ROAS</p>
-                      <p className={`text-lg font-bold ${creative.roas > 3 ? "text-neon-green" : creative.roas > 1 ? "text-neon-yellow" : "text-neon-red"}`}>{creative.roas.toFixed(2)}x</p>
+                      <p className={`text-lg font-bold ${creative.roas > 3 ? "text-success" : creative.roas > 1 ? "text-warning" : "text-destructive"}`}>{creative.roas.toFixed(2)}x</p>
                     </div>
                     <div><p className="text-xs text-muted-foreground">CTR</p><p className="text-lg font-bold">{creative.ctr.toFixed(1)}%</p></div>
                     <div><p className="text-xs text-muted-foreground">Compras</p><p className="text-lg font-bold">{creative.purchases}</p></div>
