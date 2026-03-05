@@ -190,7 +190,7 @@ export default function AgencyView() {
                       {errorAccounts > 0 && <Badge variant="destructive">{errorAccounts} Erro</Badge>}
                     </div>
                   </div>
-                  <AlertTriangle className={`h-8 w-8 ${errorAccounts > 0 ? "text-neon-red/50" : "text-neon-green/30"}`} />
+                  <AlertTriangle className={`h-8 w-8 ${errorAccounts > 0 ? "text-destructive/50" : "text-success/30"}`} />
                 </div>
               </CardContent></Card>
             </motion.div>
