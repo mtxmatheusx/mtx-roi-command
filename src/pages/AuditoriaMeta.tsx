@@ -144,7 +144,7 @@ export default function AuditoriaMeta() {
         </div>
 
         {!activeProfile && (
-          <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-sm text-amber-400">
+          <div className="flex items-center gap-2 p-3 rounded-lg bg-warning/10 border border-warning/20 text-sm text-warning">
             <AlertTriangle className="w-4 h-4 shrink-0" />
             Selecione um perfil de cliente para buscar recomendações da Meta.
           </div>
