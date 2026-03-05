@@ -196,7 +196,7 @@ export default function CreativeFactory({ winners }: CreativeFactoryProps) {
       <Card className="lg:col-span-2">
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
-            <Trophy className="w-5 h-5 text-neon-green" />
+            <Trophy className="w-5 h-5 text-success" />
             Biblioteca Vencedora
           </CardTitle>
           <CardDescription>Criativos com ROAS ≥ 3x e investimento relevante</CardDescription>
