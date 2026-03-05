@@ -261,7 +261,7 @@ export default function Diagnostico() {
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-2xl font-bold flex items-center gap-2">
-                  <Brain className="h-6 w-6 text-neon-red" />
+                  <Brain className="h-6 w-6 text-primary" />
                   {t("diagnostic.title")}
                 </h1>
                 <p className="text-muted-foreground text-sm mt-1">{t("diagnostic.subtitle")}</p>
