@@ -20,9 +20,9 @@ import CreativeFactory from "@/components/CreativeFactory";
 
 const typeIcon = { video: Video, image: Image, carousel: LayoutGrid };
 const statusConfig = {
-  winner: { label: "Winner", className: "bg-neon-green/15 text-neon-green" },
-  testing: { label: "Testando", className: "bg-neon-yellow/15 text-neon-yellow" },
-  saturated: { label: "Saturado", className: "bg-neon-red/15 text-neon-red" },
+  winner: { label: "Winner", className: "bg-success/10 text-success" },
+  testing: { label: "Testando", className: "bg-warning/10 text-warning" },
+  saturated: { label: "Saturado", className: "bg-destructive/10 text-destructive" },
 };
 
 function getCreativeStatus(roas: number, spend: number): Creative["status"] {
