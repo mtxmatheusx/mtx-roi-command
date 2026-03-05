@@ -1013,7 +1013,7 @@ export default function LancarCampanha() {
             <Card className="border-primary/30">
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
-                  <CheckCircle2 className="w-5 h-5 text-neon-green" />
+                  <CheckCircle2 className="w-5 h-5 text-success" />
                   Resumo para Aprovação
                 </CardTitle>
               </CardHeader>
