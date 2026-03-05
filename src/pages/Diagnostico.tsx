@@ -292,7 +292,7 @@ export default function Diagnostico() {
               <Card ref={reportRef}>
                 <CardHeader>
                   <CardTitle className="text-lg flex items-center gap-2">
-                    <Brain className="h-5 w-5 text-neon-red" />
+                    <Brain className="h-5 w-5 text-primary" />
                     {t("diagnostic.reportTitle")}
                     {loading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
                   </CardTitle>
