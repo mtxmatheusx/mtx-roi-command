@@ -72,7 +72,7 @@ export default function ResetPassword() {
               <label className="text-sm font-medium">Confirmar Senha</label>
               <Input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required />
             </div>
-            <Button type="submit" disabled={loading} className="w-full bg-foreground text-background hover:bg-neon-red hover:text-foreground transition-all duration-300">
+            <Button type="submit" disabled={loading} className="w-full h-10 font-medium">
               {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
               Atualizar Senha
             </Button>
