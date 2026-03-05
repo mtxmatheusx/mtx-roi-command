@@ -780,7 +780,7 @@ export default function LancarCampanha() {
                 </CollapsibleTrigger>
                 <CollapsibleContent>
                   <Card className="mt-2">
-                    <CardContent className="pt-4 prose prose-sm prose-invert max-w-none">
+                    <CardContent className="pt-4 prose prose-sm max-w-none">
                       <ReactMarkdown>{draft.ai_reasoning}</ReactMarkdown>
                     </CardContent>
                   </Card>
