@@ -232,7 +232,7 @@ export default function AgencyView() {
                       <TableCell className={`text-right font-bold ${m.roas >= 2 ? "text-success" : m.roas >= 1 ? "text-warning" : "text-destructive"}`}>{m.roas.toFixed(2)}x</TableCell>
                       <TableCell className="text-right">{m.purchases}</TableCell>
                       <TableCell>
-                        <Badge variant={m.status === "active" ? "outline" : "destructive"} className={m.status === "active" ? "text-neon-green border-neon-green/40" : ""}>
+                        <Badge variant={m.status === "active" ? "outline" : "destructive"} className={m.status === "active" ? "text-success border-success/30" : ""}>
                           {m.status === "active" ? "Ativo" : m.status === "error" ? "Erro" : "Sem dados"}
                         </Badge>
                       </TableCell>

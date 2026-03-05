@@ -69,11 +69,11 @@ const objectiveLabels: Record<string, string> = {
 };
 
 const statusConfig: Record<string, { label: string; className: string; icon: typeof CheckCircle2 }> = {
-  draft: { label: "Rascunho", className: "bg-secondary text-muted-foreground", icon: Clock },
-  approved: { label: "Aprovado", className: "bg-neon-yellow/15 text-neon-yellow", icon: Clock },
-  published: { label: "Publicado", className: "bg-neon-green/15 text-neon-green", icon: CheckCircle2 },
-  failed: { label: "Falhou", className: "bg-destructive/15 text-destructive", icon: XCircle },
-  rejected: { label: "Rejeitado", className: "bg-secondary text-muted-foreground", icon: XCircle },
+  draft: { label: "Rascunho", className: "bg-muted text-muted-foreground", icon: Clock },
+  approved: { label: "Aprovado", className: "bg-warning/10 text-warning", icon: Clock },
+  published: { label: "Publicado", className: "bg-success/10 text-success", icon: CheckCircle2 },
+  failed: { label: "Falhou", className: "bg-destructive/10 text-destructive", icon: XCircle },
+  rejected: { label: "Rejeitado", className: "bg-muted text-muted-foreground", icon: XCircle },
 };
 
 export default function LancarCampanha() {

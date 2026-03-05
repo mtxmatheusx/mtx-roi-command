@@ -95,7 +95,7 @@ export default function CampanhasPage() {
                       <td className="text-right px-3 py-3">{c.initiateCheckout}</td>
                       <td className="text-right px-3 py-3 text-muted-foreground">{formatCurrency(c.costPerIC)}</td>
                       <td className="text-right px-3 py-3 font-semibold">{c.purchases}</td>
-                      <td className={`text-right px-3 py-3 font-semibold ${c.purchases > 0 && c.costPerPurchase > c.cpaMeta * 1.2 ? 'text-neon-red' : ''}`}>
+                      <td className={`text-right px-3 py-3 font-semibold ${c.purchases > 0 && c.costPerPurchase > c.cpaMeta * 1.2 ? 'text-destructive' : ''}`}>
                         {c.purchases > 0 ? formatCurrency(c.costPerPurchase) : '—'}
                       </td>
                       <td className="text-right px-3 py-3">{formatPercent(c.conversionRate)}</td>

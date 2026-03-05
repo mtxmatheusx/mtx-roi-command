@@ -219,7 +219,7 @@ export default function AuditoriaMeta() {
                         </Button>
                       )}
                       {item.verdict?.verdict === "COM_RESSALVAS" && (
-                        <Button size="sm" variant="outline" className="gap-2 border-neon-yellow/30 text-neon-yellow hover:bg-neon-yellow/10">
+                        <Button size="sm" variant="outline" className="gap-2 border-warning/20 text-warning hover:bg-warning/10">
                           <AlertTriangle className="w-3 h-3" />
                           Aplicar com Cuidado
                         </Button>

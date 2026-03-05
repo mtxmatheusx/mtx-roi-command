@@ -363,7 +363,7 @@ export default function CriativosPage() {
                   )}
                   <button onClick={() => toggleWinner(creative.id)}
                     className={`w-full py-2 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 ${
-                      isWinner ? "bg-accent/20 text-neon-green border border-glow-green" : "bg-secondary text-muted-foreground hover:text-foreground"}`}>
+                      isWinner ? "bg-success/10 text-success border border-success/20" : "bg-muted text-muted-foreground hover:text-foreground"}`}>
                     <Star className={`w-4 h-4 ${isWinner ? "fill-current" : ""}`} />
                     {isWinner ? "Winner" : "Marcar Winner"}
                   </button>

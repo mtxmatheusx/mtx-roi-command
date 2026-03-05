@@ -118,8 +118,8 @@ export default function Dashboard() {
 
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <motion.h1 initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="text-3xl font-bold tracking-tight">
-            <span className="text-neon-red">MTX</span> Command Center
+          <motion.h1 initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-2xl font-semibold tracking-tight">
+            MTX Command Center
           </motion.h1>
           <p className="text-muted-foreground mt-1">
             Visão geral de performance · {isUsingMock ? "Dados de demonstração" : "Dados em tempo real"}
