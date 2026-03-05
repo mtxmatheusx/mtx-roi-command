@@ -1087,8 +1087,8 @@ export default function LancarCampanha() {
                 )}
 
                 {publishResult?.success && (
-                  <div className="bg-neon-green/10 border border-neon-green/30 rounded-lg p-4 space-y-2">
-                    <p className="text-neon-green font-semibold flex items-center gap-2">
+                  <div className="bg-success/10 border border-success/20 rounded-lg p-4 space-y-2">
+                    <p className="text-success font-semibold flex items-center gap-2">
                       <CheckCircle2 className="w-4 h-4" /> {publishResult.total_ads || 1} anúncio(s) publicados com sucesso!
                     </p>
                     {publishResult.failed_ads && publishResult.failed_ads > 0 && (
