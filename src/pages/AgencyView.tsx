@@ -186,7 +186,7 @@ export default function AgencyView() {
                   <div>
                     <p className="text-xs text-muted-foreground font-medium">Saúde da Operação</p>
                     <div className="flex items-center gap-2 mt-1">
-                      <Badge variant="outline" className="text-neon-green border-neon-green/40">{activeAccounts} Ativas</Badge>
+                      <Badge variant="outline" className="text-success border-success/30">{activeAccounts} Ativas</Badge>
                       {errorAccounts > 0 && <Badge variant="destructive">{errorAccounts} Erro</Badge>}
                     </div>
                   </div>
