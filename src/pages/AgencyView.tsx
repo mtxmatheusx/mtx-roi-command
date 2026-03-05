@@ -129,7 +129,7 @@ export default function AgencyView() {
 
   const sortedMetrics = [...metrics].sort((a, b) => b.roas - a.roas);
 
-  const alertColors = { success: "border-neon-green/40 bg-neon-green/5 text-neon-green", warning: "border-neon-yellow/40 bg-neon-yellow/5 text-neon-yellow", danger: "border-neon-red/40 bg-neon-red/5 text-neon-red" };
+  const alertColors = { success: "border-success/30 bg-success/5 text-success", warning: "border-warning/30 bg-warning/5 text-warning", danger: "border-destructive/30 bg-destructive/5 text-destructive" };
   const alertIcons = { success: "✅", warning: "⚠️", danger: "🚨" };
 
   return (
