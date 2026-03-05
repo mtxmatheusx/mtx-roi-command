@@ -213,7 +213,7 @@ export default function AuditoriaMeta() {
                         </Button>
                       )}
                       {item.verdict?.verdict === "APROVADO" && (
-                        <Button size="sm" variant="default" className="gap-2 bg-neon-green/20 text-neon-green hover:bg-neon-green/30 border border-neon-green/30">
+                        <Button size="sm" variant="default" className="gap-2 bg-success/10 text-success hover:bg-success/20 border border-success/20">
                           <CheckCircle2 className="w-3 h-3" />
                           Aplicar na Meta
                         </Button>
