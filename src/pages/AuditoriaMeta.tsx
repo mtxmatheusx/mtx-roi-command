@@ -122,7 +122,7 @@ export default function AuditoriaMeta() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold flex items-center gap-2">
-              <Shield className="w-6 h-6 text-neon-red" />
+              <Shield className="w-6 h-6 text-primary" />
               Auditoria Meta AI
             </h1>
             <p className="text-muted-foreground text-sm mt-1">
