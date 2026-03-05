@@ -141,6 +141,6 @@ export function useClientProfiles() {
     geminiApiKey: activeProfile?.gemini_api_key ?? null,
     productContext: activeProfile?.product_context ?? null,
     productUrls: activeProfile?.product_urls ?? [],
-    apiBaseUrl: (activeProfile as any)?.api_base_url ?? "https://ghz-thomas-volt-database.trycloudflare.com",
+    apiBaseUrl: (activeProfile as any)?.api_base_url ?? "https://thor-backend.mtxestrategia.com.br",
   };
 }
