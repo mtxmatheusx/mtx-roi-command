@@ -167,7 +167,7 @@ export default function AuditoriaMeta() {
             const VerdictIcon = vConfig?.icon || Shield;
             return (
               <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
-                <Card className={item.verdict ? "border-l-4" : ""} style={item.verdict ? { borderLeftColor: item.verdict.verdict === "APROVADO" ? "hsl(var(--neon-green))" : item.verdict.verdict === "REJEITADO" ? "hsl(var(--destructive))" : "hsl(var(--neon-yellow))" } : undefined}>
+                <Card className={item.verdict ? "border-l-4" : ""} style={item.verdict ? { borderLeftColor: item.verdict.verdict === "APROVADO" ? "hsl(142 71% 45%)" : item.verdict.verdict === "REJEITADO" ? "hsl(0 84% 60%)" : "hsl(38 92% 50%)" } : undefined}>
                   <CardContent className="p-5 space-y-4">
                     {/* What Meta wants */}
                     <div>
