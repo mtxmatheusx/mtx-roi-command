@@ -167,8 +167,8 @@ export default function AgencyView() {
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
               <Card><CardContent className="pt-6">
                 <div className="flex items-center justify-between">
-                  <div><p className="text-xs text-muted-foreground font-medium">Faturamento Estimado</p><p className="text-2xl font-bold mt-1 text-neon-green">{formatCurrency(totalRevenue)}</p></div>
-                  <TrendingUp className="h-8 w-8 text-neon-green/30" />
+                  <div><p className="text-xs text-muted-foreground font-medium">Faturamento Estimado</p><p className="text-2xl font-bold mt-1 text-success">{formatCurrency(totalRevenue)}</p></div>
+                  <TrendingUp className="h-8 w-8 text-success/30" />
                 </div>
               </CardContent></Card>
             </motion.div>
