@@ -51,18 +51,17 @@ export default function ResetPassword() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background noise-bg">
+    <div className="min-h-screen flex items-center justify-center bg-background">
       <div className="w-full max-w-md mx-4">
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold tracking-tight">
-            <span className="text-neon-red">MTX</span>{" "}
-            <span className="text-foreground">Estratégias</span>
+          <h1 className="text-2xl font-semibold tracking-tight">
+            MTX Estratégias
           </h1>
         </div>
-        <div className="rounded-xl border border-neon-red/20 bg-card p-8 shadow-lg shadow-neon-red/5">
-          <form onSubmit={handleSubmit} className="space-y-5">
+        <div className="rounded-lg border border-border bg-card p-6 shadow-sm">
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div className="text-center mb-2">
-              <KeyRound className="w-8 h-8 text-neon-red mx-auto mb-2" />
+              <KeyRound className="w-8 h-8 text-primary mx-auto mb-2" />
               <h2 className="text-lg font-semibold text-foreground">Nova Senha</h2>
             </div>
             <div className="space-y-2">
