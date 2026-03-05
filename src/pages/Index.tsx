@@ -104,13 +104,13 @@ export default function Dashboard() {
 
       {/* Monitoring Indicator */}
       <div className="mb-4 flex items-center gap-2">
-        <span className="relative flex h-3 w-3">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-neon-green opacity-75"></span>
-          <span className="relative inline-flex rounded-full h-3 w-3 bg-neon-green"></span>
+        <span className="relative flex h-2 w-2">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75"></span>
+          <span className="relative inline-flex rounded-full h-2 w-2 bg-success"></span>
         </span>
-        <span className="text-xs font-semibold text-neon-green tracking-wide uppercase">Monitoramento Ativo em Tempo Real</span>
+        <span className="text-xs font-medium text-success tracking-wide">Monitoramento Ativo</span>
         {apiBaseUrl && (
-          <span className={`ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${apiConfigured ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" : "bg-amber-500/10 border-amber-500/20 text-amber-400"}`}>
+          <span className={`ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border ${apiConfigured ? "bg-success/10 border-success/20 text-success" : "bg-warning/10 border-warning/20 text-warning"}`}>
             {apiConfigured ? "API Conectada" : "API Desconectada"}
           </span>
         )}
