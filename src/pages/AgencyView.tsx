@@ -228,8 +228,8 @@ export default function AgencyView() {
                       <TableCell className="font-bold text-muted-foreground">{i + 1}</TableCell>
                       <TableCell className="font-medium">{m.profileName}</TableCell>
                       <TableCell className="text-right">{formatCurrency(m.spend)}</TableCell>
-                      <TableCell className="text-right text-neon-green">{formatCurrency(m.revenue)}</TableCell>
-                      <TableCell className={`text-right font-bold ${m.roas >= 2 ? "text-neon-green" : m.roas >= 1 ? "text-neon-yellow" : "text-neon-red"}`}>{m.roas.toFixed(2)}x</TableCell>
+                      <TableCell className="text-right text-success">{formatCurrency(m.revenue)}</TableCell>
+                      <TableCell className={`text-right font-bold ${m.roas >= 2 ? "text-success" : m.roas >= 1 ? "text-warning" : "text-destructive"}`}>{m.roas.toFixed(2)}x</TableCell>
                       <TableCell className="text-right">{m.purchases}</TableCell>
                       <TableCell>
                         <Badge variant={m.status === "active" ? "outline" : "destructive"} className={m.status === "active" ? "text-neon-green border-neon-green/40" : ""}>
