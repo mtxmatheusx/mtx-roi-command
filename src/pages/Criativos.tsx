@@ -305,7 +305,7 @@ export default function CriativosPage() {
       />
 
       {isUsingMock && (
-        <div className="mb-4 flex items-center gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-sm text-amber-400">
+        <div className="mb-4 flex items-center gap-2 p-3 rounded-lg bg-warning/10 border border-warning/20 text-sm text-warning">
           <AlertTriangle className="w-4 h-4 shrink-0" />
           Exibindo dados de demonstração. Configure o Ad Account ID em <strong className="mx-1">Configurações</strong>.
         </div>
