@@ -624,7 +624,7 @@ export default function LancarCampanha() {
                   const copyTypeConfig: Record<string, { label: string; desc: string; className: string }> = {
                     direct_response: { label: "Direct Response", desc: "Foco na dor e oferta", className: "bg-destructive/15 text-destructive border-destructive/30" },
                     storytelling: { label: "Storytelling", desc: "Narrativa de transformação", className: "bg-blue-500/15 text-blue-400 border-blue-500/30" },
-                    social_proof: { label: "Social Proof", desc: "Resultados e autoridade", className: "bg-neon-green/15 text-neon-green border-neon-green/30" },
+                    social_proof: { label: "Social Proof", desc: "Resultados e autoridade", className: "bg-success/10 text-success border-success/20" },
                   };
                   const ct = copy.copy_type ? copyTypeConfig[copy.copy_type] : null;
                   return (
