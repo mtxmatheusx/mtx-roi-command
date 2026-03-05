@@ -33,9 +33,9 @@ type AuditedRecommendation = {
 };
 
 const verdictConfig = {
-  APROVADO: { icon: CheckCircle2, className: "bg-neon-green/15 text-neon-green border-neon-green/30", label: "✅ APROVADO PELA MTX" },
-  COM_RESSALVAS: { icon: AlertTriangle, className: "bg-neon-yellow/15 text-neon-yellow border-neon-yellow/30", label: "⚠️ APLICAR COM RESSALVAS" },
-  REJEITADO: { icon: XCircle, className: "bg-destructive/15 text-destructive border-destructive/30", label: "❌ REJEITADO: RISCO DE ROI" },
+  APROVADO: { icon: CheckCircle2, className: "bg-success/10 text-success border-success/20", label: "✅ APROVADO PELA MTX" },
+  COM_RESSALVAS: { icon: AlertTriangle, className: "bg-warning/10 text-warning border-warning/20", label: "⚠️ APLICAR COM RESSALVAS" },
+  REJEITADO: { icon: XCircle, className: "bg-destructive/10 text-destructive border-destructive/20", label: "❌ REJEITADO: RISCO DE ROI" },
 };
 
 export default function AuditoriaMeta() {
