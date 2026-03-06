@@ -40,7 +40,6 @@ serve(async (req) => {
       { global: { headers: { Authorization: authHeader } } }
     );
 
-    // FIX: getClaims() não existe na SDK supabase-js@2 — usar getUser() diretamente
     let userId: string;
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (userError || !user) return fail("Não autorizado");
@@ -180,7 +179,6 @@ serve(async (req) => {
       campaign_id: metaCampaignId,
       daily_budget: dailyBudgetCents,
       billing_event: "IMPRESSIONS",
-      // FIX: optimization_goal correto por objetivo (API Meta v21.0)
       optimization_goal: draft.objective === "OUTCOME_LEADS"
         ? "LEAD_GENERATION"
         : draft.objective === "OUTCOME_SALES"
