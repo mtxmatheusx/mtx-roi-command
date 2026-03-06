@@ -158,7 +158,7 @@ export default function Configuracoes() {
     });
     if (!parsed.success) {
       const fieldErrors: Record<string, string> = {};
-      parsed.error.errors.forEach((e) => { if (e.path[0]) fieldErrors[e.path[0] as string] = e.message; });
+      parsed.error.issues.forEach((e: any) => { if (e.path[0]) fieldErrors[e.path[0] as string] = e.message; });
       setErrors(fieldErrors); return;
     }
     setSaving(true);
