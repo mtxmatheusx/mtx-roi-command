@@ -208,7 +208,7 @@ export default function LancarCampanha() {
         if (data?.description) {
           setRecentAssets(prev => prev.map(a => a.id === inserted.id ? { ...a, description: data.description } : a));
         }
-      }).catch(() => {});
+      }).catch(() => { });
     }
 
     setUploadProgress(100);
@@ -526,9 +526,8 @@ export default function LancarCampanha() {
         <div className="flex items-center gap-2">
           {[1, 2, 3].map((s) => (
             <div key={s} className="flex items-center gap-2">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold border ${
-                step >= s ? "bg-primary/20 text-primary border-primary/50" : "bg-secondary text-muted-foreground border-border"
-              }`}>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold border ${step >= s ? "bg-primary/20 text-primary border-primary/50" : "bg-secondary text-muted-foreground border-border"
+                }`}>
                 {s}
               </div>
               <span className={`text-xs ${step >= s ? "text-foreground" : "text-muted-foreground"}`}>
@@ -631,9 +630,8 @@ export default function LancarCampanha() {
                     <div
                       key={i}
                       onClick={() => setSelectedCopyIdx(i)}
-                      className={`p-4 rounded-lg border cursor-pointer transition-all ${
-                        selectedCopyIdx === i ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"
-                      }`}
+                      className={`p-4 rounded-lg border cursor-pointer transition-all ${selectedCopyIdx === i ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"
+                        }`}
                     >
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
@@ -715,8 +713,8 @@ export default function LancarCampanha() {
                         <span className="text-muted-foreground">Gênero:</span>
                         <p className="font-medium">
                           {draft.andromeda_targeting.genders.includes(0) ? "Todos" :
-                           draft.andromeda_targeting.genders.includes(2) ? "Feminino" :
-                           draft.andromeda_targeting.genders.includes(1) ? "Masculino" : "Todos"}
+                            draft.andromeda_targeting.genders.includes(2) ? "Feminino" :
+                              draft.andromeda_targeting.genders.includes(1) ? "Masculino" : "Todos"}
                         </p>
                       </div>
                     </div>
@@ -919,9 +917,8 @@ export default function LancarCampanha() {
                           <button
                             key={asset.id}
                             onClick={() => toggleAssetUrl(asset.file_url)}
-                            className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all hover:opacity-80 ${
-                              isSelected ? "border-primary ring-2 ring-primary/30" : "border-border"
-                            }`}
+                            className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all hover:opacity-80 ${isSelected ? "border-primary ring-2 ring-primary/30" : "border-border"
+                              }`}
                             title={asset.description || asset.file_name}
                           >
                             {asset.file_type === "video" ? (
@@ -933,9 +930,8 @@ export default function LancarCampanha() {
                             )}
                             {/* Checkbox overlay */}
                             <div className="absolute top-1 left-1">
-                              <div className={`w-5 h-5 rounded border-2 flex items-center justify-center text-xs font-bold ${
-                                isSelected ? "bg-primary border-primary text-primary-foreground" : "bg-background/70 border-border"
-                              }`}>
+                              <div className={`w-5 h-5 rounded border-2 flex items-center justify-center text-xs font-bold ${isSelected ? "bg-primary border-primary text-primary-foreground" : "bg-background/70 border-border"
+                                }`}>
                                 {isSelected && "✓"}
                               </div>
                             </div>
@@ -973,9 +969,8 @@ export default function LancarCampanha() {
               onDragLeave={() => setIsDragging(false)}
               onDrop={handleDrop}
               onClick={() => fileInputRef.current?.click()}
-              className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-all ${
-                isDragging ? "border-primary bg-primary/10" : "border-border hover:border-primary/50"
-              }`}
+              className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-all ${isDragging ? "border-primary bg-primary/10" : "border-border hover:border-primary/50"
+                }`}
             >
               <Upload className="w-10 h-10 mx-auto mb-3 text-muted-foreground" />
               <p className="text-sm font-medium">Arraste arquivos aqui ou clique para selecionar</p>
@@ -1217,7 +1212,7 @@ export default function LancarCampanha() {
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                  <AlertDialogAction onClick={() => { setConfirmPublishOpen(false); handlePublish(); }} className="gap-2 bg-neon-green/90 hover:bg-neon-green text-background font-bold">
+                  <AlertDialogAction onClick={() => { setConfirmPublishOpen(false); handlePublish(); }} className="gap-2 bg-success hover:bg-success/90 text-white font-bold">
                     <Rocket className="w-4 h-4" />
                     Confirmar e Subir
                   </AlertDialogAction>

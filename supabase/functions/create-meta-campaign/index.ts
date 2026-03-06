@@ -40,17 +40,11 @@ serve(async (req) => {
       { global: { headers: { Authorization: authHeader } } }
     );
 
+    // FIX: getClaims() não existe na SDK supabase-js@2 — usar getUser() diretamente
     let userId: string;
-    try {
-      const token = authHeader.replace("Bearer ", "");
-      const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
-      if (claimsError || !claimsData?.claims) throw new Error("getClaims failed");
-      userId = claimsData.claims.sub;
-    } catch {
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError || !user) return fail("Não autorizado");
-      userId = user.id;
-    }
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) return fail("Não autorizado");
+    userId = user.id;
 
     const body = await req.json();
     const { draftId, creativeUrls } = body;
@@ -152,21 +146,31 @@ serve(async (req) => {
       }
     }
 
-    // Build targeting — FIX: cap age_min at 25 when Advantage+ is active
+    // Build targeting
     const targetingObj: Record<string, unknown> = { geo_locations: { countries: ["BR"] } };
     if (andromedaTargeting) {
-      // When Advantage+ is active, Meta rejects age_min > 25
-      if (andromedaTargeting.age_min && andromedaTargeting.age_min <= 25) {
-        targetingObj.age_min = andromedaTargeting.age_min;
+      // FIX: age_min válido para Meta é 18-65. Advantage+ audience não bloqueia age_min.
+      // Apenas garantir que está no range permitido.
+      const ageMin = andromedaTargeting.age_min;
+      if (ageMin && ageMin >= 18 && ageMin <= 65) {
+        targetingObj.age_min = ageMin;
       }
-      // Never set age_max with Advantage+
+      // age_max: opcional, só setar se definido e válido
+      const ageMax = andromedaTargeting.age_max;
+      if (ageMax && ageMax >= 18 && ageMax <= 65) {
+        targetingObj.age_max = ageMax;
+      }
+      // Gêneros: 1=Masculino, 2=Feminino, 0=Todos (não enviar 0 — ausência = todos)
       if (andromedaTargeting.genders?.length && !andromedaTargeting.genders.includes(0)) {
         targetingObj.genders = andromedaTargeting.genders;
       }
       if (resolvedInterests.length > 0) {
         targetingObj.flexible_spec = [{ interests: resolvedInterests }];
       }
-      targetingObj.targeting_automation = { advantage_audience: Number(1) };
+      // Advantage+ audience — só para objetivos de conversão
+      if (["OUTCOME_SALES", "OUTCOME_LEADS"].includes(draft.objective)) {
+        targetingObj.targeting_automation = { advantage_audience: 1 };
+      }
     }
 
     console.log("Final targeting payload:", JSON.stringify(targetingObj));
@@ -176,11 +180,18 @@ serve(async (req) => {
       campaign_id: metaCampaignId,
       daily_budget: dailyBudgetCents,
       billing_event: "IMPRESSIONS",
+      // FIX: optimization_goal correto por objetivo (API Meta v21.0)
       optimization_goal: draft.objective === "OUTCOME_LEADS"
         ? "LEAD_GENERATION"
         : draft.objective === "OUTCOME_SALES"
           ? "OFFSITE_CONVERSIONS"
-          : "LINK_CLICKS",
+          : draft.objective === "OUTCOME_TRAFFIC"
+            ? "LANDING_PAGE_VIEWS"
+            : draft.objective === "OUTCOME_ENGAGEMENT"
+              ? "POST_ENGAGEMENT"
+              : draft.objective === "OUTCOME_AWARENESS"
+                ? "REACH"
+                : "LINK_CLICKS",
       bid_strategy: "LOWEST_COST_WITHOUT_CAP",
       targeting: targetingObj,
       status: "PAUSED",
