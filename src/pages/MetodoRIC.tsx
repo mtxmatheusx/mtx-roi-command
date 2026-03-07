@@ -102,7 +102,7 @@ export default function MetodoRIC() {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.6, delay: 0.2 }}
-                        className="max-w-3xl mx-auto text-lg md:text-xl text-white/70 mb-14 leading-relaxed font-medium"
+                        className="max-w-3xl mx-auto text-lg md:text-xl text-white/80 mb-14 leading-relaxed font-medium"
                     >
                         A Tríade RIC ataca os 3 pilares da Autoria: Rota, Ignição e
                         Calibragem — para quem está cansado de começar e parar no meio do
@@ -122,7 +122,7 @@ export default function MetodoRIC() {
                             Quero me tornar AUTOR agora <ArrowRight className="w-7 h-7" />
                         </Button>
 
-                        <div className="flex flex-wrap items-center justify-center gap-6 text-white/50 text-[10px] font-black uppercase tracking-widest">
+                        <div className="flex flex-wrap items-center justify-center gap-6 text-white/70 text-[10px] font-black uppercase tracking-widest">
                             <span className="flex items-center gap-2">
                                 <Globe className="w-4 h-4 text-[#F26129]" /> Acesso Vitalício
                             </span>
@@ -171,7 +171,7 @@ export default function MetodoRIC() {
                             E você está preso em um{" "}
                             <span className="text-[#F26129] italic">ciclo impossível</span>
                         </h2>
-                        <p className="text-white/70 max-w-3xl mx-auto text-lg font-medium">
+                        <p className="text-white/80 max-w-3xl mx-auto text-lg font-medium">
                             Quando percebe que precisa mudar, geralmente procura uma dessas 3
                             opções. Mas nenhuma funciona de verdade:
                         </p>
@@ -208,7 +208,7 @@ export default function MetodoRIC() {
                         <h3 className="text-2xl md:text-3xl font-black mb-4 uppercase">
                             Enquanto isso acontece...
                         </h3>
-                        <p className="text-white/70 text-lg font-medium mb-2">
+                        <p className="text-white/80 text-lg font-medium mb-2">
                             Pessoas que implementaram o RIC estão:
                         </p>
                         <p className="text-white/90 text-xl font-black leading-relaxed">
@@ -231,7 +231,7 @@ export default function MetodoRIC() {
                             desenvolvi a{" "}
                             <span className="text-[#F26129] italic">Tríade RIC</span>
                         </h2>
-                        <p className="text-white/70 text-lg leading-relaxed mb-10 font-medium">
+                        <p className="text-white/85 text-lg leading-relaxed mb-10 font-medium">
                             O problema da maioria dos métodos é que eles focam só na execução.
                             Mas execução sem direção é apenas velocidade em direção ao abismo.
                         </p>
@@ -285,7 +285,7 @@ export default function MetodoRIC() {
                                 3 pilares da Autoria
                             </span>
                         </h2>
-                        <p className="text-white/70 max-w-3xl mx-auto mt-6 text-lg font-medium">
+                        <p className="text-white/80 max-w-3xl mx-auto mt-6 text-lg font-medium">
                             Não é mais um curso de produtividade. É o sistema que te coloca no
                             comando da sua própria história.
                         </p>
@@ -334,7 +334,7 @@ export default function MetodoRIC() {
                             Você ainda leva R$164 em bônus —{" "}
                             <span className="text-[#F26129] italic">de graça</span>
                         </h2>
-                        <p className="text-white/70 max-w-2xl mx-auto mt-4 text-lg font-medium">
+                        <p className="text-white/80 max-w-2xl mx-auto mt-4 text-lg font-medium">
                             Materiais complementares que aceleram seus resultados e atacam
                             problemas específicos.
                         </p>
@@ -438,7 +438,7 @@ export default function MetodoRIC() {
                                 investimento ridículo
                             </span>
                         </h2>
-                        <p className="text-white/70 max-w-2xl mx-auto text-lg font-medium">
+                        <p className="text-white/80 max-w-2xl mx-auto text-lg font-medium">
                             Compare com o que você pagaria por alternativas que entregam muito
                             menos:
                         </p>
@@ -479,7 +479,7 @@ export default function MetodoRIC() {
                         <h2 className="text-4xl md:text-7xl font-black mb-6 uppercase tracking-tight italic">
                             Sua Chance de <span className="text-[#F26129]">Decidir.</span>
                         </h2>
-                        <p className="text-white/60 max-w-2xl mx-auto text-xl font-medium">
+                        <p className="text-white/80 max-w-2xl mx-auto text-xl font-medium">
                             Condição exclusiva de lançamento. O preço sobe automaticamente
                             conforme as vagas acabam.
                         </p>
@@ -528,7 +528,7 @@ export default function MetodoRIC() {
                                 R$ 109
                             </div>
                         </div>
-                        <p className="text-white/60 text-base mb-10 italic uppercase font-bold tracking-tight">
+                        <p className="text-white/80 text-base mb-10 italic uppercase font-bold tracking-tight">
                             Ou 12x de R$ 10,90 — Menos de R$ 0,40 por dia.
                         </p>
 
@@ -540,7 +540,7 @@ export default function MetodoRIC() {
                             <ArrowRight className="w-8 h-8" />
                         </Button>
 
-                        <p className="mt-8 text-[10px] text-white/30 font-black uppercase tracking-[0.3em]">
+                        <p className="mt-8 text-[10px] text-white/50 font-black uppercase tracking-[0.3em]">
                             Ambiente 100% Seguro • Acesso Imediato
                         </p>
                     </motion.div>
@@ -557,7 +557,7 @@ export default function MetodoRIC() {
                         Garantia Incondicional de{" "}
                         <span className="text-emerald-400">7 Dias</span>
                     </h3>
-                    <p className="text-white/70 text-lg leading-relaxed font-medium">
+                    <p className="text-white/85 text-lg leading-relaxed font-medium">
                         Se dentro de 7 dias você sentir que o RIC não é para você, basta
                         pedir o reembolso com um clique na plataforma. Sem perguntas, sem
                         burocracia, sem ressentimento. 100% do seu dinheiro de volta.
@@ -632,7 +632,7 @@ export default function MetodoRIC() {
                         Chega de ser <br /> um{" "}
                         <span className="text-[#F26129]">Espectador.</span>
                     </h3>
-                    <p className="text-white/60 mb-14 text-xl md:text-2xl font-medium">
+                    <p className="text-white/80 mb-14 text-xl md:text-2xl font-medium">
                         Assuma o controle. Torne-se o Autor da sua própria história hoje.
                     </p>
 
@@ -643,7 +643,7 @@ export default function MetodoRIC() {
                         QUERO O SISTEMA COMPLETO
                     </Button>
 
-                    <div className="mt-16 text-white/30 text-xs leading-relaxed max-w-xl mx-auto font-medium">
+                    <div className="mt-16 text-white/50 text-xs leading-relaxed max-w-xl mx-auto font-medium">
                         © {new Date().getFullYear()} Método RIC · Todos os direitos
                         reservados
                         <br />
@@ -694,7 +694,7 @@ function CycleOption({
                     {problems.map((p, i) => (
                         <div key={i} className="flex items-start gap-3">
                             <XCircle className="w-4 h-4 text-red-400/70 mt-0.5 flex-shrink-0" />
-                            <span className="text-white/60 text-sm font-medium leading-snug">
+                            <span className="text-white/80 text-sm font-medium leading-snug">
                                 {p}
                             </span>
                         </div>
@@ -753,7 +753,7 @@ function RICSystemCard({
                         </h4>
                         <h3 className="text-4xl font-black italic">{title}</h3>
                     </div>
-                    <p className="text-white/70 text-base leading-relaxed font-medium mb-4">
+                    <p className="text-white/80 text-base leading-relaxed font-medium mb-4">
                         {desc}
                     </p>
                     <p
@@ -795,7 +795,7 @@ function BonusCard({
                 <h4 className="text-lg font-black mb-3 text-white/90 leading-snug">
                     {title}
                 </h4>
-                <p className="text-white/60 text-sm leading-relaxed font-medium mb-4">
+                <p className="text-white/80 text-sm leading-relaxed font-medium mb-4">
                     {description}
                 </p>
                 <span className="text-[#F26129] text-sm font-black italic">
@@ -831,7 +831,7 @@ function CurriculumModule({
             <AccordionContent className="pb-6">
                 <ul className="space-y-2 pl-12">
                     {bullets.map((b, i) => (
-                        <li key={i} className="flex items-center gap-2 text-white/60 text-sm font-medium">
+                        <li key={i} className="flex items-center gap-2 text-white/80 text-sm font-medium">
                             <span className="text-[#F26129]">•</span> {b}
                         </li>
                     ))}
@@ -845,7 +845,7 @@ function ComparisonItem({ name, detail }: { name: string; detail: string }) {
     return (
         <div className="flex items-center justify-between bg-white/[0.04] border border-white/10 rounded-2xl p-6 hover:bg-white/[0.06] transition-colors">
             <span className="text-white/80 font-bold text-base">{name}</span>
-            <span className="text-white/40 text-sm font-medium">{detail}</span>
+            <span className="text-white/70 text-sm font-medium">{detail}</span>
         </div>
     );
 }
@@ -867,7 +867,7 @@ function LoteCard({
         <Card
             className={`relative overflow-hidden transition-all duration-500 border-white/10 rounded-[28px] h-full ${active
                 ? "bg-white/[0.06] shadow-2xl shadow-orange-500/10"
-                : "bg-white/[0.02] opacity-30 grayscale hover:opacity-50"
+                : "bg-white/[0.02] opacity-40 grayscale hover:opacity-60"
                 }`}
         >
             {active && (
@@ -887,7 +887,7 @@ function LoteCard({
                 >
                     {label}
                 </div>
-                <div className="text-white/40 text-xs font-bold leading-relaxed">
+                <div className="text-white/60 text-xs font-bold leading-relaxed">
                     {desc}
                 </div>
             </CardContent>
@@ -904,7 +904,7 @@ function FAQItem({ value, q, a }: { value: string; q: string; a: string }) {
             <AccordionTrigger className="text-left font-black text-lg hover:no-underline py-7 text-white/90">
                 {q}
             </AccordionTrigger>
-            <AccordionContent className="text-white/60 text-base pb-7 leading-relaxed font-medium">
+            <AccordionContent className="text-white/80 text-base pb-7 leading-relaxed font-medium">
                 {a}
             </AccordionContent>
         </AccordionItem>
