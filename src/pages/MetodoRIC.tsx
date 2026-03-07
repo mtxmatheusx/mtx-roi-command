@@ -852,7 +852,7 @@ function RICSystemCard({
                         >
                             {subtitle}
                         </h4>
-                        <h3 className="text-4xl font-black italic">{title}</h3>
+                        <h3 className="text-4xl font-black italic text-white">{title}</h3>
                     </div>
                     <p className="text-white/80 text-base leading-relaxed font-medium mb-4">
                         {desc}
