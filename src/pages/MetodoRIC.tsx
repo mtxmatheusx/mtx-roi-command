@@ -9,20 +9,15 @@ import {
     ShieldCheck,
     Target,
     ArrowRight,
-    Split,
+    Settings,
     XCircle,
-    Play,
-    Gift,
-    BookOpen,
     Brain,
-    Compass,
+    Navigation,
     Award,
-    Users,
     Star,
-    DollarSign,
     MapPin,
-    ArrowDown,
 } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
@@ -301,7 +296,7 @@ export default function MetodoRIC() {
                             number="01"
                             title="ROTA"
                             subtitle="O GPS da Vida"
-                            icon={<Compass className="w-10 h-10" />}
+                            icon={<Navigation className="w-10 h-10" />}
                             desc="Defina a sua 'Única Coisa' — a meta principal que torna as outras irrelevantes. Clareza mata ansiedade."
                             highlight="Sem rota, você é apenas um passageiro."
                             color="#10B981"
@@ -319,7 +314,7 @@ export default function MetodoRIC() {
                             number="03"
                             title="CALIBRAGEM"
                             subtitle="O Volante que te Corrige"
-                            icon={<Split className="w-10 h-10" />}
+                            icon={<Settings className="w-10 h-10" />}
                             desc="Protocolo para te recolocar nos trilhos depois de falhar — sem culpa, sem drama. A maioria dos cursos ignora essa parte."
                             highlight="Nunca mais recomece do zero."
                             color="#A855F7"
@@ -871,8 +866,8 @@ function LoteCard({
     return (
         <Card
             className={`relative overflow-hidden transition-all duration-500 border-white/10 rounded-[28px] h-full ${active
-                    ? "bg-white/[0.06] shadow-2xl shadow-orange-500/10"
-                    : "bg-white/[0.02] opacity-30 grayscale hover:opacity-50"
+                ? "bg-white/[0.06] shadow-2xl shadow-orange-500/10"
+                : "bg-white/[0.02] opacity-30 grayscale hover:opacity-50"
                 }`}
         >
             {active && (
