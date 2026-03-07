@@ -634,10 +634,10 @@ export default function MetodoRIC() {
                         </p>
                     </motion.div>
                 </div>
-            </section >
+            </section>
 
             {/* ═══════════════════ GARANTIA ═══════════════════ */}
-            < section className="py-20 px-6" >
+            <section className="py-20 px-6" >
                 <motion.div
                     initial={{ opacity: 0, y: 30, scale: 0.97 }}
                     whileInView={{ opacity: 1, y: 0, scale: 1 }}
@@ -658,10 +658,10 @@ export default function MetodoRIC() {
                         burocracia, sem ressentimento. 100% do seu dinheiro de volta.
                     </p>
                 </motion.div>
-            </section >
+            </section>
 
             {/* ═══════════════════ FAQ COMPLETO ═══════════════════ */}
-            < section className="py-28 px-6 border-t border-white/5" >
+            <section className="py-28 px-6 border-t border-white/5" >
                 <div className="max-w-3xl mx-auto">
                     <motion.div
                         initial={{ opacity: 0, y: 30 }}
@@ -712,7 +712,7 @@ export default function MetodoRIC() {
                         />
                     </Accordion>
                 </div>
-            </section >
+            </section>
 
             {/* ═══════════════════ FINAL CTA ═══════════════════ */}
             < footer className="py-32 px-6 text-center border-t border-white/10 relative bg-black overflow-hidden" >
