@@ -13,7 +13,6 @@ serve(async (req) => {
 
     try {
         const { url, manualContent } = await req.json();
-        const RAPIDAPI_KEY = Deno.env.get("RAPIDAPI_KEY");
         const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 
         if (!LOVABLE_API_KEY) {
@@ -23,68 +22,28 @@ serve(async (req) => {
             );
         }
 
+        // Extract username from URL
+        const username = url ? url.split('/').filter(Boolean).pop() : "";
         let contentToAnalyze = manualContent || "";
 
-        // 1. If no manual content, try RocketAPI (RapidAPI)
-        if (!contentToAnalyze && url) {
-            const username = url.split('/').filter(Boolean).pop();
-            console.log(`[ROCKET-API] Analyzing username: ${username}`);
-
-            if (!RAPIDAPI_KEY) {
-                console.warn("RAPIDAPI_KEY not configured. Automated analysis will skip.");
-            } else {
-                try {
-                    // Step A: Get User ID
-                    const userRes = await fetch(`https://instagram47.p.rapidapi.com/get_user_id?username=${username}`, {
-                        method: 'GET',
-                        headers: {
-                            'x-rapidapi-key': RAPIDAPI_KEY,
-                            'x-rapidapi-host': 'instagram47.p.rapidapi.com'
-                        }
-                    });
-
-                    const userData = await userRes.json();
-                    const userId = userData.user_id;
-
-                    if (userId) {
-                        console.log(`[ROCKET-API] Found User ID: ${userId}. Fetching posts...`);
-                        // Step B: Get Recent Posts
-                        const postsRes = await fetch(`https://instagram47.p.rapidapi.com/get_user_posts?user_id=${userId}`, {
-                            method: 'GET',
-                            headers: {
-                                'x-rapidapi-key': RAPIDAPI_KEY,
-                                'x-rapidapi-host': 'instagram47.p.rapidapi.com'
-                            }
-                        });
-                        const postsData = await postsRes.json();
-
-                        const posts = postsData.posts || [];
-                        contentToAnalyze = `
-                            Perfil: ${username}
-                            Recent Posts Captions:
-                            ${posts.slice(0, 5).map((p: any) => p.caption?.text || "").join("\n---\n")}
-                        `;
-                    } else {
-                        console.warn("[ROCKET-API] User ID not found.");
-                    }
-                } catch (e) {
-                    console.error("RocketAPI integration error:", e);
-                }
-            }
+        // If manual content was provided, use it directly.
+        // Otherwise, use AI knowledge-based analysis from the username.
+        if (!contentToAnalyze && username) {
+            contentToAnalyze = `ANÁLISE BASEADA EM CONHECIMENTO: O perfil do Instagram é @${username}. Use todo o seu conhecimento sobre essa marca/pessoa para inferir o DNA visual.`;
         }
 
-        if (!contentToAnalyze || contentToAnalyze.length < 20) {
+        if (!contentToAnalyze) {
             return new Response(
                 JSON.stringify({
-                    error: "Não conseguimos ler o perfil automaticamente.",
-                    tip: "O Instagram bloqueou o acesso padrão. Por favor, use o botão 'Colar Texto' ou configure sua RAPIDAPI_KEY no Supabase."
+                    error: "Nenhuma informação fornecida.",
+                    tip: "Insira um link de perfil ou cole o texto da bio manualmente."
                 }),
                 { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
             );
         }
 
-        // 2. Analyze with Gemini
-        console.log("[GEMINI] Analyzing brand DNA...");
+        // Analyze with Gemini
+        console.log(`[GEMINI] Analyzing brand DNA for: ${username || "manual input"}`);
         const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
             method: "POST",
             headers: {
@@ -92,22 +51,58 @@ serve(async (req) => {
                 "Content-Type": "application/json",
             },
             body: JSON.stringify({
-                model: "google/gemini-2.0-flash-exp",
+                model: "google/gemini-3-flash-preview",
                 messages: [
                     {
                         role: "system",
-                        content: `Você é um especialista em branding. 
-                        Analise as informações de um perfil do Instagram e extraia o DNA visual.
-                        Retorne JSON: palette (5 hex codes), typography, tone, aesthetic, summary, image_prompt_style.`
+                        content: `Você é um especialista mundial em branding visual e identidade de marca para Instagram.
+
+Sua tarefa é extrair o DNA visual de um perfil do Instagram.
+Se você receber texto direto (bio, legendas), analise-o.
+Se você receber apenas o nome de usuário (@username), use TODO o seu conhecimento sobre essa marca, pessoa ou empresa.
+Seja criativo e detalhado. Infira cores, estilo tipográfico, tom de voz e estética com base no nicho e posicionamento.
+
+SEMPRE retorne um JSON válido com esta estrutura exata:
+{
+  "palette": ["#hex1", "#hex2", "#hex3", "#hex4", "#hex5"],
+  "typography": "descrição do estilo tipográfico",
+  "tone": "descrição do tom de voz",
+  "aesthetic": "descrição da estética visual",
+  "summary": "resumo do DNA da marca em 2-3 frases",
+  "image_prompt_style": "estilo para gerar imagens dessa marca"
+}`
                     },
                     {
                         role: "user",
-                        content: `Extraia o DNA visual destas informações:\n\n${contentToAnalyze.slice(0, 10000)}`
+                        content: contentToAnalyze.slice(0, 10000)
                     }
                 ],
                 response_format: { type: "json_object" }
             }),
         });
+
+        if (!aiRes.ok) {
+            const errText = await aiRes.text();
+            console.error("Gemini API Error:", aiRes.status, errText);
+
+            if (aiRes.status === 429) {
+                return new Response(
+                    JSON.stringify({ error: "Limite de requisições excedido.", tip: "Aguarde alguns segundos e tente novamente." }),
+                    { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+                );
+            }
+            if (aiRes.status === 402) {
+                return new Response(
+                    JSON.stringify({ error: "Créditos de IA insuficientes.", tip: "Adicione créditos ao seu workspace Lovable." }),
+                    { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+                );
+            }
+
+            return new Response(
+                JSON.stringify({ error: "Erro no gateway de IA.", tip: `Status: ${aiRes.status}. Tente novamente.` }),
+                { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+            );
+        }
 
         const aiData = await aiRes.json();
         const result = JSON.parse(aiData.choices[0].message.content);
