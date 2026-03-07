@@ -790,6 +790,14 @@ export default function Configuracoes() {
                 <Input type="number" min="0" step="1" value={(activeProfile as any)?.teto_diario_escala ?? 0} onChange={async (e) => { if (!activeProfile) return; await updateProfile({ id: activeProfile.id, teto_diario_escala: Number(e.target.value) } as any); }} />
               </div>
             </div>
+            {(activeProfile as any)?.last_autonomous_run && (
+              <div className="mt-6 flex items-center justify-center p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/10">
+                <p className="text-xs text-emerald-400">
+                  <span className="font-semibold uppercase mr-2">Status do Gestor IA:</span>
+                  Última execução em {new Date((activeProfile as any).last_autonomous_run).toLocaleString()}
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
 

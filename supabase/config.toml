@@ -1,4 +1,4 @@
-project_id = "wuuwifyuxyizjxltznsu"
+project_id = "ljqfhvpfgvngxpaiufmk"
 
 [functions.meta-ads-sync]
 verify_jwt = false
@@ -61,4 +61,12 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.index-creative-asset]
+verify_jwt = false
+[functions.ai-strategic-advisor]
+verify_jwt = false
+
+[functions.analyze-instagram]
+verify_jwt = false
+
+[functions.generate-carousel]
 verify_jwt = false

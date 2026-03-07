@@ -25,9 +25,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import ReactMarkdown from "react-markdown";
+import { useLocation } from "react-router-dom";
 
 type CopyOption = { copy_type?: "direct_response" | "storytelling" | "social_proof"; headline: string; primary_text: string; cta: string };
-type TargetingSuggestion = { audience_type?: string; age_range?: string; interests?: string[]; lookalike_source?: string; placements?: string };
+type TargetingSuggestion = { audience_type?: string; age_range?: string; interests?: string[]; lookalike_source?: string; placements?: string; notes?: string };
 
 interface AndromedaTargeting {
   age_min: number;
@@ -79,6 +80,7 @@ const statusConfig: Record<string, { label: string; className: string; icon: typ
 export default function LancarCampanha() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const location = useLocation();
   const { activeProfile, budgetMaximo, cpaMeta, ticketMedio, limiteEscala, budgetFrequency, productContext } = useClientProfiles();
   const { campaigns } = useMetaAds();
 
@@ -87,6 +89,27 @@ export default function LancarCampanha() {
   const [dailyBudget, setDailyBudget] = useState(50);
   const [campaignCount, setCampaignCount] = useState(1);
   const [draft, setDraft] = useState<DraftData | null>(null);
+
+  // Handle Strategic Pre-fill
+  useEffect(() => {
+    if (location.state?.prefill) {
+      const { prefill, reasoning } = location.state;
+      setObjective(prefill.objective || "OUTCOME_SALES");
+      setDailyBudget(prefill.daily_budget || 50);
+      setDraft({
+        campaign_name: prefill.campaign_name,
+        copy_options: [{ headline: "Aguardando sugestão...", primary_text: "Aguardando sugestão...", cta: "Saiba Mais" }],
+        targeting_suggestion: { notes: prefill.targeting_notes },
+        daily_budget: prefill.daily_budget || 50,
+        ai_reasoning: reasoning || ""
+      });
+      setStep(2); // Jump to review step
+      toast({ title: "Estratégia Carregada", description: "A IA já preencheu os detalhes básicos. Agora, gere a sugestão de copy." });
+
+      // Clear state to avoid re-triggering on refresh
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state, toast]);
   const [selectedCopyIdx, setSelectedCopyIdx] = useState(0);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
