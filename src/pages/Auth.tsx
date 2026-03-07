@@ -10,8 +10,8 @@ export default function Auth() {
   const { signIn, signUp, resetPassword, user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState("mtxagenciacriativa@gmail.com");
+  const [password, setPassword] = useState("Radiolife99!");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState<"login" | "signup" | "forgot">("login");

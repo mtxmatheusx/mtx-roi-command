@@ -1,5 +1,5 @@
 import { NavLink as RouterNavLink } from "react-router-dom";
-import { BarChart3, Zap, Target, ImageIcon, Settings, LogOut, Brain, Rocket, Shield, Building2, Users } from "lucide-react";
+import { BarChart3, Zap, Target, ImageIcon, Settings, LogOut, Brain, Rocket, Shield, Building2, Users, Beaker, Wand2, Layout, Sparkles } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useTranslation } from "react-i18next";
 import ProfileSelector from "@/components/ProfileSelector";
@@ -11,11 +11,16 @@ export default function AppSidebar() {
   const navItems = [
     { to: "/", label: t("nav.dashboard"), icon: BarChart3 },
     { to: "/campanhas", label: t("nav.campaigns"), icon: Target },
+    { to: "/laboratorio-estrategico", label: "Laboratório Estratégico", icon: Beaker },
     { to: "/diagnostico", label: t("nav.diagnostic"), icon: Brain },
     { to: "/lancar-campanha", label: t("nav.launchCampaign"), icon: Rocket },
     { to: "/simulador", label: t("nav.simulator"), icon: Zap },
     { to: "/criativos", label: t("nav.creatives"), icon: ImageIcon },
     { to: "/auditoria-meta", label: t("nav.auditMeta"), icon: Shield },
+    { to: "/laboratorio-visual/landing", label: "Landing Laboratório", icon: Layout },
+    { to: "/laboratorio-visual", label: "Laboratório Visual", icon: Wand2 },
+    { to: "/legacy", label: "Legacy Landing", icon: Sparkles },
+    { to: "/metodo-ric", label: "Método RIC", icon: Target },
     { to: "/personagens-ugc", label: "Personagens UGC", icon: Users },
   ];
 
@@ -39,10 +44,9 @@ export default function AppSidebar() {
         <RouterNavLink
           to="/agencia"
           className={({ isActive }) =>
-            `flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-              isActive
-                ? "bg-primary/10 text-primary"
-                : "text-muted-foreground hover:text-foreground hover:bg-accent"
+            `flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium transition-colors ${isActive
+              ? "bg-primary/10 text-primary"
+              : "text-muted-foreground hover:text-foreground hover:bg-accent"
             }`
           }
         >
@@ -61,10 +65,9 @@ export default function AppSidebar() {
             to={item.to}
             end={item.to === "/"}
             className={({ isActive }) =>
-              `flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                isActive
-                  ? "bg-primary/10 text-primary"
-                  : "text-muted-foreground hover:text-foreground hover:bg-accent"
+              `flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium transition-colors ${isActive
+                ? "bg-primary/10 text-primary"
+                : "text-muted-foreground hover:text-foreground hover:bg-accent"
               }`
             }
           >
@@ -79,10 +82,9 @@ export default function AppSidebar() {
         <RouterNavLink
           to="/configuracoes"
           className={({ isActive }) =>
-            `flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium transition-colors w-full ${
-              isActive
-                ? "bg-primary/10 text-primary"
-                : "text-muted-foreground hover:text-foreground hover:bg-accent"
+            `flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium transition-colors w-full ${isActive
+              ? "bg-primary/10 text-primary"
+              : "text-muted-foreground hover:text-foreground hover:bg-accent"
             }`
           }
         >

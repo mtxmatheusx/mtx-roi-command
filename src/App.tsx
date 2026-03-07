@@ -15,8 +15,13 @@ import Diagnostico from "./pages/Diagnostico";
 import LancarCampanha from "./pages/LancarCampanha";
 import AgencyView from "./pages/AgencyView";
 import PersonagensUGC from "./pages/PersonagensUGC";
+import LaboratorioEstrategico from "./pages/LaboratorioEstrategico";
 import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
+import LaboratorioVisual from "./pages/LaboratorioVisual";
+import LaboratorioVisualLanding from "./pages/LaboratorioVisualLanding";
+import LegacyLanding from "./pages/LegacyLanding";
+import MetodoRIC from "./pages/MetodoRIC";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -35,12 +40,17 @@ const App = () => (
             <Route path="/agencia" element={<ProtectedRoute><AgencyView /></ProtectedRoute>} />
             <Route path="/campanhas" element={<ProtectedRoute><Campanhas /></ProtectedRoute>} />
             <Route path="/diagnostico" element={<ProtectedRoute><Diagnostico /></ProtectedRoute>} />
+            <Route path="/laboratorio-estrategico" element={<ProtectedRoute><LaboratorioEstrategico /></ProtectedRoute>} />
             <Route path="/lancar-campanha" element={<ProtectedRoute><LancarCampanha /></ProtectedRoute>} />
             <Route path="/simulador" element={<ProtectedRoute><Simulador /></ProtectedRoute>} />
             <Route path="/criativos" element={<ProtectedRoute><Criativos /></ProtectedRoute>} />
             <Route path="/auditoria-meta" element={<ProtectedRoute><AuditoriaMeta /></ProtectedRoute>} />
             <Route path="/configuracoes" element={<ProtectedRoute><Configuracoes /></ProtectedRoute>} />
             <Route path="/personagens-ugc" element={<ProtectedRoute><PersonagensUGC /></ProtectedRoute>} />
+            <Route path="/laboratorio-visual/landing" element={<LaboratorioVisualLanding />} />
+            <Route path="/laboratorio-visual" element={<ProtectedRoute><LaboratorioVisual /></ProtectedRoute>} />
+            <Route path="/legacy" element={<LegacyLanding />} />
+            <Route path="/metodo-ric" element={<MetodoRIC />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
