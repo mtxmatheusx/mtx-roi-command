@@ -147,17 +147,29 @@ export default function MetodoRIC() {
                         <div className="absolute top-0 right-0 w-96 h-96 bg-[#F26129]/10 blur-[100px] rounded-full -mr-48 -mt-48" />
 
                         <div className="relative z-10 max-w-4xl">
-                            <h2 className="text-3xl md:text-5xl font-black mb-12 uppercase leading-[0.95] tracking-tight">
+                            <motion.h2
+                                initial={{ opacity: 0, y: 30 }}
+                                whileInView={{ opacity: 1, y: 0 }}
+                                viewport={{ once: true }}
+                                transition={{ duration: 0.6 }}
+                                className="text-3xl md:text-5xl font-black mb-12 uppercase leading-[0.95] tracking-tight"
+                            >
                                 Se você se identifica com isso, o{" "}
                                 <span className="text-[#F26129]">RIC foi feito para você</span>
-                            </h2>
+                            </motion.h2>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <motion.div
+                                initial={{ opacity: 0, y: 20 }}
+                                whileInView={{ opacity: 1, y: 0 }}
+                                viewport={{ once: true }}
+                                transition={{ duration: 0.5, delay: 0.2 }}
+                                className="grid grid-cols-1 md:grid-cols-2 gap-8"
+                            >
                                 <PainPoint text="Sente que corre o dia todo, mas não sai do lugar?" />
                                 <PainPoint text="Começa projetos com sede, mas abandona na 2ª semana?" />
                                 <PainPoint text="O improviso é a sua única estratégia de produtividade?" />
                                 <PainPoint text="Vive sobrecarregado pela culpa de não estar fazendo o suficiente?" />
-                            </div>
+                            </motion.div>
                         </div>
                     </div>
                 </div>
@@ -167,17 +179,35 @@ export default function MetodoRIC() {
             <section className="py-28 px-6 relative">
                 <div className="max-w-7xl mx-auto">
                     <div className="text-center mb-16">
-                        <h2 className="text-3xl md:text-5xl font-black uppercase tracking-tight mb-4">
+                        <motion.h2
+                            initial={{ opacity: 0, y: 30 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            viewport={{ once: true }}
+                            transition={{ duration: 0.6 }}
+                            className="text-3xl md:text-5xl font-black uppercase tracking-tight mb-4"
+                        >
                             E você está preso em um{" "}
                             <span className="text-[#F26129] italic">ciclo impossível</span>
-                        </h2>
-                        <p className="text-white/80 max-w-3xl mx-auto text-lg font-medium">
+                        </motion.h2>
+                        <motion.p
+                            initial={{ opacity: 0, y: 20 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            viewport={{ once: true }}
+                            transition={{ duration: 0.5, delay: 0.15 }}
+                            className="text-white/80 max-w-3xl mx-auto text-lg font-medium"
+                        >
                             Quando percebe que precisa mudar, geralmente procura uma dessas 3
                             opções. Mas nenhuma funciona de verdade:
-                        </p>
+                        </motion.p>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
+                    <motion.div
+                        initial={{ opacity: 0, y: 30 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ duration: 0.6, delay: 0.2 }}
+                        className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16"
+                    >
                         <CycleOption
                             title="Conteúdo Grátis"
                             problems={[
@@ -202,7 +232,7 @@ export default function MetodoRIC() {
                                 "Depende da agenda de outra pessoa",
                             ]}
                         />
-                    </div>
+                    </motion.div>
 
                     <div className="bg-white/[0.04] border border-white/10 rounded-[32px] p-10 md:p-16 text-center">
                         <h3 className="text-2xl md:text-3xl font-black mb-4 uppercase">
@@ -222,7 +252,12 @@ export default function MetodoRIC() {
             {/* ═══════════════════ AUTHORITY / QUEM CRIOU ═══════════════════ */}
             <section className="py-28 px-6 bg-white/[0.02] border-y border-white/5">
                 <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-                    <div>
+                    <motion.div
+                        initial={{ opacity: 0, x: -40 }}
+                        whileInView={{ opacity: 1, x: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ duration: 0.7 }}
+                    >
                         <span className="text-[#F26129] text-xs font-black uppercase tracking-[0.3em] mb-4 block">
                             Quem criou o Método RIC
                         </span>
@@ -242,9 +277,15 @@ export default function MetodoRIC() {
                             <AuthorityItem text="Especialista em Comportamento Humano" />
                             <AuthorityItem text="Anos de estudo em neuroplasticidade, hábitos e gestão de tempo aplicados à vida real" />
                         </div>
-                    </div>
+                    </motion.div>
 
-                    <div className="relative">
+                    <motion.div
+                        initial={{ opacity: 0, x: 40 }}
+                        whileInView={{ opacity: 1, x: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ duration: 0.7, delay: 0.2 }}
+                        className="relative"
+                    >
                         <div className="absolute inset-0 bg-[#F26129]/10 blur-[80px] rounded-full" />
                         <Card className="relative z-10 bg-black/60 border-white/10 backdrop-blur-xl rounded-[40px] overflow-hidden">
                             <CardContent className="p-10 space-y-6">
@@ -266,7 +307,7 @@ export default function MetodoRIC() {
                                 </div>
                             </CardContent>
                         </Card>
-                    </div>
+                    </motion.div>
                 </div>
             </section>
 
@@ -275,7 +316,13 @@ export default function MetodoRIC() {
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-[#F26129]/5 blur-[150px] rounded-full pointer-events-none" />
 
                 <div className="max-w-7xl mx-auto relative z-10">
-                    <div className="text-center mb-20">
+                    <motion.div
+                        initial={{ opacity: 0, y: 30 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ duration: 0.6 }}
+                        className="text-center mb-20"
+                    >
                         <span className="text-[#F26129] font-black uppercase tracking-[0.3em] text-xs">
                             O SISTEMA DEFINITIVO
                         </span>
@@ -289,7 +336,7 @@ export default function MetodoRIC() {
                             Não é mais um curso de produtividade. É o sistema que te coloca no
                             comando da sua própria história.
                         </p>
-                    </div>
+                    </motion.div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                         <RICSystemCard
@@ -326,7 +373,13 @@ export default function MetodoRIC() {
             {/* ═══════════════════ BÔNUS EXCLUSIVOS ═══════════════════ */}
             <section className="py-28 px-6 bg-white/[0.02] border-y border-white/5">
                 <div className="max-w-7xl mx-auto">
-                    <div className="text-center mb-16">
+                    <motion.div
+                        initial={{ opacity: 0, y: 30 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ duration: 0.6 }}
+                        className="text-center mb-16"
+                    >
                         <span className="text-[#F26129] text-xs font-black uppercase tracking-[0.3em]">
                             Bônus Exclusivos
                         </span>
@@ -338,9 +391,15 @@ export default function MetodoRIC() {
                             Materiais complementares que aceleram seus resultados e atacam
                             problemas específicos.
                         </p>
-                    </div>
+                    </motion.div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <motion.div
+                        initial={{ opacity: 0, y: 30 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ duration: 0.6, delay: 0.2 }}
+                        className="grid grid-cols-1 md:grid-cols-3 gap-8"
+                    >
                         <BonusCard
                             tag="Bônus #1"
                             title="As Duas Mentalidades + A Ciência da Neuroplasticidade"
@@ -362,21 +421,27 @@ export default function MetodoRIC() {
                             highlight="Valor: R$50"
                             icon={<MapPin className="w-8 h-8" />}
                         />
-                    </div>
+                    </motion.div>
                 </div>
             </section>
 
             {/* ═══════════════════ CURRÍCULO ═══════════════════ */}
             <section className="py-28 px-6 relative">
                 <div className="max-w-4xl mx-auto">
-                    <div className="text-center mb-16">
+                    <motion.div
+                        initial={{ opacity: 0, y: 30 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ duration: 0.6 }}
+                        className="text-center mb-16"
+                    >
                         <h2 className="text-3xl md:text-5xl font-black uppercase tracking-tight">
                             Veja o{" "}
                             <span className="text-[#F26129] italic">
                                 currículo completo
                             </span>
                         </h2>
-                    </div>
+                    </motion.div>
 
                     <Accordion type="single" collapsible className="space-y-4">
                         <CurriculumModule
@@ -431,7 +496,13 @@ export default function MetodoRIC() {
             {/* ═══════════════════ COMPARAÇÃO DE PREÇO ═══════════════════ */}
             <section className="py-28 px-6 bg-white/[0.02] border-y border-white/5">
                 <div className="max-w-5xl mx-auto">
-                    <div className="text-center mb-16">
+                    <motion.div
+                        initial={{ opacity: 0, y: 30 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ duration: 0.6 }}
+                        className="text-center mb-16"
+                    >
                         <h2 className="text-3xl md:text-5xl font-black uppercase tracking-tight mb-4">
                             Por que R$109 é um{" "}
                             <span className="text-[#F26129] italic">
@@ -442,9 +513,15 @@ export default function MetodoRIC() {
                             Compare com o que você pagaria por alternativas que entregam muito
                             menos:
                         </p>
-                    </div>
+                    </motion.div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ duration: 0.5, delay: 0.2 }}
+                        className="grid grid-cols-1 md:grid-cols-2 gap-6"
+                    >
                         <ComparisonItem
                             name="Sessão de Coaching"
                             detail="R$300 - R$500 por sessão"
@@ -461,21 +538,33 @@ export default function MetodoRIC() {
                             name="Terapia Comportamental"
                             detail="R$250 - R$400 por sessão"
                         />
-                    </div>
+                    </motion.div>
 
-                    <div className="mt-12 text-center">
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        whileInView={{ opacity: 1, scale: 1 }}
+                        viewport={{ once: true }}
+                        transition={{ duration: 0.5, delay: 0.3 }}
+                        className="mt-12 text-center"
+                    >
                         <p className="text-white/90 text-2xl font-black">
                             O RIC entrega um sistema completo por{" "}
                             <span className="text-[#F26129] text-4xl">R$ 109</span>
                         </p>
-                    </div>
+                    </motion.div>
                 </div>
             </section>
 
             {/* ═══════════════════ PRICING ═══════════════════ */}
             <section className="py-28 px-6 relative">
                 <div className="max-w-7xl mx-auto">
-                    <div className="text-center mb-20">
+                    <motion.div
+                        initial={{ opacity: 0, y: 30 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ duration: 0.6 }}
+                        className="text-center mb-20"
+                    >
                         <h2 className="text-4xl md:text-7xl font-black mb-6 uppercase tracking-tight italic">
                             Sua Chance de <span className="text-[#F26129]">Decidir.</span>
                         </h2>
@@ -483,7 +572,7 @@ export default function MetodoRIC() {
                             Condição exclusiva de lançamento. O preço sobe automaticamente
                             conforme as vagas acabam.
                         </p>
-                    </div>
+                    </motion.div>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
                         <LoteCard
@@ -545,11 +634,17 @@ export default function MetodoRIC() {
                         </p>
                     </motion.div>
                 </div>
-            </section>
+            </section >
 
             {/* ═══════════════════ GARANTIA ═══════════════════ */}
-            <section className="py-20 px-6">
-                <div className="max-w-3xl mx-auto text-center bg-white/[0.04] border border-white/10 rounded-[40px] p-10 md:p-16">
+            < section className="py-20 px-6" >
+                <motion.div
+                    initial={{ opacity: 0, y: 30, scale: 0.97 }}
+                    whileInView={{ opacity: 1, y: 0, scale: 1 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.6 }}
+                    className="max-w-3xl mx-auto text-center bg-white/[0.04] border border-white/10 rounded-[40px] p-10 md:p-16"
+                >
                     <div className="w-20 h-20 rounded-3xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mx-auto mb-8">
                         <ShieldCheck className="w-10 h-10 text-emerald-400" />
                     </div>
@@ -562,13 +657,19 @@ export default function MetodoRIC() {
                         pedir o reembolso com um clique na plataforma. Sem perguntas, sem
                         burocracia, sem ressentimento. 100% do seu dinheiro de volta.
                     </p>
-                </div>
-            </section>
+                </motion.div>
+            </section >
 
             {/* ═══════════════════ FAQ COMPLETO ═══════════════════ */}
-            <section className="py-28 px-6 border-t border-white/5">
+            < section className="py-28 px-6 border-t border-white/5" >
                 <div className="max-w-3xl mx-auto">
-                    <div className="text-center mb-16">
+                    <motion.div
+                        initial={{ opacity: 0, y: 30 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ duration: 0.6 }}
+                        className="text-center mb-16"
+                    >
                         <span className="text-[#F26129] text-xs font-black uppercase tracking-[0.3em]">
                             Ainda tem dúvida?
                         </span>
@@ -576,7 +677,7 @@ export default function MetodoRIC() {
                             Talvez você esteja{" "}
                             <span className="text-[#F26129] italic">pensando...</span>
                         </h2>
-                    </div>
+                    </motion.div>
 
                     <Accordion type="single" collapsible className="space-y-4">
                         <FAQItem
@@ -611,10 +712,10 @@ export default function MetodoRIC() {
                         />
                     </Accordion>
                 </div>
-            </section>
+            </section >
 
             {/* ═══════════════════ FINAL CTA ═══════════════════ */}
-            <footer className="py-32 px-6 text-center border-t border-white/10 relative bg-black overflow-hidden">
+            < footer className="py-32 px-6 text-center border-t border-white/10 relative bg-black overflow-hidden" >
                 <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[2px] bg-gradient-to-r from-transparent via-[#F26129]/50 to-transparent" />
 
                 <div className="max-w-5xl mx-auto relative z-10">
@@ -659,8 +760,8 @@ export default function MetodoRIC() {
                         <span>MTX ESTRATÉGIAS DIGITAIS</span>
                     </div>
                 </div>
-            </footer>
-        </div>
+            </footer >
+        </div >
     );
 }
 
