@@ -649,8 +649,18 @@ export default function LancarCampanha() {
 
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Opções de Copy</CardTitle>
-                <CardDescription>Selecione a melhor copy para seu anúncio</CardDescription>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-lg">Opções de Copy</CardTitle>
+                    <CardDescription>Selecione a melhor copy para seu anúncio</CardDescription>
+                  </div>
+                  {draft.copy_options.length === 1 && draft.copy_options[0].headline === "Aguardando sugestão..." && (
+                    <Button onClick={handleGenerateAI} disabled={isGenerating} size="sm" className="gap-2">
+                      {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Brain className="w-4 h-4" />}
+                      {isGenerating ? "Gerando..." : "Gerar Copy com IA"}
+                    </Button>
+                  )}
+                </div>
               </CardHeader>
               <CardContent className="space-y-3">
                 {draft.copy_options.map((copy, i) => {
