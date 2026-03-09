@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { Switch } from "@/components/ui/switch";
 import { Shield, Save, Loader2, CheckCircle, KeyRound, Globe, Brain, X, ExternalLink, Trash2, Upload, FileText, Target } from "lucide-react";
 import { z } from "zod";
 import { useNavigate } from "react-router-dom";
