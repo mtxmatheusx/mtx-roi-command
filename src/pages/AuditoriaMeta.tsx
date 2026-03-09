@@ -153,6 +153,26 @@ export default function AuditoriaMeta() {
           </div>
         )}
 
+        {/* Account Metrics Summary */}
+        {accountMetrics && (
+          <Card className="border-primary/20 bg-primary/5">
+            <CardContent className="py-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Shield className="w-4 h-4 text-primary" />
+                <span className="text-sm font-semibold">Dados de Performance (últimos 7 dias)</span>
+                <Badge variant="outline" className="text-[10px] ml-auto">{accountMetrics.period}</Badge>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-3 text-xs">
+                <div><span className="text-muted-foreground">Investimento:</span> <strong>R$ {accountMetrics.spend?.toFixed(2)}</strong></div>
+                <div><span className="text-muted-foreground">ROAS:</span> <strong className={accountMetrics.roas > 3 ? "text-success" : ""}>{accountMetrics.roas?.toFixed(2)}x</strong></div>
+                <div><span className="text-muted-foreground">CPA:</span> <strong>R$ {accountMetrics.cpa?.toFixed(2)}</strong></div>
+                <div><span className="text-muted-foreground">Compras:</span> <strong>{accountMetrics.purchases}</strong></div>
+                <div><span className="text-muted-foreground">CTR:</span> <strong>{accountMetrics.ctr?.toFixed(2)}%</strong></div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {recommendations.length === 0 && !isLoading && (
           <Card>
             <CardContent className="py-12 text-center">
