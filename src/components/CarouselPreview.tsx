@@ -24,6 +24,7 @@ type CarouselSlide = {
 type CarouselData = {
     title: string;
     slides: CarouselSlide[];
+    captions?: Record<string, string>;
 };
 
 export default function CarouselPreview({ visualDNA }: CarouselPreviewProps) {
