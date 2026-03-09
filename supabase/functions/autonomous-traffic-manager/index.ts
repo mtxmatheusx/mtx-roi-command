@@ -24,9 +24,10 @@ interface CampaignInsight {
 interface Decision {
   campaign_id: string;
   adset_id?: string;
-  action: string; // "pause" | "scale" | "duplicate_scale" | "maintain"
+  action: string; // "pause" | "scale" | "duplicate_scale" | "rollback" | "maintain"
   reason: string;
   new_budget?: number;
+  previous_budget?: number;
 }
 
 async function getAIDecision(
