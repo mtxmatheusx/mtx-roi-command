@@ -16,7 +16,7 @@ import ReactMarkdown from "react-markdown";
 import {
   Plus, Loader2, AlertTriangle, Users, Zap, Target, DollarSign,
   MessageSquare, Send, Bot, User, Sparkles, Upload, X, Image as ImageIcon,
-  Globe, BarChart3, Settings2, Megaphone, ChevronRight
+  Globe, BarChart3, Settings2, Megaphone, ChevronRight, Trash2, ShieldMinus
 } from "lucide-react";
 
 type Msg = { role: "user" | "assistant"; content: string };
