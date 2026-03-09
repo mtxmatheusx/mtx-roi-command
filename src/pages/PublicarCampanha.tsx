@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import AppLayout from "@/components/AppLayout";
 import ActiveProfileHeader from "@/components/ActiveProfileHeader";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -19,7 +19,7 @@ import {
 import {
   Rocket, ShoppingBag, Eye, Send, Loader2, CheckCircle2, XCircle, AlertTriangle,
   Plus, Upload, Trash2, ExternalLink, RefreshCw, Image as ImageIcon, FileText,
-  Target, DollarSign, Users, Globe, Sparkles, Clock
+  Target, DollarSign, Users, Globe, Sparkles, Clock, Video, X
 } from "lucide-react";
 import { useClientProfiles } from "@/hooks/useClientProfiles";
 import { useAuth } from "@/hooks/useAuth";
@@ -40,6 +40,7 @@ interface CampaignForm {
   isRemarketing: boolean;
   remarketingType: string;
   retentionDays: string;
+  audienceId: string;
 }
 
 interface CatalogItem {
@@ -71,7 +72,7 @@ const defaultForm: CampaignForm = {
   name: "", objective: "OUTCOME_SALES", dailyBudget: "50",
   destinationUrl: "", primaryText: "", headline: "", cta: "LEARN_MORE",
   useCatalog: false, isRemarketing: false, remarketingType: "website_visitors",
-  retentionDays: "30",
+  retentionDays: "30", audienceId: "",
 };
 
 export default function PublicarCampanha() {
@@ -92,6 +93,10 @@ export default function PublicarCampanha() {
   const [aiGenerating, setAiGenerating] = useState(false);
   const [recentDrafts, setRecentDrafts] = useState<any[]>([]);
   const [creatingAudience, setCreatingAudience] = useState(false);
+  const [creativeUrls, setCreativeUrls] = useState<string[]>([]);
+  const [uploadingCreative, setUploadingCreative] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const profileId = activeProfile?.id;
   const pageId = activeProfile?.page_id;
   const pixelId = activeProfile?.pixel_id;
@@ -134,6 +139,39 @@ export default function PublicarCampanha() {
   }, [user, profileId]);
 
   useEffect(() => { loadDrafts(); }, [loadDrafts]);
+
+  /* ─── Creative Upload ─── */
+  const handleCreativeUpload = async (files: FileList | null) => {
+    if (!files || !user || !profileId) return;
+    setUploadingCreative(true);
+    try {
+      const newUrls: string[] = [];
+      for (const file of Array.from(files)) {
+        if (file.size > 20 * 1024 * 1024) {
+          toast({ title: "Arquivo muito grande", description: `${file.name} excede 20MB.`, variant: "destructive" });
+          continue;
+        }
+        const ext = file.name.split(".").pop();
+        const path = `${user.id}/${profileId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+        const { error } = await supabase.storage.from("creative-assets").upload(path, file);
+        if (error) {
+          toast({ title: "Erro no upload", description: error.message, variant: "destructive" });
+          continue;
+        }
+        const { data: urlData } = supabase.storage.from("creative-assets").getPublicUrl(path);
+        newUrls.push(urlData.publicUrl);
+      }
+      if (newUrls.length > 0) {
+        setCreativeUrls((prev) => [...prev, ...newUrls]);
+        toast({ title: "✅ Upload concluído", description: `${newUrls.length} arquivo(s) adicionado(s).` });
+      }
+    } catch (e) {
+      toast({ title: "Erro", description: (e as Error).message, variant: "destructive" });
+    } finally {
+      setUploadingCreative(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
 
   /* ─── AI Copy Generation ─── */
   const handleGenerateAI = async () => {
@@ -237,6 +275,10 @@ export default function PublicarCampanha() {
           targeting_notes: form.primaryText,
           use_catalog: form.useCatalog,
           destination_url: form.destinationUrl,
+          creative_url: creativeUrls.length > 0 ? creativeUrls[0] : undefined,
+          headline: form.headline,
+          cta_type: form.cta,
+          audience_id: form.isRemarketing && form.audienceId ? form.audienceId : undefined,
         },
       });
 
@@ -433,6 +475,60 @@ export default function PublicarCampanha() {
                       </div>
                     </div>
 
+                    {/* ─── Creative Upload Section ─── */}
+                    <Separator />
+                    <div className="space-y-3">
+                      <Label className="flex items-center gap-1.5">
+                        <ImageIcon className="w-4 h-4 text-primary" />
+                        Criativos do Anúncio
+                      </Label>
+
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*,video/*"
+                        multiple
+                        className="hidden"
+                        onChange={(e) => handleCreativeUpload(e.target.files)}
+                      />
+
+                      {creativeUrls.length > 0 && (
+                        <div className="grid grid-cols-3 gap-2">
+                          {creativeUrls.map((url, i) => (
+                            <div key={i} className="relative group rounded-lg overflow-hidden border border-border aspect-square bg-muted">
+                              {url.match(/\.(mp4|mov|webm)$/i) ? (
+                                <div className="w-full h-full flex items-center justify-center">
+                                  <Video className="w-6 h-6 text-muted-foreground" />
+                                </div>
+                              ) : (
+                                <img src={url} alt={`Creative ${i + 1}`} className="w-full h-full object-cover" />
+                              )}
+                              <button
+                                onClick={() => setCreativeUrls((prev) => prev.filter((_, j) => j !== i))}
+                                className="absolute top-1 right-1 w-5 h-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={uploadingCreative}
+                        className="gap-1.5 w-full"
+                      >
+                        {uploadingCreative ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+                        {uploadingCreative ? "Enviando..." : "Upload de Criativos"}
+                      </Button>
+                      <p className="text-[11px] text-muted-foreground">
+                        Imagens ou vídeos que serão injetados no anúncio. A primeira imagem será usada como visual principal.
+                      </p>
+                    </div>
+
                     {/* ─── Remarketing Section ─── */}
                     <Separator />
                     <div className="space-y-3">
@@ -479,6 +575,21 @@ export default function PublicarCampanha() {
                             </div>
                           </div>
 
+                          <div className="space-y-1.5">
+                            <Label className="text-xs">ID do Público (Audience ID)</Label>
+                            <Input
+                              placeholder="Ex: 120243487645360596"
+                              value={form.audienceId}
+                              onChange={(e) => updateField("audienceId", e.target.value)}
+                              className="h-9 font-mono text-xs"
+                            />
+                            <p className="text-[11px] text-muted-foreground">
+                              Cole o ID do público criado anteriormente para segmentar esta campanha.
+                            </p>
+                          </div>
+
+                          <Separator className="my-2" />
+
                           <Button
                             variant="outline"
                             size="sm"
@@ -487,7 +598,7 @@ export default function PublicarCampanha() {
                             className="gap-1.5 w-full"
                           >
                             {creatingAudience ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Users className="w-3.5 h-3.5" />}
-                            {creatingAudience ? "Criando público..." : "Criar Público de Remarketing"}
+                            {creatingAudience ? "Criando público..." : "Criar Novo Público de Remarketing"}
                           </Button>
 
                           <p className="text-[11px] text-muted-foreground">

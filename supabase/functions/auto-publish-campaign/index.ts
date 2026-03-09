@@ -39,7 +39,7 @@ serve(async (req) => {
     let body: any;
     try { body = JSON.parse(rawBody); } catch { return fail("JSON inválido"); }
 
-    const { profileId, campaign_name, objective, daily_budget, targeting_notes, use_catalog, destination_url } = body;
+    const { profileId, campaign_name, objective, daily_budget, targeting_notes, use_catalog, destination_url, creative_url, headline, cta_type, audience_id } = body;
     if (!profileId || !campaign_name) return fail("profileId e campaign_name obrigatórios");
 
     // Fetch profile
@@ -111,6 +111,9 @@ serve(async (req) => {
       geo_locations: { countries: ["BR"] },
       targeting_automation: { advantage_audience: 1 },
     };
+    if (audience_id) {
+      targetingObj.custom_audiences = [{ id: audience_id }];
+    }
 
     const adSetBody: Record<string, unknown> = {
       name: `${campaign_name} - Conjunto Auto`,
@@ -151,6 +154,16 @@ serve(async (req) => {
     steps.push(`✅ Conjunto: ${metaAdSetId}`);
 
     // ─── Step 3: Ad ───
+    const linkData: Record<string, unknown> = {
+      message: targeting_notes || "Descubra como transformar seus resultados",
+      link: linkUrl,
+      name: headline || campaign_name,
+      call_to_action: { type: cta_type || "LEARN_MORE", value: { link: linkUrl } },
+    };
+    if (creative_url) {
+      linkData.picture = creative_url;
+    }
+
     const adBody = {
       name: `${campaign_name} - Anúncio Auto`,
       adset_id: metaAdSetId,
@@ -159,12 +172,7 @@ serve(async (req) => {
       creative: {
         object_story_spec: {
           page_id: String(pageId),
-          link_data: {
-            message: targeting_notes || "Descubra como transformar seus resultados",
-            link: linkUrl,
-            name: campaign_name,
-            call_to_action: { type: "LEARN_MORE", value: { link: linkUrl } },
-          },
+          link_data: linkData,
         },
       },
     };
