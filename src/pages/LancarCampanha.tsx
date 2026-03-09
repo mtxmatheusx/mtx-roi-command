@@ -681,15 +681,15 @@ export default function LancarCampanha() {
               <CardDescription>Defina o objetivo, orçamento e quantidade de campanhas.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="space-y-2">
-                  <Label>Objetivo</Label>
+                  <Label>Objetivo *</Label>
                   <Select value={objective} onValueChange={setObjective}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="OUTCOME_SALES">Vendas</SelectItem>
-                      <SelectItem value="OUTCOME_LEADS">Leads</SelectItem>
-                      <SelectItem value="OUTCOME_ENGAGEMENT">Engajamento</SelectItem>
+                      {OBJECTIVES.map((o) => (
+                        <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -698,10 +698,32 @@ export default function LancarCampanha() {
                   <Input type="number" value={dailyBudget} onChange={(e) => setDailyBudget(Number(e.target.value))} min={1} />
                 </div>
                 <div className="space-y-2">
+                  <Label>CTA (Call to Action)</Label>
+                  <Select value={ctaType} onValueChange={setCtaType}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {CTA_OPTIONS.map((c) => (
+                        <SelectItem key={c} value={c}>{c.replace(/_/g, " ")}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
                   <Label>Qtd. Campanhas (1-5)</Label>
                   <Input type="number" value={campaignCount} onChange={(e) => setCampaignCount(Math.max(1, Math.min(5, Number(e.target.value))))} min={1} max={5} />
                 </div>
               </div>
+
+              <div className="space-y-2">
+                <Label>URL de Destino {!useCatalog && "*"}</Label>
+                <Input
+                  placeholder="https://seu-produto.com/oferta"
+                  value={destinationUrl}
+                  onChange={(e) => setDestinationUrl(e.target.value)}
+                  disabled={useCatalog}
+                />
+              </div>
+
               {campaignCount > 1 && (
                 <div className="flex items-center gap-2 text-xs text-primary bg-primary/10 border border-primary/20 rounded-lg px-4 py-2">
                   <Rocket className="w-4 h-4 shrink-0" />
@@ -718,6 +740,65 @@ export default function LancarCampanha() {
                   </label>
                 </div>
               )}
+
+              {/* Remarketing Section */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-3 p-3 rounded-lg border border-border bg-secondary/50">
+                  <Checkbox id="useRemarketing" checked={isRemarketing} onCheckedChange={(v) => setIsRemarketing(!!v)} />
+                  <label htmlFor="useRemarketing" className="text-sm cursor-pointer flex items-center gap-2">
+                    <Users className="w-4 h-4 text-primary" />
+                    Campanha de Remarketing
+                    <span className="text-xs text-muted-foreground">Alcance quem já interagiu com seu negócio</span>
+                  </label>
+                </div>
+
+                {isRemarketing && (
+                  <div className="p-4 rounded-lg border border-primary/20 bg-primary/5 space-y-3">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">Tipo de Público</Label>
+                        <Select value={remarketingType} onValueChange={setRemarketingType}>
+                          <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="website_visitors">🌐 Visitantes do Site</SelectItem>
+                            <SelectItem value="engagement">💬 Engajamento (Página)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">Retenção (dias)</Label>
+                        <Select value={retentionDays} onValueChange={setRetentionDays}>
+                          <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            {["7", "14", "30", "60", "90", "180"].map((d) => (
+                              <SelectItem key={d} value={d}>{d} dias</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">Audience ID (opcional)</Label>
+                        <Input
+                          placeholder="Ex: 120243487645360596"
+                          value={audienceId}
+                          onChange={(e) => setAudienceId(e.target.value)}
+                          className="h-9 font-mono text-xs"
+                        />
+                      </div>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleCreateAudience}
+                      disabled={creatingAudience}
+                      className="gap-1.5 w-full"
+                    >
+                      {creatingAudience ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Users className="w-3.5 h-3.5" />}
+                      {creatingAudience ? "Criando público..." : "Criar Novo Público de Remarketing"}
+                    </Button>
+                  </div>
+                )}
+              </div>
               <div className="flex gap-3 pt-2">
                 <Button onClick={handleGenerateAI} disabled={isGenerating} className="gap-2">
                   {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Brain className="w-4 h-4" />}
