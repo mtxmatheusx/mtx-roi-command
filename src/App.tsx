@@ -52,7 +52,7 @@ const App = () => (
             <Route path="/personagens-ugc" element={<ProtectedRoute><PersonagensUGC /></ProtectedRoute>} />
             <Route path="/agente-autonomo" element={<ProtectedRoute><AgenteAutonomo /></ProtectedRoute>} />
             <Route path="/feedback-copy" element={<ProtectedRoute><FeedbackAdmin /></ProtectedRoute>} />
-            <Route path="/publicar" element={<ProtectedRoute><PublicarCampanha /></ProtectedRoute>} />
+            <Route path="/publicar" element={<ProtectedRoute><LancarCampanha /></ProtectedRoute>} />
             <Route path="/laboratorio-visual/landing" element={<LaboratorioVisualLanding />} />
             <Route path="/laboratorio-visual" element={<ProtectedRoute><LaboratorioVisual /></ProtectedRoute>} />
             <Route path="/legacy" element={<LegacyLanding />} />
