@@ -1519,7 +1519,7 @@ export default function LancarCampanha() {
                     )}
                     <p className="text-xs text-muted-foreground whitespace-pre-line">{publishResult.error}</p>
                     {publishResult.step && (
-                      <p className="text-xs text-amber-400">Etapa com falha: {publishResult.step === "campaign" ? "Campanha" : publishResult.step === "adset" ? "Conjunto de Anúncios" : publishResult.step === "ad" ? "Anúncio" : publishResult.step === "media_upload" ? "Upload de Mídia" : publishResult.step === "ad_validation" ? "Validação do Anúncio" : publishResult.step}</p>
+                      <p className="text-xs text-warning">Etapa com falha: {publishResult.step === "campaign" ? "Campanha" : publishResult.step === "adset" ? "Conjunto de Anúncios" : publishResult.step === "ad" ? "Anúncio" : publishResult.step === "media_upload" ? "Upload de Mídia" : publishResult.step === "ad_validation" ? "Validação do Anúncio" : publishResult.step}</p>
                     )}
                     {publishResult.rollback && (
                       <p className="text-xs text-muted-foreground">🧹 Campanha parcial apagada automaticamente para manter o gerenciador limpo.</p>
