@@ -188,6 +188,28 @@ export default function Configuracoes() {
     } finally { setSaving(false); }
   };
 
+  const handleFetchCatalogs = async () => {
+    if (!activeProfile?.id) return;
+    setCatalogsLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("fetch-meta-catalogs", {
+        body: { profileId: activeProfile.id },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      setAvailableCatalogs(data.catalogs || []);
+      if (data.catalogs?.length === 0) {
+        toast({ title: "Nenhum catálogo encontrado", description: "Nenhum catálogo de produtos foi encontrado nesta conta." });
+      } else {
+        toast({ title: `${data.catalogs.length} catálogo(s) encontrado(s)`, description: "Selecione um para vincular." });
+      }
+    } catch (err) {
+      toast({ title: "Erro ao buscar catálogos", description: (err as Error).message, variant: "destructive" });
+    } finally {
+      setCatalogsLoading(false);
+    }
+  };
+
   const handleTestConnection = async () => {
     if (!form.adAccountId || form.adAccountId === "act_") { toast({ title: "Erro", description: "Preencha o Ad Account ID.", variant: "destructive" }); return; }
     setTestResult("loading");
