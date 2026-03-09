@@ -12,14 +12,21 @@ interface MetricCardProps {
   invertDelta?: boolean;
 }
 
-const variantStyles = {
-  default: "bg-card border-border",
-  profit: "bg-card border-success/30",
-  danger: "bg-card border-destructive/30",
-  highlight: "bg-card border-primary/30",
+const variantAccent: Record<string, string> = {
+  default: "bg-muted/50",
+  profit: "bg-success/8",
+  danger: "bg-destructive/8",
+  highlight: "bg-primary/8",
 };
 
-const valueStyles = {
+const variantIcon: Record<string, string> = {
+  default: "text-muted-foreground",
+  profit: "text-success",
+  danger: "text-destructive",
+  highlight: "text-primary",
+};
+
+const valueColor: Record<string, string> = {
   default: "text-foreground",
   profit: "text-success",
   danger: "text-destructive",
@@ -33,25 +40,30 @@ export default function MetricCard({ title, value, subtitle, variant = "default"
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 12 }}
+      initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
-      className={`rounded-lg border p-5 ${variantStyles[variant]}`}
+      transition={{ duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] }}
+      className="glass-card p-5 flex flex-col gap-3"
     >
-      <div className="flex items-center justify-between mb-1.5">
-        <span className="text-xs font-medium text-muted-foreground">{title}</span>
-        {icon && <span className="text-muted-foreground">{icon}</span>}
-      </div>
-      <p className={`text-2xl font-semibold tracking-tight ${valueStyles[variant]}`}>{value}</p>
-      <div className="flex items-center gap-2 mt-1">
-        {hasDelta && (
-          <span className={`flex items-center gap-0.5 text-xs font-medium ${isPositive ? "text-success" : isNegative ? "text-destructive" : "text-muted-foreground"}`}>
-            {isPositive ? <TrendingUp className="w-3 h-3" /> : isNegative ? <TrendingDown className="w-3 h-3" /> : null}
-            {delta! > 0 ? "+" : ""}{delta!.toFixed(1)}%
-            <span className="text-muted-foreground ml-1">vs anterior</span>
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-medium text-muted-foreground tracking-wide uppercase">{title}</span>
+        {icon && (
+          <span className={`w-8 h-8 rounded-lg flex items-center justify-center ${variantAccent[variant]} ${variantIcon[variant]}`}>
+            {icon}
           </span>
         )}
-        {!hasDelta && subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
+      </div>
+      <p className={`text-2xl font-bold tracking-tight hero-number ${valueColor[variant]}`}>{value}</p>
+      <div className="flex items-center gap-2">
+        {hasDelta && (
+          <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full
+            ${isPositive ? "bg-success/10 text-success" : isNegative ? "bg-destructive/10 text-destructive" : "bg-muted text-muted-foreground"}`}>
+            {isPositive ? <TrendingUp className="w-3 h-3" /> : isNegative ? <TrendingDown className="w-3 h-3" /> : null}
+            {delta! > 0 ? "+" : ""}{delta!.toFixed(1)}%
+          </span>
+        )}
+        {hasDelta && <span className="text-[10px] text-muted-foreground">vs período anterior</span>}
+        {!hasDelta && subtitle && <p className="text-xs text-muted-foreground">{subtitle}</p>}
       </div>
     </motion.div>
   );
