@@ -18,7 +18,8 @@ import DashboardTab from "@/components/dashboard/DashboardTab";
 import CreateCampaignTab from "@/components/dashboard/CreateCampaignTab";
 import CreateAudienceTab from "@/components/dashboard/CreateAudienceTab";
 import CreateAdTab from "@/components/dashboard/CreateAdTab";
-import { DollarSign, TrendingUp, Target, BarChart3, Loader2, AlertTriangle, RefreshCw, Eye, MousePointerClick, ShoppingBag, ShieldCheck, OctagonAlert, Activity, Plus, Users, Zap } from "lucide-react";
+import CampaignManagerTab from "@/components/dashboard/CampaignManagerTab";
+import { DollarSign, TrendingUp, Target, BarChart3, Loader2, AlertTriangle, RefreshCw, Eye, MousePointerClick, ShoppingBag, ShieldCheck, OctagonAlert, Activity, Plus, Users, Zap, Briefcase } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface LogEntry {
