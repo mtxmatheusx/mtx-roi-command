@@ -346,14 +346,26 @@ export default function AIChatPanel() {
             </Button>
           )}
           {action && action.action === "create_campaign" && (
-            <Button
-              onClick={() => handleExecuteAction(action)}
-              className="w-full gap-2 bg-green-600 hover:bg-green-700 text-white"
-              size="sm"
-            >
-              <Rocket className="h-4 w-4" />
-              🚀 Executar: {action.campaign_name?.slice(0, 30)}...
-            </Button>
+            <div className="space-y-1.5 w-full">
+              <Button
+                onClick={() => handleAutoPublish(action)}
+                disabled={executingAction}
+                className="w-full gap-2 bg-primary hover:bg-primary/90 text-primary-foreground"
+                size="sm"
+              >
+                {executingAction ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
+                ⚡ Publicar Direto (sem wizard)
+              </Button>
+              <Button
+                onClick={() => handleExecuteAction(action)}
+                variant="outline"
+                className="w-full gap-2"
+                size="sm"
+              >
+                <Rocket className="h-4 w-4" />
+                🚀 Abrir no Wizard: {action.campaign_name?.slice(0, 25)}...
+              </Button>
+            </div>
           )}
         </div>
       </div>
