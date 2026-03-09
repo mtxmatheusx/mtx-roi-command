@@ -148,6 +148,7 @@ serve(async (req) => {
       optimization_goal: adSetData.optimization_goal || "LINK_CLICKS",
       bid_strategy: adSetData.bid_strategy || "LOWEST_COST_WITHOUT_CAP",
       targeting: adSetData.targeting || { geo_locations: { countries: ["BR"] } },
+      is_adset_budget_sharing_enabled: false,
       status: "PAUSED",
       access_token: accessToken,
     };
