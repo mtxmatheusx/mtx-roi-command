@@ -78,6 +78,7 @@ export default function AgenteAutonomo() {
       case "guardian": return <Pause className="w-4 h-4 text-destructive" />;
       case "agent_scale":
       case "auto_scale": return <TrendingUp className="w-4 h-4 text-success" />;
+      case "agent_duplicate": return <Zap className="w-4 h-4 text-primary" />;
       case "kill_switch": return <AlertTriangle className="w-4 h-4 text-amber-500" />;
       default: return <Activity className="w-4 h-4" />;
     }
