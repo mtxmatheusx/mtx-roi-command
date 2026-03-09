@@ -91,7 +91,7 @@ export default function PublicarCampanha() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [aiGenerating, setAiGenerating] = useState(false);
   const [recentDrafts, setRecentDrafts] = useState<any[]>([]);
-
+  const [creatingAudience, setCreatingAudience] = useState(false);
   const profileId = activeProfile?.id;
   const pageId = activeProfile?.page_id;
   const pixelId = activeProfile?.pixel_id;
