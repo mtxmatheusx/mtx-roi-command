@@ -40,6 +40,7 @@ interface CampaignForm {
   isRemarketing: boolean;
   remarketingType: string;
   retentionDays: string;
+  audienceId: string;
 }
 
 interface CatalogItem {
