@@ -214,8 +214,8 @@ export default function AgenteAutonomo() {
                     <div className="mt-3 space-y-2">
                       {activeResult.actions.map((action: any, i: number) => (
                         <div key={i} className="flex items-center gap-2 text-xs p-2 rounded bg-background border">
-                          {action.action === "pause" ? <Pause className="w-3 h-3 text-destructive" /> : <TrendingUp className="w-3 h-3 text-success" />}
-                          <span className="font-medium">{action.action === "pause" ? "PAUSOU" : "ESCALOU"}</span>
+                          {action.action === "pause" ? <Pause className="w-3 h-3 text-destructive" /> : action.action === "duplicate_scale" ? <Zap className="w-3 h-3 text-primary" /> : <TrendingUp className="w-3 h-3 text-success" />}
+                          <span className="font-medium">{action.action === "pause" ? "PAUSOU" : action.action === "duplicate_scale" ? "DUPLICOU" : "ESCALOU"}</span>
                           <span className="text-muted-foreground flex-1">{action.reason}</span>
                           {action.old_budget != null && action.new_budget != null && (
                             <span className="text-success font-mono">R$ {action.old_budget.toFixed(2)} → R$ {action.new_budget.toFixed(2)}</span>

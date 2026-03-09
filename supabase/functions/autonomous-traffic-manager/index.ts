@@ -21,12 +21,21 @@ interface CampaignInsight {
   daily_budget: number;
 }
 
+interface Decision {
+  campaign_id: string;
+  adset_id?: string;
+  action: string; // "pause" | "scale" | "duplicate_scale" | "maintain"
+  reason: string;
+  new_budget?: number;
+}
+
 async function getAIDecision(
   LOVABLE_API_KEY: string,
   profileName: string,
   profileConfig: any,
-  campaigns: CampaignInsight[]
-): Promise<{ decisions: { campaign_id: string; action: string; reason: string; new_budget?: number }[]; summary: string }> {
+  campaigns: CampaignInsight[],
+  adsets: any[]
+): Promise<{ decisions: Decision[]; summary: string }> {
   try {
     const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -46,16 +55,23 @@ REGRAS DE PAUSA (Guardian):
 - Se gasto > 0 e 0 conversões nas últimas 24h e gasto > 50% do orçamento diário → PAUSAR
 - Se frequência > 3.0 e CTR < 0.8% → PAUSAR (saturação)
 
-REGRAS DE ESCALA (Auto-Scale):
+REGRAS DE ESCALA HORIZONTAL (Budget Increase):
 - Se ROAS > ROAS mínimo de escala E purchases >= 3 → ESCALAR
 - Incremento: +${profileConfig.limite_escala}% do orçamento atual
 - Teto diário: R$ ${profileConfig.teto_diario_escala}
 - NÃO escalar se frequência > 2.5 e CTR < 1.0% (saturação)
 
+REGRAS DE ESCALA VERTICAL (Duplicação — NOVO):
+- Se um adset já está com orçamento >= 80% do teto diário (R$ ${profileConfig.teto_diario_escala}) E ROAS > ${profileConfig.roas_min_escala} E purchases >= 3 → DUPLICAR_ESCALAR
+- A duplicação cria uma cópia do adset com orçamento inicial igual ao orçamento original (não escalado)
+- Use "duplicate_scale" como action para esta decisão
+- Informe o adset_id do adset a ser duplicado
+- Prefira duplicação quando o budget já está perto do teto
+
 REGRAS DE MANUTENÇÃO:
 - Se performance está dentro dos parâmetros → MANTER (sem ação)
 
-Retorne decisões APENAS para campanhas que precisam de ação (pausar ou escalar). Campanhas saudáveis não precisam ser listadas.`,
+Retorne decisões APENAS para campanhas/adsets que precisam de ação. Campanhas saudáveis não precisam ser listadas.`,
           },
           {
             role: "user",
@@ -68,6 +84,25 @@ Limite de Escala: ${profileConfig.limite_escala}%
 
 Campanhas ativas:
 ${JSON.stringify(campaigns, null, 2)}
+
+AdSets ativos (com métricas):
+${JSON.stringify(adsets.map((a: any) => ({
+  adset_id: a.id,
+  name: a.name,
+  campaign_id: a.campaign_id,
+  daily_budget: parseInt(a.daily_budget || "0", 10) / 100,
+  spend: parseFloat(a.insights?.data?.[0]?.spend || "0"),
+  roas: (() => {
+    const ins = a.insights?.data?.[0];
+    const sp = parseFloat(ins?.spend || "0");
+    const rev = (ins?.action_values || []).filter((v: any) => v.action_type === "purchase" || v.action_type === "omni_purchase").reduce((s: number, v: any) => s + parseFloat(v.value || "0"), 0);
+    return sp > 0 ? (rev / sp).toFixed(2) : "0";
+  })(),
+  purchases: (() => {
+    const ins = a.insights?.data?.[0];
+    return (ins?.actions || []).filter((v: any) => v.action_type === "purchase" || v.action_type === "omni_purchase").reduce((s: number, v: any) => s + parseInt(v.value || "0", 10), 0);
+  })(),
+})), null, 2)}
 
 Analise e retorne as decisões.`,
           },
@@ -87,7 +122,8 @@ Analise e retorne as decisões.`,
                       type: "object",
                       properties: {
                         campaign_id: { type: "string" },
-                        action: { type: "string", enum: ["pause", "scale", "maintain"] },
+                        adset_id: { type: "string", description: "Required for duplicate_scale actions" },
+                        action: { type: "string", enum: ["pause", "scale", "duplicate_scale", "maintain"] },
                         reason: { type: "string" },
                         new_budget: { type: "number", description: "New daily budget in currency (not cents). Only for scale actions." },
                       },
@@ -125,8 +161,8 @@ Analise e retorne as decisões.`,
   }
 }
 
-function applyStaticRules(campaigns: CampaignInsight[], profileConfig: any): { campaign_id: string; action: string; reason: string; new_budget?: number }[] {
-  const decisions: { campaign_id: string; action: string; reason: string; new_budget?: number }[] = [];
+function applyStaticRules(campaigns: CampaignInsight[], profileConfig: any, adsets: any[]): Decision[] {
+  const decisions: Decision[] = [];
 
   for (const c of campaigns) {
     // Guardian: CPA too high
@@ -139,18 +175,73 @@ function applyStaticRules(campaigns: CampaignInsight[], profileConfig: any): { c
       }
     }
 
-    // Auto-Scale: ROAS above threshold
+    // Auto-Scale or Duplicate
     if (profileConfig.roas_min_escala > 0 && c.purchases >= 3 && c.roas >= profileConfig.roas_min_escala) {
       if (c.frequency > 2.5 && c.ctr < 1.0) continue; // Saturation
+
+      const teto = profileConfig.teto_diario_escala || 0;
       const incrementalRatio = 1 + (profileConfig.limite_escala / 100);
       const newBudget = c.daily_budget * incrementalRatio;
-      const teto = profileConfig.teto_diario_escala || 0;
+
+      // Check if budget is near ceiling → duplicate instead
+      if (teto > 0 && c.daily_budget >= teto * 0.8) {
+        // Find the best adset for this campaign to duplicate
+        const campaignAdsets = adsets.filter((a: any) => a.campaign_id === c.id);
+        if (campaignAdsets.length > 0) {
+          // Pick the adset with highest spend (most data)
+          const bestAdset = campaignAdsets.sort((a: any, b: any) => {
+            const spA = parseFloat(a.insights?.data?.[0]?.spend || "0");
+            const spB = parseFloat(b.insights?.data?.[0]?.spend || "0");
+            return spB - spA;
+          })[0];
+          decisions.push({
+            campaign_id: c.id,
+            adset_id: bestAdset.id,
+            action: "duplicate_scale",
+            reason: `Budget R$ ${c.daily_budget.toFixed(2)} está a ≥80% do teto R$ ${teto}. Duplicando adset para escala vertical.`,
+            new_budget: c.daily_budget, // Same budget for the copy
+          });
+          continue;
+        }
+      }
+
       if (teto > 0 && newBudget > teto) continue;
       decisions.push({ campaign_id: c.id, action: "scale", reason: `ROAS ${c.roas.toFixed(2)} > mínimo ${profileConfig.roas_min_escala}`, new_budget: newBudget });
     }
   }
 
   return decisions;
+}
+
+async function duplicateAdset(adsetId: string, accessToken: string, newName?: string): Promise<{ success: boolean; new_adset_id?: string; error?: string }> {
+  try {
+    // Use Meta API copy endpoint
+    const copyResp = await fetch(`https://graph.facebook.com/v21.0/${adsetId}/copies`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        deep_copy: true,
+        rename_options: newName ? { rename_strategy: "DEEP_RENAME", rename_prefix: newName } : undefined,
+        status_option: "ACTIVE",
+        access_token: accessToken,
+      }),
+    });
+    const copyData = await copyResp.json();
+
+    if (copyData.error) {
+      return { success: false, error: copyData.error.message || JSON.stringify(copyData.error) };
+    }
+
+    // The copies endpoint returns { copied_adset_id: "..." } or { ad_object_ids: [...] }
+    const newId = copyData.copied_adset_id || copyData.ad_object_ids?.[0];
+    if (!newId) {
+      return { success: false, error: "Meta API não retornou o ID do adset copiado." };
+    }
+
+    return { success: true, new_adset_id: newId };
+  } catch (e) {
+    return { success: false, error: (e as Error).message };
+  }
 }
 
 serve(async (req) => {
@@ -198,10 +289,11 @@ serve(async (req) => {
           continue;
         }
 
-        // Also fetch adset-level for scaling
+        // Also fetch adset-level for scaling & duplication
         const adsetUrl = `https://graph.facebook.com/v21.0/${profile.ad_account_id}/adsets?fields=id,name,daily_budget,effective_status,campaign_id,insights.time_range({"since":"${twoDaysAgo}","until":"${today}"}){spend,actions,action_values,ctr,frequency}&effective_status=["ACTIVE"]&access_token=${accessToken}&limit=100`;
         const adsetResp = await fetch(adsetUrl);
         const adsetData = await adsetResp.json();
+        const adsetsList = adsetData.data || [];
 
         // Build campaign insights
         const campaignInsights: CampaignInsight[] = (campaignData.data || []).map((c: any) => {
@@ -229,7 +321,7 @@ serve(async (req) => {
         });
 
         // Get decisions (AI-powered or static fallback)
-        let decisions: { campaign_id: string; action: string; reason: string; new_budget?: number }[];
+        let decisions: Decision[];
         let aiSummary = "";
 
         if (LOVABLE_API_KEY && campaignInsights.length > 0) {
@@ -239,11 +331,11 @@ serve(async (req) => {
             roas_min_escala: profile.roas_min_escala,
             teto_diario_escala: profile.teto_diario_escala,
             limite_escala: profile.limite_escala,
-          }, campaignInsights);
+          }, campaignInsights, adsetsList);
           decisions = aiResult.decisions.filter(d => d.action !== "maintain");
           aiSummary = aiResult.summary;
         } else {
-          decisions = applyStaticRules(campaignInsights, profile);
+          decisions = applyStaticRules(campaignInsights, profile, adsetsList);
           aiSummary = `Análise estática: ${campaignInsights.length} campanhas verificadas.`;
         }
 
@@ -275,11 +367,50 @@ serve(async (req) => {
               });
 
               profileResult.actions.push({ ...decision, status: pauseData.success ? "EXECUTED" : "FAILED" });
+            } else if (decision.action === "duplicate_scale") {
+              // VERTICAL SCALING: Duplicate the adset
+              const adsetId = decision.adset_id;
+              if (!adsetId) {
+                profileResult.actions.push({ ...decision, status: "SKIPPED", error: "adset_id ausente na decisão" });
+                continue;
+              }
+
+              const campaign = campaignInsights.find(c => c.id === decision.campaign_id);
+              const adset = adsetsList.find((a: any) => a.id === adsetId);
+              const adsetName = adset?.name || "Unknown";
+              const newName = `[SCALE COPY 🚀] `;
+
+              const dupResult = await duplicateAdset(adsetId, accessToken, newName);
+
+              await sb.from("emergency_logs").insert({
+                profile_id: profile.id,
+                user_id: profile.user_id,
+                action_type: "agent_duplicate",
+                details: {
+                  campaign_id: decision.campaign_id,
+                  campaign_name: campaign?.name,
+                  original_adset_id: adsetId,
+                  original_adset_name: adsetName,
+                  new_adset_id: dupResult.new_adset_id || null,
+                  reason: decision.reason,
+                  ai_driven: !!LOVABLE_API_KEY,
+                  success: dupResult.success,
+                  error: dupResult.error || null,
+                },
+              });
+
+              profileResult.actions.push({
+                ...decision,
+                adset_name: adsetName,
+                new_adset_id: dupResult.new_adset_id,
+                status: dupResult.success ? "DUPLICATED" : "FAILED",
+                error: dupResult.error,
+              });
             } else if (decision.action === "scale") {
               const campaignId = decision.campaign_id;
               const campaign = campaignInsights.find(c => c.id === campaignId);
-              const adsetsForCampaign = (adsetData.data || []).filter((a: any) => a.campaign_id === campaignId);
-              
+              const adsetsForCampaign = adsetsList.filter((a: any) => a.campaign_id === campaignId);
+
               // Detect CBO: budget at campaign level
               const campaignBudgetRaw = (campaignData.data || []).find((c: any) => c.id === campaignId)?.daily_budget;
               const campaignBudget = parseInt(campaignBudgetRaw || "0", 10) / 100;
