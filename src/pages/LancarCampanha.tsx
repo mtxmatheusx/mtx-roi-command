@@ -490,6 +490,11 @@ export default function LancarCampanha() {
           body: {
             draftId: inserted.id,
             creativeUrls: selectedAssetUrls.length > 0 ? selectedAssetUrls : undefined,
+            destination_url: destinationUrl || undefined,
+            cta_type: ctaType,
+            audience_id: isRemarketing && audienceId ? audienceId : undefined,
+            use_catalog: useCatalog,
+            catalog_id: useCatalog && selectedCatalog ? selectedCatalog : undefined,
           },
         });
 
