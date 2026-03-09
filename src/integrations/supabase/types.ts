@@ -242,6 +242,57 @@ export type Database = {
         }
         Relationships: []
       }
+      copy_feedback: {
+        Row: {
+          copy_type: string | null
+          created_at: string
+          draft_id: string | null
+          id: string
+          original_copy: string
+          profile_id: string | null
+          status: string
+          suggested_correction: string
+          user_id: string
+        }
+        Insert: {
+          copy_type?: string | null
+          created_at?: string
+          draft_id?: string | null
+          id?: string
+          original_copy: string
+          profile_id?: string | null
+          status?: string
+          suggested_correction: string
+          user_id: string
+        }
+        Update: {
+          copy_type?: string | null
+          created_at?: string
+          draft_id?: string | null
+          id?: string
+          original_copy?: string
+          profile_id?: string | null
+          status?: string
+          suggested_correction?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "copy_feedback_draft_id_fkey"
+            columns: ["draft_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_drafts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "copy_feedback_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "client_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       creative_assets: {
         Row: {
           created_at: string

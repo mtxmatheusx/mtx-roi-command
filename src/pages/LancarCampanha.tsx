@@ -18,7 +18,8 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
-import { Rocket, Brain, ChevronDown, CheckCircle2, XCircle, Clock, Loader2, ExternalLink, AlertTriangle, Sparkles, Image as ImageIcon, Video, Trash2, Copy, Upload, X, ShoppingBag } from "lucide-react";
+import { Rocket, Brain, ChevronDown, CheckCircle2, XCircle, Clock, Loader2, ExternalLink, AlertTriangle, Sparkles, Image as ImageIcon, Video, Trash2, Copy, Upload, X, ShoppingBag, MessageSquarePlus } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 import { useClientProfiles } from "@/hooks/useClientProfiles";
 import { useMetaAds } from "@/hooks/useMetaAds";
 import { supabase } from "@/integrations/supabase/client";
@@ -138,6 +139,31 @@ export default function LancarCampanha() {
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [useCatalog, setUseCatalog] = useState(false);
+  const [feedbackIdx, setFeedbackIdx] = useState<number | null>(null);
+  const [feedbackText, setFeedbackText] = useState("");
+  const [isSendingFeedback, setIsSendingFeedback] = useState(false);
+
+  const handleSendFeedback = async (copyIdx: number) => {
+    if (!user?.id || !draft || !feedbackText.trim()) return;
+    setIsSendingFeedback(true);
+    try {
+      const copy = draft.copy_options[copyIdx];
+      await supabase.from("copy_feedback" as any).insert({
+        user_id: user.id,
+        profile_id: activeProfile?.id || null,
+        copy_type: copy.copy_type || null,
+        original_copy: `${copy.headline}\n\n${copy.primary_text}`,
+        suggested_correction: feedbackText.trim(),
+      } as any);
+      toast({ title: "Feedback enviado!", description: "Sua sugestão será analisada para melhorar as próximas gerações." });
+      setFeedbackIdx(null);
+      setFeedbackText("");
+    } catch {
+      toast({ title: "Erro ao enviar", description: "Tente novamente.", variant: "destructive" });
+    } finally {
+      setIsSendingFeedback(false);
+    }
+  };
 
   // Load draft history filtered by profile
   useEffect(() => {
@@ -693,10 +719,40 @@ export default function LancarCampanha() {
                           )}
                           {ct && <span className="text-xs text-muted-foreground">{ct.desc}</span>}
                         </div>
-                        <span className="text-xs text-muted-foreground">{copy.cta}</span>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2 text-xs gap-1 text-muted-foreground hover:text-primary"
+                            onClick={(e) => { e.stopPropagation(); setFeedbackIdx(feedbackIdx === i ? null : i); setFeedbackText(""); }}
+                          >
+                            <MessageSquarePlus className="w-3.5 h-3.5" />
+                            Corrigir
+                          </Button>
+                          <span className="text-xs text-muted-foreground">{copy.cta}</span>
+                        </div>
                       </div>
                       <p className="font-semibold text-sm">{copy.headline}</p>
                       <p className="text-sm text-muted-foreground mt-1">{copy.primary_text}</p>
+
+                      {feedbackIdx === i && (
+                        <div className="mt-3 p-3 rounded-md border border-primary/20 bg-primary/5 space-y-2" onClick={(e) => e.stopPropagation()}>
+                          <p className="text-xs font-medium text-primary">Sugerir correção para esta copy:</p>
+                          <Textarea
+                            placeholder="Descreva o que está errado ou como deveria ser..."
+                            value={feedbackText}
+                            onChange={(e) => setFeedbackText(e.target.value)}
+                            className="text-sm min-h-[70px]"
+                          />
+                          <div className="flex justify-end gap-2">
+                            <Button variant="ghost" size="sm" onClick={() => { setFeedbackIdx(null); setFeedbackText(""); }}>Cancelar</Button>
+                            <Button size="sm" disabled={!feedbackText.trim() || isSendingFeedback} onClick={() => handleSendFeedback(i)} className="gap-1">
+                              {isSendingFeedback ? <Loader2 className="w-3 h-3 animate-spin" /> : <MessageSquarePlus className="w-3 h-3" />}
+                              Enviar
+                            </Button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
