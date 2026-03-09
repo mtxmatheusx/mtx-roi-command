@@ -178,8 +178,9 @@ function applyStaticRules(campaigns: CampaignInsight[], profileConfig: any, adse
   const decisions: Decision[] = [];
 
   for (const c of campaigns) {
-    // Rollback Rule: ROAS >= 10x, budget was scaled, spend increase > ROAS increase, 0 purchases
-    if (c.roas >= 10 && c.purchases === 0 && c.spend > 0) {
+    // Rollback Rule: uses TODAY's data only
+    // ROAS >= 10x on aggregated period, 0 purchases TODAY, budget was scaled
+    if (c.today_roas >= 10 && c.today_purchases === 0 && c.today_spend > 0) {
       const incrementalRatio = 1 + (profileConfig.limite_escala / 100);
       const estimatedPrevBudget = c.daily_budget / incrementalRatio;
       // If budget looks scaled (current > estimated previous by at least the increment)
@@ -187,7 +188,7 @@ function applyStaticRules(campaigns: CampaignInsight[], profileConfig: any, adse
         decisions.push({
           campaign_id: c.id,
           action: "rollback",
-          reason: `ROAS ${c.roas.toFixed(2)}x ≥ 10x mas 0 vendas no período. Investimento escalado sem retorno proporcional. Rollback para R$ ${estimatedPrevBudget.toFixed(2)}.`,
+          reason: `ROAS do dia ${c.today_roas.toFixed(2)}x ≥ 10x mas 0 vendas HOJE (spend hoje: R$ ${c.today_spend.toFixed(2)}). Budget escalado sem retorno proporcional. Rollback para R$ ${estimatedPrevBudget.toFixed(2)}.`,
           new_budget: estimatedPrevBudget,
           previous_budget: c.daily_budget,
         });
