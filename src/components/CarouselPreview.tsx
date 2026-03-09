@@ -378,6 +378,61 @@ export default function CarouselPreview({ visualDNA }: CarouselPreviewProps) {
                                 </div>
                             </CardContent>
                         </Card>
+
+                        {/* Captions Section */}
+                        {carousel.captions && Object.keys(carousel.captions).length > 0 && (
+                            <Card className="md:col-span-2 h-fit">
+                                <CardHeader className="pb-2">
+                                    <div className="flex items-center justify-between">
+                                        <CardTitle className="text-sm flex items-center gap-2">
+                                            <FileText className="w-4 h-4 text-primary" />
+                                            Legendas Prontas para Publicação
+                                        </CardTitle>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => setShowCaptions(!showCaptions)}
+                                            className="text-xs"
+                                        >
+                                            {showCaptions ? "Ocultar" : "Mostrar"}
+                                        </Button>
+                                    </div>
+                                    <CardDescription className="text-xs">
+                                        Legendas personalizadas com base no Dossiê do perfil
+                                    </CardDescription>
+                                </CardHeader>
+                                {showCaptions && (
+                                    <CardContent className="space-y-4">
+                                        {Object.entries(carousel.captions).map(([platform, caption]) => (
+                                            <div key={platform} className="space-y-2">
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-xs font-bold uppercase text-primary">
+                                                        {platform === "instagram" ? "📸 Instagram" :
+                                                         platform === "tiktok" ? "🎵 TikTok" :
+                                                         platform === "linkedin" ? "💼 LinkedIn" :
+                                                         platform === "blog" ? "📝 Blog" : platform}
+                                                    </span>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-6 w-6"
+                                                        onClick={() => {
+                                                            navigator.clipboard.writeText(caption);
+                                                            toast({ title: "Copiado!", description: `Legenda ${platform} copiada.` });
+                                                        }}
+                                                    >
+                                                        <Copy className="w-3 h-3" />
+                                                    </Button>
+                                                </div>
+                                                <div className="p-3 rounded-lg bg-secondary/50 border text-sm whitespace-pre-wrap leading-relaxed">
+                                                    {caption}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </CardContent>
+                                )}
+                            </Card>
+                        )}
                     </div>
                 </>
             )}
