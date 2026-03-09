@@ -195,6 +195,7 @@ serve(async (req) => {
                 : "LINK_CLICKS",
       bid_strategy: "LOWEST_COST_WITHOUT_CAP",
       targeting: targetingObj,
+      is_adset_budget_sharing_enabled: false,
       status: "PAUSED",
       access_token: accessToken,
     };
