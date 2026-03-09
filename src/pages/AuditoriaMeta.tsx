@@ -63,6 +63,7 @@ export default function AuditoriaMeta() {
         return;
       }
       setProfileSummary(data.profile_summary);
+      setAccountMetrics(data.account_metrics || null);
       const recs: AuditedRecommendation[] = (data.recommendations || []).map((r: MetaRecommendation) => ({
         recommendation: r,
         verdict: null,
