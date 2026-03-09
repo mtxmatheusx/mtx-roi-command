@@ -1537,7 +1537,7 @@ export default function LancarCampanha() {
                     {publishLogs.map((log, i) => (
                       <div key={i} className="flex items-center gap-2 text-xs">
                         <span className="text-muted-foreground/60 font-mono w-16 shrink-0">{log.time}</span>
-                        {log.status === "done" && <CheckCircle2 className="w-3 h-3 text-emerald-400 shrink-0" />}
+                        {log.status === "done" && <CheckCircle2 className="w-3 h-3 text-success shrink-0" />}
                         {log.status === "pending" && <Loader2 className="w-3 h-3 text-muted-foreground animate-spin shrink-0" />}
                         {log.status === "error" && <XCircle className="w-3 h-3 text-destructive shrink-0" />}
                         <span className={log.status === "error" ? "text-destructive" : "text-muted-foreground"}>{log.message}</span>
