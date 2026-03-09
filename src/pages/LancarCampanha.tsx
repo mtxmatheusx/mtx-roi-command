@@ -1488,7 +1488,7 @@ export default function LancarCampanha() {
                       <CheckCircle2 className="w-4 h-4" /> {publishResult.total_ads || 1} anúncio(s) publicados com sucesso!
                     </p>
                     {publishResult.failed_ads && publishResult.failed_ads > 0 && (
-                      <p className="text-xs text-amber-400">⚠️ {publishResult.failed_ads} campanha(s) falharam</p>
+                      <p className="text-xs text-warning">⚠️ {publishResult.failed_ads} campanha(s) falharam</p>
                     )}
                     {publishResult.campaign_results?.filter((r: any) => r.success).map((r: any, i: number) => (
                       <div key={i} className="text-xs text-muted-foreground">
