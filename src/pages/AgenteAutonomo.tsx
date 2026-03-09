@@ -62,7 +62,8 @@ export default function AgenteAutonomo() {
       });
       if (error) throw error;
       setRunResult(data);
-      toast({ title: "✅ Agente executado", description: data?.results?.[0]?.ai_summary || `${data?.results?.length || 0} perfis analisados.` });
+      const activeResult = data?.results?.find((r: any) => r.profile_id === activeProfile?.id) || data?.results?.[0];
+      toast({ title: "✅ Agente executado", description: activeResult?.ai_summary || `${data?.results?.length || 0} perfis analisados.` });
       loadLogs();
     } catch (e: any) {
       toast({ title: "Erro", description: e.message, variant: "destructive" });
