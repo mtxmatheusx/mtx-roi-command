@@ -1,19 +1,29 @@
 import { useState, useRef, useEffect } from "react";
-import { X, Send, Brain, Loader2, Rocket, Plus, MessageSquare, Trash2 } from "lucide-react";
+import { X, Send, Brain, Loader2, Rocket, Plus, MessageSquare, Trash2, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ReactMarkdown from "react-markdown";
 import { useClientProfiles } from "@/hooks/useClientProfiles";
 import { useChatHistory, Msg } from "@/hooks/useChatHistory";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 
 interface CampaignAction {
-  action: string;
-  campaign_name: string;
-  objective: string;
-  daily_budget: number;
+  action: string; // "create_campaign" | "create_audience"
+  campaign_name?: string;
+  objective?: string;
+  daily_budget?: number;
   targeting_notes?: string;
   reasoning?: string;
+  use_catalog?: boolean;
+  destination_url?: string;
+  // Audience fields
+  audience_type?: string;
+  audience_name?: string;
+  retention_days?: number;
+  url_filter?: string;
+  source_audience_id?: string;
+  ratio?: number;
 }
 
 const AI_CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-chat`;
@@ -84,9 +94,10 @@ export default function AIChatPanel() {
   const [showHistory, setShowHistory] = useState(false);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [executingAction, setExecutingAction] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
-  const { activeProfile, cpaMeta, ticketMedio, limiteEscala, budgetMaximo } = useClientProfiles();
+  const { activeProfile, cpaMeta, ticketMedio, limiteEscala, budgetMaximo, catalogId } = useClientProfiles();
   const { toast } = useToast();
 
   const {
@@ -100,10 +111,23 @@ export default function AIChatPanel() {
   }, [messages]);
 
   const campaignContext = activeProfile
-    ? { perfil: activeProfile.name, cpa_meta: cpaMeta, ticket_medio: ticketMedio, limite_escala: limiteEscala, budget_maximo: budgetMaximo }
+    ? {
+        perfil: activeProfile.name,
+        cpa_meta: cpaMeta,
+        ticket_medio: ticketMedio,
+        limite_escala: limiteEscala,
+        budget_maximo: budgetMaximo,
+        catalog_id: catalogId || null,
+      }
     : undefined;
 
-  const handleExecuteAction = (action: CampaignAction) => {
+  const handleExecuteAction = async (action: CampaignAction) => {
+    if (action.action === "create_audience") {
+      await handleCreateAudience(action);
+      return;
+    }
+
+    // Default: navigate to campaign launcher
     navigate("/lancar-campanha", {
       state: {
         prefill: {
@@ -111,6 +135,8 @@ export default function AIChatPanel() {
           objective: action.objective,
           daily_budget: action.daily_budget,
           targeting_notes: action.targeting_notes || "",
+          use_catalog: action.use_catalog || false,
+          destination_url: action.destination_url || "",
         },
         reasoning: action.reasoning || "",
       },
@@ -119,12 +145,73 @@ export default function AIChatPanel() {
     toast({ title: "🚀 Campanha carregada", description: "Revise os detalhes e clique em Publicar." });
   };
 
+  const handleCreateAudience = async (action: CampaignAction) => {
+    if (!activeProfile?.id) {
+      toast({ title: "Erro", description: "Selecione um perfil ativo.", variant: "destructive" });
+      return;
+    }
+
+    setExecutingAction(true);
+    try {
+      const body: Record<string, unknown> = {
+        profileId: activeProfile.id,
+        audienceType: action.audience_type,
+        name: action.audience_name,
+      };
+
+      if (action.audience_type === "website_visitors") {
+        body.rule = {
+          retention_seconds: (action.retention_days || 180) * 86400,
+          url_filter: action.url_filter || "",
+        };
+      } else if (action.audience_type === "engagement") {
+        body.rule = {
+          retention_seconds: (action.retention_days || 365) * 86400,
+        };
+      } else if (action.audience_type === "lookalike") {
+        body.lookalikeSpec = {
+          source_audience_id: action.source_audience_id,
+          ratio: action.ratio || 0.01,
+        };
+      }
+
+      const { data, error } = await supabase.functions.invoke("manage-audiences", { body });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      toast({
+        title: "✅ Público criado com sucesso!",
+        description: `${data.name} (ID: ${data.audience_id})`,
+      });
+
+      // Add success message to chat
+      setMessages((p) => [
+        ...p,
+        {
+          role: "assistant",
+          content: `✅ **Público criado com sucesso!**\n\n- **Nome:** ${data.name}\n- **ID:** \`${data.audience_id}\`\n- **Tipo:** ${data.type}\n\nEste público já está disponível para uso nas suas campanhas de remarketing.`,
+        },
+      ]);
+    } catch (e: any) {
+      toast({ title: "Erro ao criar público", description: e.message, variant: "destructive" });
+      setMessages((p) => [
+        ...p,
+        {
+          role: "assistant",
+          content: `❌ **Erro ao criar público:** ${e.message}\n\nVerifique as configurações do perfil (Pixel ID, Page ID) e tente novamente.`,
+        },
+      ]);
+    } finally {
+      setExecutingAction(false);
+    }
+  };
+
   const send = async () => {
     const text = input.trim();
     if (!text || loading) return;
     const userMsg: Msg = { role: "user", content: text };
 
-    // Determine conversation ID
     let convId = activeConversationId;
     if (!convId) {
       convId = await createConversation(text);
@@ -138,7 +225,6 @@ export default function AIChatPanel() {
     setInput("");
     setLoading(true);
 
-    // Save user message
     await saveMessage(convId, "user", text);
 
     let assistantSoFar = "";
@@ -195,8 +281,27 @@ export default function AIChatPanel() {
               </div>
             </div>
           )}
-          {action && (
-            <Button onClick={() => handleExecuteAction(action)} className="w-full gap-2 bg-green-600 hover:bg-green-700 text-white" size="sm">
+          {action && action.action === "create_audience" && (
+            <Button
+              onClick={() => handleExecuteAction(action)}
+              disabled={executingAction}
+              className="w-full gap-2 bg-blue-600 hover:bg-blue-700 text-white"
+              size="sm"
+            >
+              {executingAction ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Users className="h-4 w-4" />
+              )}
+              👥 Criar Público: {action.audience_name?.slice(0, 30)}...
+            </Button>
+          )}
+          {action && action.action === "create_campaign" && (
+            <Button
+              onClick={() => handleExecuteAction(action)}
+              className="w-full gap-2 bg-green-600 hover:bg-green-700 text-white"
+              size="sm"
+            >
               <Rocket className="h-4 w-4" />
               🚀 Executar: {action.campaign_name?.slice(0, 30)}...
             </Button>
@@ -285,6 +390,26 @@ export default function AIChatPanel() {
                     </div>
                     <p className="font-medium text-foreground">Olá! Sou seu Gestor de Tráfego IA.</p>
                     <p className="mt-1 text-xs">Pergunte sobre campanhas, peça para criar ou otimizar. Posso executar no Meta Ads!</p>
+                    <div className="mt-3 space-y-1">
+                      <button
+                        onClick={() => setInput("Crie uma campanha de remarketing para visitantes do meu site")}
+                        className="block w-full text-left text-xs px-3 py-1.5 rounded-md bg-muted hover:bg-accent transition-colors"
+                      >
+                        🔄 Criar campanha de remarketing
+                      </button>
+                      <button
+                        onClick={() => setInput("Crie um público personalizado de visitantes do site nos últimos 30 dias")}
+                        className="block w-full text-left text-xs px-3 py-1.5 rounded-md bg-muted hover:bg-accent transition-colors"
+                      >
+                        👥 Criar público personalizado
+                      </button>
+                      <button
+                        onClick={() => setInput("Crie uma campanha de vendas com catálogo de produtos e orçamento de R$100/dia")}
+                        className="block w-full text-left text-xs px-3 py-1.5 rounded-md bg-muted hover:bg-accent transition-colors"
+                      >
+                        🛍️ Campanha com catálogo (DPA)
+                      </button>
+                    </div>
                   </div>
                 ) : (
                   messages.map((m, i) => renderMessage(m, i))
@@ -304,7 +429,7 @@ export default function AIChatPanel() {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && send()}
-                  placeholder="Ex: Crie uma campanha de vendas com R$100/dia..."
+                  placeholder="Ex: Crie uma campanha de remarketing..."
                   className="flex-1 bg-background border border-input rounded-md px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
                   disabled={loading}
                 />
