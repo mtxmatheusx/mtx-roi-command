@@ -19,7 +19,7 @@ import {
 import {
   Rocket, ShoppingBag, Eye, Send, Loader2, CheckCircle2, XCircle, AlertTriangle,
   Plus, Upload, Trash2, ExternalLink, RefreshCw, Image as ImageIcon, FileText,
-  Target, DollarSign, Users, Globe, Sparkles, Clock
+  Target, DollarSign, Users, Globe, Sparkles, Clock, Video, X
 } from "lucide-react";
 import { useClientProfiles } from "@/hooks/useClientProfiles";
 import { useAuth } from "@/hooks/useAuth";
