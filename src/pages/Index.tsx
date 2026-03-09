@@ -18,7 +18,8 @@ import DashboardTab from "@/components/dashboard/DashboardTab";
 import CreateCampaignTab from "@/components/dashboard/CreateCampaignTab";
 import CreateAudienceTab from "@/components/dashboard/CreateAudienceTab";
 import CreateAdTab from "@/components/dashboard/CreateAdTab";
-import { DollarSign, TrendingUp, Target, BarChart3, Loader2, AlertTriangle, RefreshCw, Eye, MousePointerClick, ShoppingBag, ShieldCheck, OctagonAlert, Activity, Plus, Users, Zap } from "lucide-react";
+import CampaignManagerTab from "@/components/dashboard/CampaignManagerTab";
+import { DollarSign, TrendingUp, Target, BarChart3, Loader2, AlertTriangle, RefreshCw, Eye, MousePointerClick, ShoppingBag, ShieldCheck, OctagonAlert, Activity, Plus, Users, Zap, Briefcase } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface LogEntry {
@@ -149,6 +150,7 @@ export default function Dashboard() {
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="bg-card border border-border">
           <TabsTrigger value="dashboard" className="gap-2"><BarChart3 className="w-4 h-4" />Dashboard</TabsTrigger>
+          <TabsTrigger value="campaign-manager" className="gap-2"><Briefcase className="w-4 h-4" />Gestão de Campanhas</TabsTrigger>
           <TabsTrigger value="create-campaign" className="gap-2"><Plus className="w-4 h-4" />Criar Campanha</TabsTrigger>
           <TabsTrigger value="audiences" className="gap-2"><Users className="w-4 h-4" />Públicos</TabsTrigger>
           <TabsTrigger value="ads" className="gap-2"><Zap className="w-4 h-4" />Anúncios</TabsTrigger>
@@ -188,6 +190,10 @@ export default function Dashboard() {
             deltaTM={deltaTM}
             logs={logs}
           />
+        </TabsContent>
+
+        <TabsContent value="campaign-manager">
+          <CampaignManagerTab campaigns={campaigns} isLoading={isLoading} />
         </TabsContent>
 
         <TabsContent value="create-campaign">
