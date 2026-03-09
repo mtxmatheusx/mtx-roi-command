@@ -140,6 +140,39 @@ export default function PublicarCampanha() {
 
   useEffect(() => { loadDrafts(); }, [loadDrafts]);
 
+  /* ─── Creative Upload ─── */
+  const handleCreativeUpload = async (files: FileList | null) => {
+    if (!files || !user || !profileId) return;
+    setUploadingCreative(true);
+    try {
+      const newUrls: string[] = [];
+      for (const file of Array.from(files)) {
+        if (file.size > 20 * 1024 * 1024) {
+          toast({ title: "Arquivo muito grande", description: `${file.name} excede 20MB.`, variant: "destructive" });
+          continue;
+        }
+        const ext = file.name.split(".").pop();
+        const path = `${user.id}/${profileId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+        const { error } = await supabase.storage.from("creative-assets").upload(path, file);
+        if (error) {
+          toast({ title: "Erro no upload", description: error.message, variant: "destructive" });
+          continue;
+        }
+        const { data: urlData } = supabase.storage.from("creative-assets").getPublicUrl(path);
+        newUrls.push(urlData.publicUrl);
+      }
+      if (newUrls.length > 0) {
+        setCreativeUrls((prev) => [...prev, ...newUrls]);
+        toast({ title: "✅ Upload concluído", description: `${newUrls.length} arquivo(s) adicionado(s).` });
+      }
+    } catch (e) {
+      toast({ title: "Erro", description: (e as Error).message, variant: "destructive" });
+    } finally {
+      setUploadingCreative(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
   /* ─── AI Copy Generation ─── */
   const handleGenerateAI = async () => {
     if (!profileId) return;
