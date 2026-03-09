@@ -70,3 +70,6 @@ verify_jwt = false
 
 [functions.generate-carousel]
 verify_jwt = false
+
+[functions.fetch-meta-catalogs]
+verify_jwt = false
