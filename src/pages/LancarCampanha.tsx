@@ -625,7 +625,7 @@ export default function LancarCampanha() {
           <div className="relative">
             <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-10 flex items-center justify-center rounded-lg">
               <div className="text-center p-8">
-                <AlertTriangle className="w-12 h-12 text-amber-400 mx-auto mb-3" />
+                <AlertTriangle className="w-12 h-12 text-warning mx-auto mb-3" />
                 <p className="text-lg font-semibold">⚠️ Selecione um cliente</p>
                 <p className="text-sm text-muted-foreground mt-1">Selecione um cliente no topo da página para carregar o contexto e as credenciais.</p>
               </div>
