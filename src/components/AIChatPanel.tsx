@@ -121,8 +121,39 @@ export default function AIChatPanel() {
       }
     : undefined;
 
+  const validateProfileRequirements = (action: CampaignAction): string[] => {
+    const missing: string[] = [];
+    if (!activeProfile) {
+      missing.push("Perfil ativo não selecionado");
+      return missing;
+    }
+    const token = activeProfile.meta_access_token;
+    if (!token || token.trim() === "") missing.push("Meta Access Token");
+    const isConversion = ["OUTCOME_SALES", "OUTCOME_LEADS"].includes(action.objective || "OUTCOME_SALES");
+    const needsPixel = action.action === "create_campaign" && isConversion;
+    const needsPixelAudience = action.action === "create_audience" && action.audience_type === "website_visitors";
+    if ((needsPixel || needsPixelAudience) && (!activeProfile.pixel_id || activeProfile.pixel_id.trim() === "")) {
+      missing.push("Pixel ID");
+    }
+    if (action.action === "create_campaign" && (!activeProfile.page_id || activeProfile.page_id.trim() === "")) {
+      missing.push("Page ID");
+    }
+    if (action.action === "create_audience" && action.audience_type === "engagement" && (!activeProfile.page_id || activeProfile.page_id.trim() === "")) {
+      missing.push("Page ID");
+    }
+    return missing;
+  };
+
+  const showMissingFieldsError = (missing: string[]) => {
+    const msg = `⚠️ **Configuração incompleta**\n\nOs seguintes campos são obrigatórios e estão faltando no perfil:\n\n${missing.map(f => `- ❌ **${f}**`).join("\n")}\n\nAcesse **Configurações** no menu lateral para preencher esses campos antes de executar esta ação.`;
+    toast({ title: "Configuração incompleta", description: `Faltando: ${missing.join(", ")}`, variant: "destructive" });
+    setMessages((p) => [...p, { role: "assistant", content: msg }]);
+  };
+
   const handleExecuteAction = async (action: CampaignAction) => {
     if (action.action === "create_audience") {
+      const missing = validateProfileRequirements(action);
+      if (missing.length > 0) { showMissingFieldsError(missing); return; }
       await handleCreateAudience(action);
       return;
     }
@@ -220,6 +251,8 @@ export default function AIChatPanel() {
       toast({ title: "Erro", description: "Selecione um perfil ativo.", variant: "destructive" });
       return;
     }
+    const missing = validateProfileRequirements(action);
+    if (missing.length > 0) { showMissingFieldsError(missing); return; }
     setExecutingAction(true);
     try {
       const { data, error } = await supabase.functions.invoke("auto-publish-campaign", {
