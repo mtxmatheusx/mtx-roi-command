@@ -148,12 +148,12 @@ export default function Dashboard() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="bg-card border border-border">
-          <TabsTrigger value="dashboard" className="gap-2"><BarChart3 className="w-4 h-4" />Dashboard</TabsTrigger>
-          <TabsTrigger value="campaign-manager" className="gap-2"><Briefcase className="w-4 h-4" />Gestão de Campanhas</TabsTrigger>
-          <TabsTrigger value="create-campaign" className="gap-2"><Plus className="w-4 h-4" />Criar Campanha</TabsTrigger>
-          <TabsTrigger value="audiences" className="gap-2"><Users className="w-4 h-4" />Públicos</TabsTrigger>
-          <TabsTrigger value="ads" className="gap-2"><Zap className="w-4 h-4" />Anúncios</TabsTrigger>
+        <TabsList className="bg-card border border-border flex-wrap h-auto gap-1 p-1">
+          <TabsTrigger value="dashboard" className="gap-2 text-xs sm:text-sm"><BarChart3 className="w-4 h-4" /><span className="hidden sm:inline">Dashboard</span></TabsTrigger>
+          <TabsTrigger value="campaign-manager" className="gap-2 text-xs sm:text-sm"><Briefcase className="w-4 h-4" /><span className="hidden sm:inline">Gestão</span></TabsTrigger>
+          <TabsTrigger value="create-campaign" className="gap-2 text-xs sm:text-sm"><Plus className="w-4 h-4" /><span className="hidden sm:inline">Campanha</span></TabsTrigger>
+          <TabsTrigger value="audiences" className="gap-2 text-xs sm:text-sm"><Users className="w-4 h-4" /><span className="hidden sm:inline">Públicos</span></TabsTrigger>
+          <TabsTrigger value="ads" className="gap-2 text-xs sm:text-sm"><Zap className="w-4 h-4" /><span className="hidden sm:inline">Anúncios</span></TabsTrigger>
         </TabsList>
 
         <TabsContent value="dashboard">
