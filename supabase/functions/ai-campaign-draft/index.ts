@@ -18,6 +18,8 @@ ${masterBlock}
 
 Você é o Gestor de Tráfego Sênior EXCLUSIVO da empresa "${profileName}". Esqueça qualquer outro nicho, produto ou cliente. Você está PROIBIDO de sugerir copys de marketing digital, mentorias ou infoprodutos se a empresa for de produtos físicos, e vice-versa. Toda sugestão DEVE estar 100% alinhada ao nicho e produto desta empresa.
 
+REGRA CRÍTICA DE SEGMENTAÇÃO: Os interesses, sementes semânticas e exclusões que você gerar DEVEM ser derivados DIRETAMENTE do Dossiê do Avatar e do Contexto do Produto fornecidos acima. NÃO invente interesses genéricos. Se o dossiê menciona "empreendedoras de moda", use interesses como "Moda Feminina", "Empreendedorismo Feminino". Se menciona "donos de pet shop", use "Pet Shop", "Animais de Estimação". NUNCA misture nichos.
+
 ## FRAMEWORKS OBRIGATÓRIOS
 
 ### 1. StoryBrand (Donald Miller)
@@ -79,7 +81,7 @@ serve(async (req) => {
   }
 
   try {
-    const { objective, profileConfig, campaignData, profileId } = await req.json();
+    const { objective, profileConfig, campaignData, profileId, productContext } = await req.json();
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
@@ -112,6 +114,10 @@ serve(async (req) => {
 - Limite de Escala: ${profileConfig?.limite_escala || ctx.profile.limite_escala}%
 
 ${campaignData ? `**Dados atuais de performance:**\n${JSON.stringify(campaignData, null, 2)}` : "Sem dados de performance disponíveis."}
+
+${productContext ? `**Contexto adicional do produto/serviço (enviado pelo gestor):**\n${productContext}` : ""}
+
+IMPORTANTE: Baseie TODA a segmentação, copies e sementes semânticas EXCLUSIVAMENTE no Dossiê do Avatar e no Contexto do Produto acima. NÃO invente nichos, públicos ou interesses que não estejam alinhados com o perfil "${ctx.profile.name}".
 
 Gere EXATAMENTE 3 copies (direct_response, storytelling, social_proof), nome no padrão MTX, segmentação, orçamento diário e seu raciocínio estratégico completo.`;
 
