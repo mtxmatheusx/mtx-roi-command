@@ -385,6 +385,24 @@ serve(async (req) => {
                   details: { campaign_id: decision.campaign_id, campaign_name: campaign?.name, original_adset_id: adsetId, original_adset_name: adset?.name, new_adset_id: dupResult.new_adset_id || null, reason: decision.reason, ai_driven: !!LOVABLE_API_KEY, success: dupResult.success, error: dupResult.error || null },
                 });
                 profileResult.actions.push({ ...decision, adset_name: adset?.name, new_adset_id: dupResult.new_adset_id, status: dupResult.success ? "DUPLICATED" : "FAILED", error: dupResult.error });
+              } else if (decision.action === "rollback") {
+                // Rollback: reduce budget back to previous value
+                const campaignId = decision.campaign_id;
+                const campaign = campaignInsights.find((c: CampaignInsight) => c.id === campaignId);
+                const campaignBudgetRaw = (campaignData.data || []).find((c: any) => c.id === campaignId)?.daily_budget;
+                const currentBudget = parseInt(campaignBudgetRaw || "0", 10) / 100;
+                const rollbackBudget = decision.new_budget || currentBudget / (1 + profile.limite_escala / 100);
+
+                const rollbackResp = await fetch(`https://graph.facebook.com/v21.0/${campaignId}`, {
+                  method: "POST", headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ daily_budget: Math.round(rollbackBudget * 100), access_token: accessToken }),
+                });
+                const rollbackData = await rollbackResp.json();
+                await sb.from("emergency_logs").insert({
+                  profile_id: profile.id, user_id: profile.user_id, action_type: "agent_rollback",
+                  details: { campaign_id: campaignId, campaign_name: campaign?.name, old_budget: currentBudget, new_budget: rollbackBudget, reason: decision.reason, ai_driven: !!LOVABLE_API_KEY, success: rollbackData.success || false },
+                });
+                profileResult.actions.push({ action: "rollback", campaign_id: campaignId, old_budget: currentBudget, new_budget: rollbackBudget, reason: decision.reason, status: rollbackData.success ? "ROLLED_BACK" : "FAILED" });
               } else if (decision.action === "scale") {
                 const campaignId = decision.campaign_id;
                 const campaign = campaignInsights.find((c: CampaignInsight) => c.id === campaignId);
