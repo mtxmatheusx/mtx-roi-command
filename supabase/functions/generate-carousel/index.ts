@@ -12,16 +12,74 @@ serve(async (req) => {
     }
 
     try {
-        const { visualDNA, theme, profileId } = await req.json();
+        const rawText = await req.text();
+        if (!rawText || rawText.trim() === "") {
+            return new Response(JSON.stringify({ error: "Corpo da requisição vazio." }), {
+                status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+        }
+
+        let body: any;
+        try { body = JSON.parse(rawText); } catch {
+            return new Response(JSON.stringify({ error: "JSON inválido no corpo da requisição." }), {
+                status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+        }
+
+        const { visualDNA, theme, profileId } = body;
         const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 
         if (!LOVABLE_API_KEY) {
             throw new Error("Missing LOVABLE_API_KEY");
         }
 
+        if (!theme) {
+            return new Response(JSON.stringify({ error: "Tema é obrigatório." }), {
+                status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+        }
+
         console.log(`Generating Carousel for: ${theme}`);
 
-        // Generate Carousel Content with Gemini
+        const paletteInfo = visualDNA?.palette?.length
+            ? `Paleta de cores da marca: ${visualDNA.palette.join(", ")}`
+            : "Use cores profissionais e contrastantes.";
+
+        const systemPrompt = `Você é um Especialista em Copywriting para Instagram e Design Estratégico de carrosséis de alta conversão.
+
+MISSÃO: Criar um carrossel magnético que siga os frameworks StoryBrand (Donald Miller) e AIDA (Atenção, Interesse, Desejo, Ação).
+
+DNA VISUAL DO CLIENTE (OBRIGATÓRIO SEGUIR):
+- Tom de Voz: ${visualDNA?.tone || "Profissional e direto"}
+- Estética: ${visualDNA?.aesthetic || "Clean e moderna"}
+- Tipografia: ${visualDNA?.typography || "Sans-serif moderna"}
+- ${paletteInfo}
+- Resumo da Marca: ${visualDNA?.summary || "Não disponível"}
+
+REGRAS DE CRIAÇÃO:
+1. O PRIMEIRO slide DEVE ser um gancho irresistível (hook) que gere curiosidade extrema.
+2. Os slides intermediários devem entregar valor real, com dados, frameworks ou insights acionáveis.
+3. O ÚLTIMO slide DEVE ser um CTA claro e persuasivo.
+4. A linguagem deve ser IDÊNTICA ao tom de voz do DNA Visual — se é formal, mantenha formal; se é coloquial, use gírias.
+5. Cada headline deve ser curta (máx 8 palavras), impactante e scroll-stopping.
+6. O body text deve complementar sem repetir a headline.
+7. Os image_prompts devem descrever cenas que refletem a estética da marca.
+
+Retorne APENAS um JSON válido (sem markdown, sem backticks) com esta estrutura:
+{
+  "title": "Título do carrossel",
+  "slides": [
+    {
+      "headline": "Título curto e impactante",
+      "body": "Texto de apoio (2-3 linhas)",
+      "image_prompt": "Descrição visual detalhada para gerar imagem IA no estilo da marca",
+      "type": "hook | value | solution | cta"
+    }
+  ]
+}
+
+Gere entre 7 e 10 slides. A distribuição ideal: 1 hook, 5-7 value/solution, 1 cta.`;
+
         const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
             method: "POST",
             headers: {
@@ -31,39 +89,51 @@ serve(async (req) => {
             body: JSON.stringify({
                 model: "google/gemini-2.5-flash",
                 messages: [
-                    {
-                        role: "system",
-                        content: `Você é um Especialista em Copywriting para Instagram e Design Estratégico.
-            Sua missão é criar um carrossel de alto impacto que siga o framework स्टोरीब्रांड (StoryBrand) e AIDA.
-            
-            O carrossel deve respeitar o DNA Visual do cliente:
-            - Tom: ${visualDNA.tone}
-            - Estética: ${visualDNA.aesthetic}
-            
-            Retorne um JSON com:
-            - "title": Título do carrossel.
-            - "slides": Uma lista de objetos para cada slide (mínimo 7, máximo 10).
-              Cada slide deve ter:
-              - "headline": Título curto e impactante.
-              - "body": Texto de apoio curto.
-              - "image_prompt": Descrição para gerar uma imagem usando IA que combine com o conteúdo do slide.
-              - "type": "hook", "value", "solution", "cta".`
-                    },
+                    { role: "system", content: systemPrompt },
                     {
                         role: "user",
-                        content: `Crie um carrossel magnético sobre o tema: ${theme}`
+                        content: `Crie um carrossel magnético sobre o tema: "${theme}"\n\nO conteúdo deve ser 100% alinhado com a identidade visual e tom de voz do perfil analisado.`
                     }
                 ],
                 response_format: { type: "json_object" }
             }),
         });
 
-        const aiData = await aiRes.json();
         if (!aiRes.ok) {
-            throw new Error(`AI generation failed: ${JSON.stringify(aiData)}`);
+            if (aiRes.status === 429) {
+                return new Response(JSON.stringify({ error: "Rate limit atingido. Tente novamente em alguns segundos." }), {
+                    status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
+                });
+            }
+            if (aiRes.status === 402) {
+                return new Response(JSON.stringify({ error: "Créditos de IA insuficientes." }), {
+                    status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
+                });
+            }
+            const errText = await aiRes.text();
+            console.error("AI gateway error:", aiRes.status, errText);
+            throw new Error(`AI generation failed: ${errText}`);
         }
 
-        const carousel = JSON.parse(aiData.choices[0].message.content);
+        const aiData = await aiRes.json();
+        const rawContent = aiData.choices?.[0]?.message?.content;
+
+        if (!rawContent) {
+            throw new Error("IA retornou resposta vazia.");
+        }
+
+        let carousel: any;
+        try {
+            carousel = JSON.parse(rawContent);
+        } catch {
+            // Try extracting JSON from markdown code blocks
+            const jsonMatch = rawContent.match(/```(?:json)?\s*([\s\S]*?)```/);
+            if (jsonMatch) {
+                carousel = JSON.parse(jsonMatch[1]);
+            } else {
+                throw new Error("Resposta da IA não é JSON válido.");
+            }
+        }
 
         return new Response(JSON.stringify({
             success: true,
@@ -76,7 +146,7 @@ serve(async (req) => {
         console.error("generate-carousel error:", e.message);
         return new Response(JSON.stringify({
             error: e.message,
-            tip: "Verifique se a visualDNA foi enviada corretamente e se sua LOVABLE_API_KEY está configurada."
+            tip: "Verifique se a visualDNA foi enviada corretamente."
         }), {
             status: 200,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
