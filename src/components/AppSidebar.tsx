@@ -1,5 +1,5 @@
 import { NavLink as RouterNavLink } from "react-router-dom";
-import { BarChart3, Zap, Target, ImageIcon, Settings, LogOut, Brain, Rocket, Shield, Building2, Users, Beaker, Wand2, Layout, Sparkles, Bot } from "lucide-react";
+import { BarChart3, Zap, Target, ImageIcon, Settings, LogOut, Brain, Rocket, Shield, Building2, Users, Beaker, Wand2, Layout, Sparkles, Bot, MessageSquare } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useTranslation } from "react-i18next";
 import ProfileSelector from "@/components/ProfileSelector";
