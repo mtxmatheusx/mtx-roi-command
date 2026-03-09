@@ -542,7 +542,7 @@ export default function LancarCampanha() {
         {budgetMaximo > 0 && (
           <div className="flex items-center gap-2 text-xs text-muted-foreground bg-secondary/50 rounded-lg px-4 py-2">
             <AlertTriangle className="w-4 h-4 text-warning" />
-            Budget máximo {budgetFrequency}: R$ {budgetMaximo.toLocaleString("pt-BR")}
+            Budget máximo {budgetFrequency === "daily" ? "diário" : budgetFrequency === "weekly" ? "semanal" : "mensal"}: R$ {budgetMaximo.toLocaleString("pt-BR")}
           </div>
         )}
 
