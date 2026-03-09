@@ -21,6 +21,17 @@ import {
 
 type Msg = { role: "user" | "assistant"; content: string };
 
+interface AudienceEntry {
+  id: string;
+  name: string;
+  type: "include" | "exclude";
+}
+
+const PIXEL_EVENTS = [
+  "PageView", "ViewContent", "ViewCategory", "AddToCart",
+  "Search", "InitiateCheckout", "Purchase", "AddPaymentInfo",
+];
+
 const OBJECTIVES = [
   { value: "OUTCOME_SALES", label: "Vendas", icon: "💰" },
   { value: "OUTCOME_LEADS", label: "Geração de Leads", icon: "📋" },
