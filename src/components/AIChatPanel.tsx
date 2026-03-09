@@ -1,12 +1,11 @@
 import { useState, useRef, useEffect } from "react";
-import { X, Send, Brain, Loader2, Rocket } from "lucide-react";
+import { X, Send, Brain, Loader2, Rocket, Plus, MessageSquare, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ReactMarkdown from "react-markdown";
 import { useClientProfiles } from "@/hooks/useClientProfiles";
+import { useChatHistory, Msg } from "@/hooks/useChatHistory";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
-
-type Msg = { role: "user" | "assistant"; content: string };
 
 interface CampaignAction {
   action: string;
@@ -22,11 +21,7 @@ const AI_CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-chat`;
 function parseMtxAction(content: string): CampaignAction | null {
   const match = content.match(/```mtx-action\s*([\s\S]*?)```/);
   if (!match) return null;
-  try {
-    return JSON.parse(match[1].trim());
-  } catch {
-    return null;
-  }
+  try { return JSON.parse(match[1].trim()); } catch { return null; }
 }
 
 function stripMtxAction(content: string): string {
@@ -34,21 +29,10 @@ function stripMtxAction(content: string): string {
 }
 
 async function streamChat({
-  messages,
-  campaignData,
-  mode,
-  profileId,
-  onDelta,
-  onDone,
-  onError,
+  messages, campaignData, mode, profileId, onDelta, onDone, onError,
 }: {
-  messages: Msg[];
-  campaignData?: unknown;
-  mode: "chat" | "diagnostico";
-  profileId?: string;
-  onDelta: (t: string) => void;
-  onDone: () => void;
-  onError: (msg: string) => void;
+  messages: Msg[]; campaignData?: unknown; mode: string; profileId?: string;
+  onDelta: (t: string) => void; onDone: () => void; onError: (msg: string) => void;
 }) {
   const resp = await fetch(AI_CHAT_URL, {
     method: "POST",
@@ -64,7 +48,6 @@ async function streamChat({
     onError(err.error || `Erro ${resp.status}`);
     return;
   }
-
   if (!resp.body) { onError("Sem resposta do servidor"); return; }
 
   const reader = resp.body.getReader();
@@ -75,7 +58,6 @@ async function streamChat({
     const { done, value } = await reader.read();
     if (done) break;
     buf += decoder.decode(value, { stream: true });
-
     let idx: number;
     while ((idx = buf.indexOf("\n")) !== -1) {
       let line = buf.slice(0, idx);
@@ -99,13 +81,19 @@ async function streamChat({
 
 export default function AIChatPanel() {
   const [open, setOpen] = useState(false);
-  const [messages, setMessages] = useState<Msg[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const { activeProfile, cpaMeta, ticketMedio, limiteEscala, budgetMaximo } = useClientProfiles();
   const { toast } = useToast();
+
+  const {
+    conversations, activeConversationId, messages, setMessages,
+    loadingHistory, loadMessages, createConversation, saveMessage,
+    startNewChat, deleteConversation,
+  } = useChatHistory();
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -128,16 +116,30 @@ export default function AIChatPanel() {
       },
     });
     setOpen(false);
-    toast({ title: "🚀 Campanha carregada", description: "Revise os detalhes e clique em Publicar para subir no Meta Ads." });
+    toast({ title: "🚀 Campanha carregada", description: "Revise os detalhes e clique em Publicar." });
   };
 
   const send = async () => {
     const text = input.trim();
     if (!text || loading) return;
     const userMsg: Msg = { role: "user", content: text };
+
+    // Determine conversation ID
+    let convId = activeConversationId;
+    if (!convId) {
+      convId = await createConversation(text);
+      if (!convId) {
+        toast({ title: "Erro", description: "Não foi possível criar conversa.", variant: "destructive" });
+        return;
+      }
+    }
+
     setMessages((p) => [...p, userMsg]);
     setInput("");
     setLoading(true);
+
+    // Save user message
+    await saveMessage(convId, "user", text);
 
     let assistantSoFar = "";
     const upsert = (chunk: string) => {
@@ -151,13 +153,19 @@ export default function AIChatPanel() {
       });
     };
 
+    const finalConvId = convId;
     await streamChat({
       messages: [...messages, userMsg],
       campaignData: campaignContext,
       mode: "chat",
       profileId: activeProfile?.id,
       onDelta: upsert,
-      onDone: () => setLoading(false),
+      onDone: async () => {
+        setLoading(false);
+        if (assistantSoFar) {
+          await saveMessage(finalConvId, "assistant", assistantSoFar);
+        }
+      },
       onError: (msg) => {
         setLoading(false);
         toast({ title: "Erro na IA", description: msg, variant: "destructive" });
@@ -175,10 +183,8 @@ export default function AIChatPanel() {
         </div>
       );
     }
-
     const action = parseMtxAction(m.content);
     const cleanContent = stripMtxAction(m.content);
-
     return (
       <div key={i} className="flex justify-start">
         <div className="max-w-[85%] space-y-2">
@@ -190,13 +196,9 @@ export default function AIChatPanel() {
             </div>
           )}
           {action && (
-            <Button
-              onClick={() => handleExecuteAction(action)}
-              className="w-full gap-2 bg-green-600 hover:bg-green-700 text-white"
-              size="sm"
-            >
+            <Button onClick={() => handleExecuteAction(action)} className="w-full gap-2 bg-green-600 hover:bg-green-700 text-white" size="sm">
               <Rocket className="h-4 w-4" />
-              🚀 Executar no Meta Ads: {action.campaign_name?.slice(0, 30)}...
+              🚀 Executar: {action.campaign_name?.slice(0, 30)}...
             </Button>
           )}
         </div>
@@ -206,7 +208,6 @@ export default function AIChatPanel() {
 
   return (
     <>
-      {/* Floating button */}
       {!open && (
         <button
           onClick={() => setOpen(true)}
@@ -216,7 +217,6 @@ export default function AIChatPanel() {
         </button>
       )}
 
-      {/* Panel */}
       {open && (
         <div className="fixed bottom-0 right-0 z-50 w-full sm:w-[400px] h-[560px] sm:h-[640px] sm:bottom-6 sm:right-6 bg-card border border-border rounded-t-xl sm:rounded-xl shadow-2xl flex flex-col overflow-hidden">
           {/* Header */}
@@ -230,46 +230,90 @@ export default function AIChatPanel() {
                 <p className="text-[11px] text-muted-foreground">MTX Estratégias</p>
               </div>
             </div>
-            <button onClick={() => setOpen(false)} className="text-muted-foreground hover:text-foreground transition-colors">
-              <X className="h-4 w-4" />
-            </button>
+            <div className="flex items-center gap-1">
+              <button onClick={() => setShowHistory(!showHistory)} className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors" title="Histórico">
+                <MessageSquare className="h-4 w-4" />
+              </button>
+              <button onClick={() => { startNewChat(); setShowHistory(false); }} className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors" title="Nova conversa">
+                <Plus className="h-4 w-4" />
+              </button>
+              <button onClick={() => setOpen(false)} className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
           </div>
 
-          {/* Messages */}
-          <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3">
-            {messages.length === 0 && (
-              <div className="text-center text-muted-foreground text-sm mt-8">
-                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-3">
-                  <Brain className="h-5 w-5 text-primary" />
+          {/* History sidebar */}
+          {showHistory ? (
+            <div className="flex-1 overflow-y-auto p-3 space-y-1">
+              <p className="text-xs font-medium text-muted-foreground mb-2">Conversas recentes</p>
+              {conversations.length === 0 && (
+                <p className="text-xs text-muted-foreground text-center mt-4">Nenhuma conversa ainda.</p>
+              )}
+              {conversations.map((c) => (
+                <div
+                  key={c.id}
+                  className={`flex items-center justify-between gap-2 px-3 py-2 rounded-md cursor-pointer text-sm transition-colors ${
+                    c.id === activeConversationId ? "bg-primary/10 text-foreground" : "hover:bg-muted text-muted-foreground"
+                  }`}
+                >
+                  <span
+                    className="truncate flex-1"
+                    onClick={() => { loadMessages(c.id); setShowHistory(false); }}
+                  >
+                    {c.title}
+                  </span>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); deleteConversation(c.id); }}
+                    className="shrink-0 p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </button>
                 </div>
-                <p className="font-medium text-foreground">Olá! Sou seu Gestor de Tráfego IA.</p>
-                <p className="mt-1 text-xs">Pergunte sobre suas campanhas, peça para criar campanhas, ou solicite estratégias de otimização. Posso executar diretamente no Meta Ads!</p>
+              ))}
+            </div>
+          ) : (
+            <>
+              {/* Messages */}
+              <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3">
+                {loadingHistory ? (
+                  <div className="flex justify-center mt-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+                ) : messages.length === 0 ? (
+                  <div className="text-center text-muted-foreground text-sm mt-8">
+                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-3">
+                      <Brain className="h-5 w-5 text-primary" />
+                    </div>
+                    <p className="font-medium text-foreground">Olá! Sou seu Gestor de Tráfego IA.</p>
+                    <p className="mt-1 text-xs">Pergunte sobre campanhas, peça para criar ou otimizar. Posso executar no Meta Ads!</p>
+                  </div>
+                ) : (
+                  messages.map((m, i) => renderMessage(m, i))
+                )}
+                {loading && messages[messages.length - 1]?.role !== "assistant" && (
+                  <div className="flex justify-start">
+                    <div className="bg-muted rounded-lg px-3 py-2">
+                      <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                    </div>
+                  </div>
+                )}
               </div>
-            )}
-            {messages.map((m, i) => renderMessage(m, i))}
-            {loading && messages[messages.length - 1]?.role !== "assistant" && (
-              <div className="flex justify-start">
-                <div className="bg-muted rounded-lg px-3 py-2">
-                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                </div>
-              </div>
-            )}
-          </div>
 
-          {/* Input */}
-          <div className="p-3 border-t border-border flex gap-2">
-            <input
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && send()}
-              placeholder="Ex: Crie uma campanha de vendas com R$100/dia..."
-              className="flex-1 bg-background border border-input rounded-md px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-              disabled={loading}
-            />
-            <Button size="icon" onClick={send} disabled={loading || !input.trim()}>
-              <Send className="h-4 w-4" />
-            </Button>
-          </div>
+              {/* Input */}
+              <div className="p-3 border-t border-border flex gap-2">
+                <input
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && send()}
+                  placeholder="Ex: Crie uma campanha de vendas com R$100/dia..."
+                  className="flex-1 bg-background border border-input rounded-md px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                  disabled={loading}
+                />
+                <Button size="icon" onClick={send} disabled={loading || !input.trim()}>
+                  <Send className="h-4 w-4" />
+                </Button>
+              </div>
+            </>
+          )}
         </div>
       )}
     </>
