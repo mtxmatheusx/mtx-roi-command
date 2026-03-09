@@ -153,7 +153,6 @@ serve(async (req) => {
 
       const lookalPayload = {
         name: name || `Lookalike ${Math.round(ratio * 100)}% - ${country}`,
-        subtype: "LOOKALIKE",
         origin_audience_id: lookalikeSpec.source_audience_id,
         lookalike_spec: JSON.stringify({
           type: "similarity",
