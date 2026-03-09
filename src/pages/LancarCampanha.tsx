@@ -163,6 +163,16 @@ export default function LancarCampanha() {
   const [feedbackIdx, setFeedbackIdx] = useState<number | null>(null);
   const [feedbackText, setFeedbackText] = useState("");
   const [isSendingFeedback, setIsSendingFeedback] = useState(false);
+  const [destinationUrl, setDestinationUrl] = useState("");
+  const [ctaType, setCtaType] = useState("LEARN_MORE");
+  const [isRemarketing, setIsRemarketing] = useState(false);
+  const [remarketingType, setRemarketingType] = useState("website_visitors");
+  const [retentionDays, setRetentionDays] = useState("30");
+  const [audienceId, setAudienceId] = useState("");
+  const [creatingAudience, setCreatingAudience] = useState(false);
+  const [catalogs, setCatalogs] = useState<CatalogItem[]>([]);
+  const [catalogsLoading, setCatalogsLoading] = useState(false);
+  const [selectedCatalog, setSelectedCatalog] = useState("");
 
   const handleSendFeedback = async (copyIdx: number) => {
     if (!user?.id || !draft || !feedbackText.trim()) return;
