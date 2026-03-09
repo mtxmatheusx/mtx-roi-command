@@ -13,16 +13,14 @@ export default function AppSidebar() {
     { to: "/campanhas", label: t("nav.campaigns"), icon: Target },
     { to: "/laboratorio-estrategico", label: "Laboratório Estratégico", icon: Beaker },
     { to: "/diagnostico", label: t("nav.diagnostic"), icon: Brain },
-    { to: "/lancar-campanha", label: t("nav.launchCampaign"), icon: Rocket },
+    { to: "/lancar-campanha", label: "Lançar & Publicar", icon: Rocket },
     { to: "/simulador", label: t("nav.simulator"), icon: Zap },
     { to: "/criativos", label: t("nav.creatives"), icon: ImageIcon },
     { to: "/auditoria-meta", label: t("nav.auditMeta"), icon: Shield },
-    
     { to: "/laboratorio-visual", label: "Laboratório Visual", icon: Wand2 },
     { to: "/personagens-ugc", label: "Personagens UGC", icon: Users },
     { to: "/agente-autonomo", label: "Agente Autônomo", icon: Bot },
     { to: "/feedback-copy", label: "Feedbacks de Copy", icon: MessageSquare },
-    { to: "/publicar", label: "Central de Publicação", icon: Rocket },
   ];
 
   return (
