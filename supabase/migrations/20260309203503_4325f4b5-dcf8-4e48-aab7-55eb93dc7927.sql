@@ -1,0 +1,1 @@
+ALTER TABLE public.copy_feedback ADD COLUMN admin_notes text;

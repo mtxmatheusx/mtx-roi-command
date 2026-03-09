@@ -1,5 +1,5 @@
 import { NavLink as RouterNavLink } from "react-router-dom";
-import { BarChart3, Zap, Target, ImageIcon, Settings, LogOut, Brain, Rocket, Shield, Building2, Users, Beaker, Wand2, Layout, Sparkles, Bot } from "lucide-react";
+import { BarChart3, Zap, Target, ImageIcon, Settings, LogOut, Brain, Rocket, Shield, Building2, Users, Beaker, Wand2, Layout, Sparkles, Bot, MessageSquare } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useTranslation } from "react-i18next";
 import ProfileSelector from "@/components/ProfileSelector";
@@ -21,6 +21,7 @@ export default function AppSidebar() {
     { to: "/laboratorio-visual", label: "Laboratório Visual", icon: Wand2 },
     { to: "/personagens-ugc", label: "Personagens UGC", icon: Users },
     { to: "/agente-autonomo", label: "Agente Autônomo", icon: Bot },
+    { to: "/feedback-copy", label: "Feedbacks de Copy", icon: MessageSquare },
   ];
 
   return (

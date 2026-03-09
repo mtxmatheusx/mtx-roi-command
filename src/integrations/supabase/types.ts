@@ -244,6 +244,7 @@ export type Database = {
       }
       copy_feedback: {
         Row: {
+          admin_notes: string | null
           copy_type: string | null
           created_at: string
           draft_id: string | null
@@ -255,6 +256,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          admin_notes?: string | null
           copy_type?: string | null
           created_at?: string
           draft_id?: string | null
@@ -266,6 +268,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          admin_notes?: string | null
           copy_type?: string | null
           created_at?: string
           draft_id?: string | null
