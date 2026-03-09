@@ -1215,6 +1215,58 @@ export default function LancarCampanha() {
               </CardContent>
             </Card>
 
+            {/* Catalog Section */}
+            {useCatalog && (
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <ShoppingBag className="w-5 h-5 text-primary" />
+                      Catálogos de Produtos
+                    </CardTitle>
+                    <Button variant="outline" size="sm" onClick={loadCatalogs} disabled={catalogsLoading} className="gap-1.5">
+                      {catalogsLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                      Atualizar
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {catalogsLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                    </div>
+                  ) : catalogs.length === 0 ? (
+                    <div className="text-center py-8 space-y-2">
+                      <ShoppingBag className="w-8 h-8 text-muted-foreground mx-auto" />
+                      <p className="text-sm text-muted-foreground">Nenhum catálogo encontrado.</p>
+                      <Button variant="outline" size="sm" onClick={loadCatalogs}>Buscar Catálogos</Button>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {catalogs.map((cat) => (
+                        <div
+                          key={cat.id}
+                          onClick={() => setSelectedCatalog(cat.id)}
+                          className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${selectedCatalog === cat.id ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"}`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="font-medium text-sm text-foreground">{cat.name}</p>
+                              <p className="text-xs text-muted-foreground mt-0.5">ID: {cat.id}</p>
+                            </div>
+                            {selectedCatalog === cat.id && <CheckCircle2 className="w-5 h-5 text-primary" />}
+                          </div>
+                          {cat.product_count !== undefined && (
+                            <Badge variant="secondary" className="mt-2 text-xs">{cat.product_count} produtos</Badge>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
             <div className="flex gap-3">
               <Button onClick={() => setStep(3)}>Revisar e Aprovar</Button>
               <Button variant="outline" onClick={handleSaveDraft}>Salvar como Rascunho</Button>
