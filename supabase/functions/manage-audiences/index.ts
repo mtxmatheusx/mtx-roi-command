@@ -104,7 +104,6 @@ serve(async (req) => {
       const audiencePayload: Record<string, unknown> = {
         name: name || `Visitantes do Site - ${retentionDays}d`,
         description: description || `Pessoas que visitaram o site nos últimos ${retentionDays} dias`,
-        subtype: "WEBSITE",
         rule: JSON.stringify({
           inclusions: {
             operator: "or",
@@ -154,7 +153,6 @@ serve(async (req) => {
 
       const lookalPayload = {
         name: name || `Lookalike ${Math.round(ratio * 100)}% - ${country}`,
-        subtype: "LOOKALIKE",
         origin_audience_id: lookalikeSpec.source_audience_id,
         lookalike_spec: JSON.stringify({
           type: "similarity",
@@ -201,7 +199,6 @@ serve(async (req) => {
       const audiencePayload = {
         name: name || `Engajamento Página - ${retentionDays}d`,
         description: description || `Pessoas que interagiram com a página nos últimos ${retentionDays} dias`,
-        subtype: "ENGAGEMENT",
         rule: JSON.stringify({
           inclusions: {
             operator: "or",
