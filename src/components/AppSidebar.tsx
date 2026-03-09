@@ -3,14 +3,14 @@ import { BarChart3, Zap, Target, ImageIcon, Settings, LogOut, Brain, Rocket, Shi
 import { useAuth } from "@/hooks/useAuth";
 import { useTranslation } from "react-i18next";
 import ProfileSelector from "@/components/ProfileSelector";
-import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { useSidebarState } from "@/hooks/useSidebarState";
 
 export default function AppSidebar() {
   const { signOut } = useAuth();
   const { t } = useTranslation();
-  const [collapsed, setCollapsed] = useState(false);
+  const { collapsed, toggle } = useSidebarState();
 
   const navItems = [
     { to: "/", label: t("nav.dashboard"), icon: BarChart3 },
@@ -73,7 +73,7 @@ export default function AppSidebar() {
           </div>
         ) : (
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shrink-0">
               <span className="text-primary-foreground font-bold text-sm">M</span>
             </div>
             <div>
@@ -129,7 +129,7 @@ export default function AppSidebar() {
           <Tooltip delayDuration={0}>
             <TooltipTrigger asChild>
               <button
-                onClick={() => setCollapsed(false)}
+                onClick={toggle}
                 className="flex items-center justify-center w-full px-2 py-2.5 rounded-md text-sm transition-colors text-muted-foreground hover:text-foreground hover:bg-accent"
               >
                 <PanelLeft className="w-4 h-4" />
@@ -139,7 +139,7 @@ export default function AppSidebar() {
           </Tooltip>
         ) : (
           <button
-            onClick={() => setCollapsed(true)}
+            onClick={toggle}
             className="flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium transition-colors w-full text-muted-foreground hover:text-foreground hover:bg-accent"
           >
             <PanelLeftClose className="w-4 h-4" />
