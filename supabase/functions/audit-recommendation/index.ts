@@ -31,7 +31,7 @@ serve(async (req) => {
   }
 
   try {
-    const { recommendation, profileSummary, profileId } = await req.json();
+    const { recommendation, profileSummary, profileId, accountMetrics } = await req.json();
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
@@ -50,6 +50,19 @@ serve(async (req) => {
 
     const systemPrompt = masterBlock ? `${masterBlock}\n\n${AUDIT_PROMPT}` : AUDIT_PROMPT;
 
+    let metricsBlock = "";
+    if (accountMetrics) {
+      metricsBlock = `\n\n**Dados Reais de Performance (últimos 7 dias):**
+- Investimento: R$ ${accountMetrics.spend?.toFixed(2) || "0"}
+- ROAS: ${accountMetrics.roas?.toFixed(2) || "0"}x
+- CPA: R$ ${accountMetrics.cpa?.toFixed(2) || "0"}
+- Compras: ${accountMetrics.purchases || 0}
+- Receita: R$ ${accountMetrics.revenue?.toFixed(2) || "0"}
+- CTR: ${accountMetrics.ctr?.toFixed(2) || "0"}%
+- CPM: R$ ${accountMetrics.cpm?.toFixed(2) || "0"}
+- Impressões: ${accountMetrics.impressions || 0}`;
+    }
+
     const userPrompt = `Analise esta recomendação da Meta e dê seu veredito:
 
 **Recomendação da Meta:**
@@ -64,8 +77,9 @@ serve(async (req) => {
 - CPA Meta: R$ ${profileSummary?.cpa_meta || "N/A"}
 - Budget Máximo: R$ ${profileSummary?.budget_maximo || "N/A"} (${profileSummary?.budget_frequency || "N/A"})
 - Ticket Médio: R$ ${profileSummary?.ticket_medio || "N/A"}
+${metricsBlock}
 
-Dê seu veredito como Auditor Sênior.`;
+Cruze a sugestão da Meta com os dados reais acima. Dê seu veredito como Auditor Sênior.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
