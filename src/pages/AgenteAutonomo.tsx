@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Bot, Play, Pause, TrendingUp, ShieldCheck, Activity, AlertTriangle, Clock, Zap, RefreshCw, Loader2 } from "lucide-react";
+import { Bot, Play, Pause, TrendingUp, ShieldCheck, Activity, AlertTriangle, Clock, Zap, RefreshCw, Loader2, Copy } from "lucide-react";
 
 interface AgentLog {
   id: string;
