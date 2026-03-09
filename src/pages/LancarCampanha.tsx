@@ -233,6 +233,57 @@ export default function LancarCampanha() {
     if (data) setRecentAssets(data);
   };
 
+  const loadCatalogs = async () => {
+    if (!activeProfile?.id) return;
+    setCatalogsLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("fetch-meta-catalogs", {
+        body: { profileId: activeProfile.id },
+      });
+      if (error) throw error;
+      setCatalogs(data?.catalogs || []);
+      if (activeProfile?.catalog_id) setSelectedCatalog(activeProfile.catalog_id);
+    } catch (e) {
+      console.error("Catalog fetch error:", e);
+    } finally {
+      setCatalogsLoading(false);
+    }
+  };
+
+  const handleCreateAudience = async () => {
+    if (!activeProfile?.id) return;
+    if (remarketingType === "website_visitors" && (!activeProfile?.pixel_id || activeProfile.pixel_id.trim() === "")) {
+      toast({ title: "Pixel ID obrigatório", description: "Configure o Pixel ID em Configurações para criar público de visitantes.", variant: "destructive" });
+      return;
+    }
+    if (remarketingType === "engagement" && (!activeProfile?.page_id || activeProfile.page_id.trim() === "")) {
+      toast({ title: "Page ID obrigatório", description: "Configure o Page ID em Configurações.", variant: "destructive" });
+      return;
+    }
+    setCreatingAudience(true);
+    try {
+      const body: Record<string, unknown> = {
+        profileId: activeProfile.id,
+        audienceType: remarketingType,
+        name: `${activeProfile.name} | ${remarketingType === "website_visitors" ? "Visitantes" : "Engajamento"} - ${retentionDays}d`,
+      };
+      if (remarketingType === "website_visitors") {
+        body.rule = { retention_seconds: parseInt(retentionDays) * 86400, url_filter: "" };
+      } else if (remarketingType === "engagement") {
+        body.rule = { retention_seconds: parseInt(retentionDays) * 86400 };
+      }
+      const { data, error } = await supabase.functions.invoke("manage-audiences", { body });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      if (data?.audience_id) setAudienceId(data.audience_id);
+      toast({ title: "✅ Público criado!", description: `${data.name} (ID: ${data.audience_id})` });
+    } catch (e: any) {
+      toast({ title: "Erro ao criar público", description: e.message, variant: "destructive" });
+    } finally {
+      setCreatingAudience(false);
+    }
+  };
+
   const toggleAssetUrl = (url: string) => {
     setSelectedAssetUrls(prev =>
       prev.includes(url) ? prev.filter(u => u !== url) : prev.length < 50 ? [...prev, url] : prev
