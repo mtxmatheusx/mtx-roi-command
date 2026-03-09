@@ -104,7 +104,6 @@ serve(async (req) => {
       const audiencePayload: Record<string, unknown> = {
         name: name || `Visitantes do Site - ${retentionDays}d`,
         description: description || `Pessoas que visitaram o site nos últimos ${retentionDays} dias`,
-        subtype: "WEBSITE",
         rule: JSON.stringify({
           inclusions: {
             operator: "or",
