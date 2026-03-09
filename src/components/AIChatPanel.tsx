@@ -251,6 +251,8 @@ export default function AIChatPanel() {
       toast({ title: "Erro", description: "Selecione um perfil ativo.", variant: "destructive" });
       return;
     }
+    const missing = validateProfileRequirements(action);
+    if (missing.length > 0) { showMissingFieldsError(missing); return; }
     setExecutingAction(true);
     try {
       const { data, error } = await supabase.functions.invoke("auto-publish-campaign", {
