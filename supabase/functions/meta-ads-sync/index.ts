@@ -115,7 +115,23 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { adAccountId, datePreset, since, until, testConnection, accessToken: perProfileToken } = await req.json();
+    const body = await req.text();
+    if (!body) {
+      return new Response(
+        JSON.stringify({ error: "Request body is empty. Send a JSON payload with adAccountId." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    let parsed;
+    try {
+      parsed = JSON.parse(body);
+    } catch {
+      return new Response(
+        JSON.stringify({ error: "Invalid JSON in request body." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    const { adAccountId, datePreset, since, until, testConnection, accessToken: perProfileToken } = parsed;
 
     if (!adAccountId) {
       return new Response(
