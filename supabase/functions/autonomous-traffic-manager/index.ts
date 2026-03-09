@@ -82,27 +82,18 @@ ROAS Mínimo para Escala: ${profileConfig.roas_min_escala}
 Teto Diário de Escala: R$ ${profileConfig.teto_diario_escala}
 Limite de Escala: ${profileConfig.limite_escala}%
 
-Campanhas ativas:
-${JSON.stringify(campaigns, null, 2)}
+Campanhas ativas (resumo):
+${campaigns.map(c => `- ${c.name}: spend=R$${c.spend.toFixed(0)} purchases=${c.purchases} roas=${c.roas.toFixed(2)} cpa=R$${c.cpa.toFixed(0)} ctr=${c.ctr.toFixed(2)}% freq=${c.frequency.toFixed(1)} budget=R$${c.daily_budget.toFixed(0)}`).join("\n")}
 
-AdSets ativos (com métricas):
-${JSON.stringify(adsets.map((a: any) => ({
-  adset_id: a.id,
-  name: a.name,
-  campaign_id: a.campaign_id,
-  daily_budget: parseInt(a.daily_budget || "0", 10) / 100,
-  spend: parseFloat(a.insights?.data?.[0]?.spend || "0"),
-  roas: (() => {
-    const ins = a.insights?.data?.[0];
-    const sp = parseFloat(ins?.spend || "0");
-    const rev = (ins?.action_values || []).filter((v: any) => v.action_type === "purchase" || v.action_type === "omni_purchase").reduce((s: number, v: any) => s + parseFloat(v.value || "0"), 0);
-    return sp > 0 ? (rev / sp).toFixed(2) : "0";
-  })(),
-  purchases: (() => {
-    const ins = a.insights?.data?.[0];
-    return (ins?.actions || []).filter((v: any) => v.action_type === "purchase" || v.action_type === "omni_purchase").reduce((s: number, v: any) => s + parseInt(v.value || "0", 10), 0);
-  })(),
-})), null, 2)}
+AdSets ativos (resumo):
+${adsets.slice(0, 30).map((a: any) => {
+  const ins = a.insights?.data?.[0];
+  const sp = parseFloat(ins?.spend || "0");
+  const rev = (ins?.action_values || []).filter((v: any) => v.action_type === "purchase" || v.action_type === "omni_purchase").reduce((s: number, v: any) => s + parseFloat(v.value || "0"), 0);
+  const purch = (ins?.actions || []).filter((v: any) => v.action_type === "purchase" || v.action_type === "omni_purchase").reduce((s: number, v: any) => s + parseInt(v.value || "0", 10), 0);
+  const budget = parseInt(a.daily_budget || "0", 10) / 100;
+  return `- [${a.id}] ${a.name} (camp:${a.campaign_id}): budget=R$${budget} spend=R$${sp.toFixed(0)} roas=${sp > 0 ? (rev/sp).toFixed(2) : "0"} purchases=${purch}`;
+}).join("\n")}
 
 Analise e retorne as decisões.`,
           },
