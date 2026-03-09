@@ -165,6 +165,7 @@ export type Database = {
           avatar_dossier: string | null
           budget_frequency: string
           budget_maximo: number
+          catalog_id: string | null
           cpa_max_toleravel: number
           cpa_meta: number
           created_at: string
@@ -190,6 +191,7 @@ export type Database = {
           avatar_dossier?: string | null
           budget_frequency?: string
           budget_maximo?: number
+          catalog_id?: string | null
           cpa_max_toleravel?: number
           cpa_meta?: number
           created_at?: string
@@ -215,6 +217,7 @@ export type Database = {
           avatar_dossier?: string | null
           budget_frequency?: string
           budget_maximo?: number
+          catalog_id?: string | null
           cpa_max_toleravel?: number
           cpa_meta?: number
           created_at?: string

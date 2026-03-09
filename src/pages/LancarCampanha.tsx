@@ -18,7 +18,7 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
-import { Rocket, Brain, ChevronDown, CheckCircle2, XCircle, Clock, Loader2, ExternalLink, AlertTriangle, Sparkles, Image as ImageIcon, Video, Trash2, Copy, Upload, X } from "lucide-react";
+import { Rocket, Brain, ChevronDown, CheckCircle2, XCircle, Clock, Loader2, ExternalLink, AlertTriangle, Sparkles, Image as ImageIcon, Video, Trash2, Copy, Upload, X, ShoppingBag } from "lucide-react";
 import { useClientProfiles } from "@/hooks/useClientProfiles";
 import { useMetaAds } from "@/hooks/useMetaAds";
 import { supabase } from "@/integrations/supabase/client";
@@ -81,7 +81,7 @@ export default function LancarCampanha() {
   const { user } = useAuth();
   const { toast } = useToast();
   const location = useLocation();
-  const { activeProfile, budgetMaximo, cpaMeta, ticketMedio, limiteEscala, budgetFrequency, productContext } = useClientProfiles();
+  const { activeProfile, budgetMaximo, cpaMeta, ticketMedio, limiteEscala, budgetFrequency, productContext, catalogId: profileCatalogId } = useClientProfiles();
   const { campaigns } = useMetaAds();
 
   const [step, setStep] = useState(1);
@@ -134,6 +134,7 @@ export default function LancarCampanha() {
   const [selectedAssetUrls, setSelectedAssetUrls] = useState<string[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [useCatalog, setUseCatalog] = useState(false);
 
   // Load draft history filtered by profile
   useEffect(() => {
@@ -594,6 +595,16 @@ export default function LancarCampanha() {
                 <div className="flex items-center gap-2 text-xs text-primary bg-primary/10 border border-primary/20 rounded-lg px-4 py-2">
                   <Rocket className="w-4 h-4 shrink-0" />
                   {campaignCount} campanhas independentes serão criadas em paralelo, cada uma com seu próprio conjunto e anúncios.
+                </div>
+              )}
+              {profileCatalogId && (
+                <div className="flex items-center gap-3 p-3 rounded-lg border bg-secondary/50">
+                  <Checkbox id="useCatalog" checked={useCatalog} onCheckedChange={(v) => setUseCatalog(!!v)} />
+                  <label htmlFor="useCatalog" className="text-sm cursor-pointer flex items-center gap-2">
+                    <ShoppingBag className="w-4 h-4 text-primary" />
+                    Usar Catálogo de Produtos (DPA / Advantage+ Catalog)
+                    <span className="text-xs text-muted-foreground">ID: {profileCatalogId}</span>
+                  </label>
                 </div>
               )}
               <div className="flex gap-3 pt-2">

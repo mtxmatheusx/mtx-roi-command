@@ -81,6 +81,11 @@ export default function Configuracoes() {
   const [dossierLoading, setDossierLoading] = useState(false);
   const [dossierSaving, setDossierSaving] = useState(false);
 
+  // Catalog state
+  const [catalogId, setCatalogId] = useState("");
+  const [catalogsLoading, setCatalogsLoading] = useState(false);
+  const [availableCatalogs, setAvailableCatalogs] = useState<any[]>([]);
+
   // Fetch knowledge_base entries
   const { data: kbEntries = [], refetch: refetchKb } = useQuery({
     queryKey: ["knowledge_base", activeProfile?.id],
@@ -142,6 +147,7 @@ export default function Configuracoes() {
       setAbsorbResult(null);
       setShowManualInput(false);
       setManualText("");
+      setCatalogId((activeProfile as any).catalog_id || "");
     }
   }, [activeProfile?.id]);
 
@@ -168,6 +174,7 @@ export default function Configuracoes() {
         pixel_id: parsed.data.pixelId || "", page_id: form.pageId || null, cpa_meta: parsed.data.cpaMeta, ticket_medio: parsed.data.ticketMedio,
         limite_escala: parsed.data.limiteEscala, budget_maximo: parsed.data.budgetMaximo, budget_frequency: parsed.data.budgetFrequency,
         api_base_url: form.apiBaseUrl.trim() || null,
+        catalog_id: catalogId.trim() || null,
       };
       if (tokenEditing && form.metaAccessToken) updateData.meta_access_token = form.metaAccessToken;
       else if (tokenEditing && !form.metaAccessToken) updateData.meta_access_token = null;
@@ -179,6 +186,28 @@ export default function Configuracoes() {
     } catch (err) {
       toast({ title: "Erro ao salvar", description: (err as Error).message, variant: "destructive" });
     } finally { setSaving(false); }
+  };
+
+  const handleFetchCatalogs = async () => {
+    if (!activeProfile?.id) return;
+    setCatalogsLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("fetch-meta-catalogs", {
+        body: { profileId: activeProfile.id },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      setAvailableCatalogs(data.catalogs || []);
+      if (data.catalogs?.length === 0) {
+        toast({ title: "Nenhum catálogo encontrado", description: "Nenhum catálogo de produtos foi encontrado nesta conta." });
+      } else {
+        toast({ title: `${data.catalogs.length} catálogo(s) encontrado(s)`, description: "Selecione um para vincular." });
+      }
+    } catch (err) {
+      toast({ title: "Erro ao buscar catálogos", description: (err as Error).message, variant: "destructive" });
+    } finally {
+      setCatalogsLoading(false);
+    }
   };
 
   const handleTestConnection = async () => {
@@ -496,6 +525,70 @@ export default function Configuracoes() {
               <div className={`flex items-center gap-2 p-3 rounded-lg border ${form.apiBaseUrl ? "bg-emerald-500/10 border-emerald-500/20" : "bg-secondary border-border"}`}>
                 <Globe className="w-4 h-4 text-emerald-400 shrink-0" />
                 <span className="text-sm text-emerald-400">API configurada: {form.apiBaseUrl}</span>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Catálogo de Produtos Meta */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Target className="w-5 h-5 text-primary" />
+              Catálogo de Produtos (Meta)
+            </CardTitle>
+            <CardDescription>Vincule um catálogo de produtos para campanhas DPA (Advantage+ Catalog).</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="catalogId">Catalog ID</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="catalogId"
+                  placeholder="Ex: 123456789"
+                  value={catalogId}
+                  onChange={(e) => setCatalogId(e.target.value)}
+                  className="font-mono text-sm flex-1"
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleFetchCatalogs}
+                  disabled={catalogsLoading}
+                  className="gap-2"
+                >
+                  {catalogsLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Target className="w-4 h-4" />}
+                  Buscar Catálogos
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                ID do catálogo no Facebook Commerce Manager. Clique em "Buscar Catálogos" para listar os disponíveis.
+              </p>
+            </div>
+            {availableCatalogs.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-xs font-semibold uppercase text-muted-foreground">Catálogos Encontrados</p>
+                <div className="space-y-1">
+                  {availableCatalogs.map((cat: any) => (
+                    <div
+                      key={cat.id}
+                      onClick={() => setCatalogId(cat.id)}
+                      className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-all text-sm ${catalogId === cat.id ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"}`}
+                    >
+                      <div>
+                        <p className="font-medium">{cat.name}</p>
+                        <p className="text-xs text-muted-foreground">{cat.product_count || 0} produtos · {cat.vertical || "commerce"}</p>
+                      </div>
+                      <span className="font-mono text-xs text-muted-foreground">{cat.id}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {catalogId && (
+              <div className="flex items-center gap-2 p-3 rounded-lg border bg-emerald-500/10 border-emerald-500/20">
+                <Target className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span className="text-sm text-emerald-400 font-medium">Catálogo vinculado: {catalogId}</span>
               </div>
             )}
           </CardContent>

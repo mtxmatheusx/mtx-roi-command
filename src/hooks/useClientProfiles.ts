@@ -10,6 +10,7 @@ export interface ClientProfile {
   ad_account_id: string;
   pixel_id: string;
   page_id: string | null;
+  catalog_id: string | null;
   cpa_meta: number;
   ticket_medio: number;
   limite_escala: number;
@@ -142,5 +143,6 @@ export function useClientProfiles() {
     productContext: activeProfile?.product_context ?? null,
     productUrls: activeProfile?.product_urls ?? [],
     apiBaseUrl: (activeProfile as any)?.api_base_url ?? "https://thor-backend.mtxestrategia.com.br",
+    catalogId: (activeProfile as any)?.catalog_id ?? null,
   };
 }
