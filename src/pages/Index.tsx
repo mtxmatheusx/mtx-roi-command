@@ -192,6 +192,10 @@ export default function Dashboard() {
           />
         </TabsContent>
 
+        <TabsContent value="campaign-manager">
+          <CampaignManagerTab campaigns={campaigns} isLoading={isLoading} />
+        </TabsContent>
+
         <TabsContent value="create-campaign">
           <CreateCampaignTab apiBaseUrl={apiBaseUrl} metaAccessToken={metaAccessToken} adAccountId={adAccountId} />
         </TabsContent>
