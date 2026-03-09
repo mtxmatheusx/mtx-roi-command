@@ -81,6 +81,11 @@ export default function Configuracoes() {
   const [dossierLoading, setDossierLoading] = useState(false);
   const [dossierSaving, setDossierSaving] = useState(false);
 
+  // Catalog state
+  const [catalogId, setCatalogId] = useState("");
+  const [catalogsLoading, setCatalogsLoading] = useState(false);
+  const [availableCatalogs, setAvailableCatalogs] = useState<any[]>([]);
+
   // Fetch knowledge_base entries
   const { data: kbEntries = [], refetch: refetchKb } = useQuery({
     queryKey: ["knowledge_base", activeProfile?.id],
