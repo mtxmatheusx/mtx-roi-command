@@ -73,10 +73,12 @@ export default function CampaignManagerTab({ campaigns, isLoading }: Props) {
     headline: "",
     ctaType: "LEARN_MORE",
     isRemarketing: false,
-    audienceId: "",
     remarketingType: "website_visitors",
     retentionDays: "30",
+    pixelEvent: "PageView",
+    newAudienceId: "",
   });
+  const [audiences, setAudiences] = useState<AudienceEntry[]>([]);
   const [creativeUrls, setCreativeUrls] = useState<string[]>([]);
   const [publishing, setPublishing] = useState(false);
   const [publishLogs, setPublishLogs] = useState<string[]>([]);
