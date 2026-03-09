@@ -312,21 +312,36 @@ serve(async (req) => {
         const profileResult: any = { profile: profile.name, profile_id: profile.id, actions: [], ai_summary: "" };
 
         try {
-          // Fetch campaign + adset data in parallel
+          // Fetch campaign (yesterday-today), campaign today-only, and adset data in parallel
           const campaignUrl = `https://graph.facebook.com/v21.0/${profile.ad_account_id}/campaigns?fields=id,name,effective_status,daily_budget,insights.time_range({"since":"${yesterday}","until":"${today}"}){spend,actions,action_values,ctr,frequency}&effective_status=["ACTIVE"]&access_token=${accessToken}&limit=100`;
+          const campaignTodayUrl = `https://graph.facebook.com/v21.0/${profile.ad_account_id}/campaigns?fields=id,insights.time_range({"since":"${today}","until":"${today}"}){spend,actions,action_values}&effective_status=["ACTIVE"]&access_token=${accessToken}&limit=100`;
           const adsetUrl = `https://graph.facebook.com/v21.0/${profile.ad_account_id}/adsets?fields=id,name,daily_budget,effective_status,campaign_id,insights.time_range({"since":"${twoDaysAgo}","until":"${today}"}){spend,actions,action_values,ctr,frequency}&effective_status=["ACTIVE"]&access_token=${accessToken}&limit=100`;
 
-          const [campaignResp, adsetResp] = await Promise.all([fetch(campaignUrl), fetch(adsetUrl)]);
-          const [campaignData, adsetData] = await Promise.all([campaignResp.json(), adsetResp.json()]);
+          const [campaignResp, campaignTodayResp, adsetResp] = await Promise.all([fetch(campaignUrl), fetch(campaignTodayUrl), fetch(adsetUrl)]);
+          const [campaignData, campaignTodayData, adsetData] = await Promise.all([campaignResp.json(), campaignTodayResp.json(), adsetResp.json()]);
 
           if (campaignData.error) {
             profileResult.error = campaignData.error.message;
             return profileResult;
           }
 
+          // Build today-only lookup map
+          const todayMap = new Map<string, { spend: number; purchases: number; revenue: number }>();
+          for (const c of (campaignTodayData.data || [])) {
+            const ins = c.insights?.data?.[0];
+            const tSpend = parseFloat(ins?.spend || "0");
+            const tPurchases = (ins?.actions || [])
+              .filter((a: any) => a.action_type === "purchase" || a.action_type === "omni_purchase")
+              .reduce((s: number, a: any) => s + parseInt(a.value || "0", 10), 0);
+            const tRevenue = (ins?.action_values || [])
+              .filter((a: any) => a.action_type === "purchase" || a.action_type === "omni_purchase")
+              .reduce((s: number, a: any) => s + parseFloat(a.value || "0"), 0);
+            todayMap.set(c.id, { spend: tSpend, purchases: tPurchases, revenue: tRevenue });
+          }
+
           const adsetsList = adsetData.data || [];
 
-          // Build campaign insights
+          // Build campaign insights with today-only data
           const campaignInsights: CampaignInsight[] = (campaignData.data || []).map((c: any) => {
             const ins = c.insights?.data?.[0];
             const spend = parseFloat(ins?.spend || "0");
@@ -336,6 +351,7 @@ serve(async (req) => {
             const revenue = (ins?.action_values || [])
               .filter((a: any) => a.action_type === "purchase" || a.action_type === "omni_purchase")
               .reduce((s: number, a: any) => s + parseFloat(a.value || "0"), 0);
+            const todayData = todayMap.get(c.id) || { spend: 0, purchases: 0, revenue: 0 };
             return {
               id: c.id, name: c.name, effective_status: c.effective_status, spend, purchases, revenue,
               cpa: purchases > 0 ? spend / purchases : (spend > 0 ? spend : 0),
@@ -343,6 +359,10 @@ serve(async (req) => {
               ctr: parseFloat(ins?.ctr || "0"),
               frequency: parseFloat(ins?.frequency || "0"),
               daily_budget: parseInt(c.daily_budget || "0", 10) / 100,
+              today_spend: todayData.spend,
+              today_purchases: todayData.purchases,
+              today_revenue: todayData.revenue,
+              today_roas: todayData.spend > 0 ? todayData.revenue / todayData.spend : 0,
             };
           });
 
