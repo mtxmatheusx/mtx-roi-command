@@ -331,6 +331,7 @@ serve(async (req) => {
                   profileResult.actions.push({ action: "scale", adset_id: adset.id, adset_name: adset.name, old_budget: currentBudget, new_budget: newBudget, reason: decision.reason, status: scaleData.success ? "EXECUTED" : "FAILED" });
                 }
               }
+            }
           } catch (execErr) {
             profileResult.actions.push({ ...decision, status: "ERROR", error: (execErr as Error).message });
           }
