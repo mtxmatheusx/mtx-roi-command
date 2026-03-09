@@ -99,8 +99,8 @@ ROAS Mínimo para Escala: ${profileConfig.roas_min_escala}
 Teto Diário de Escala: R$ ${profileConfig.teto_diario_escala}
 Limite de Escala: ${profileConfig.limite_escala}%
 
-Campanhas ativas (resumo):
-${campaigns.map(c => `- ${c.name}: spend=R$${c.spend.toFixed(0)} purchases=${c.purchases} roas=${c.roas.toFixed(2)} cpa=R$${c.cpa.toFixed(0)} ctr=${c.ctr.toFixed(2)}% freq=${c.frequency.toFixed(1)} budget=R$${c.daily_budget.toFixed(0)}`).join("\n")}
+Campanhas ativas (resumo — dados agregados + dados de HOJE):
+${campaigns.map(c => `- ${c.name}: spend=R$${c.spend.toFixed(0)} purchases=${c.purchases} roas=${c.roas.toFixed(2)} cpa=R$${c.cpa.toFixed(0)} ctr=${c.ctr.toFixed(2)}% freq=${c.frequency.toFixed(1)} budget=R$${c.daily_budget.toFixed(0)} | HOJE: spend=R$${c.today_spend.toFixed(0)} purchases=${c.today_purchases} today_roas=${c.today_roas.toFixed(2)}`).join("\n")}
 
 AdSets ativos (resumo):
 ${adsets.slice(0, 30).map((a: any) => {
@@ -109,7 +109,10 @@ ${adsets.slice(0, 30).map((a: any) => {
   const rev = (ins?.action_values || []).filter((v: any) => v.action_type === "purchase" || v.action_type === "omni_purchase").reduce((s: number, v: any) => s + parseFloat(v.value || "0"), 0);
   const purch = (ins?.actions || []).filter((v: any) => v.action_type === "purchase" || v.action_type === "omni_purchase").reduce((s: number, v: any) => s + parseInt(v.value || "0", 10), 0);
   const budget = parseInt(a.daily_budget || "0", 10) / 100;
-  return `- [${a.id}] ${a.name} (camp:${a.campaign_id}): budget=R$${budget} spend=R$${sp.toFixed(0)} roas=${sp > 0 ? (rev/sp).toFixed(2) : "0"} purchases=${purch}`;
+  const todayIns = a.today_insights?.data?.[0];
+  const todaySp = parseFloat(todayIns?.spend || "0");
+  const todayPurch = (todayIns?.actions || []).filter((v: any) => v.action_type === "purchase" || v.action_type === "omni_purchase").reduce((s: number, v: any) => s + parseInt(v.value || "0", 10), 0);
+  return `- [${a.id}] ${a.name} (camp:${a.campaign_id}): budget=R$${budget} spend=R$${sp.toFixed(0)} roas=${sp > 0 ? (rev/sp).toFixed(2) : "0"} purchases=${purch} | HOJE: spend=R$${todaySp.toFixed(0)} purchases=${todayPurch}`;
 }).join("\n")}
 
 Analise e retorne as decisões.`,
