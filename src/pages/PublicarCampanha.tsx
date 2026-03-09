@@ -70,7 +70,8 @@ const CTA_OPTIONS = [
 const defaultForm: CampaignForm = {
   name: "", objective: "OUTCOME_SALES", dailyBudget: "50",
   destinationUrl: "", primaryText: "", headline: "", cta: "LEARN_MORE",
-  useCatalog: false,
+  useCatalog: false, isRemarketing: false, remarketingType: "website_visitors",
+  retentionDays: "30",
 };
 
 export default function PublicarCampanha() {
