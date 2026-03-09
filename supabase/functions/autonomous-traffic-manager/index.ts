@@ -169,6 +169,23 @@ function applyStaticRules(campaigns: CampaignInsight[], profileConfig: any, adse
   const decisions: Decision[] = [];
 
   for (const c of campaigns) {
+    // Rollback Rule: ROAS >= 10x, budget was scaled, spend increase > ROAS increase, 0 purchases
+    if (c.roas >= 10 && c.purchases === 0 && c.spend > 0) {
+      const incrementalRatio = 1 + (profileConfig.limite_escala / 100);
+      const estimatedPrevBudget = c.daily_budget / incrementalRatio;
+      // If budget looks scaled (current > estimated previous by at least the increment)
+      if (c.daily_budget > estimatedPrevBudget * 1.05) {
+        decisions.push({
+          campaign_id: c.id,
+          action: "rollback",
+          reason: `ROAS ${c.roas.toFixed(2)}x ≥ 10x mas 0 vendas no período. Investimento escalado sem retorno proporcional. Rollback para R$ ${estimatedPrevBudget.toFixed(2)}.`,
+          new_budget: estimatedPrevBudget,
+          previous_budget: c.daily_budget,
+        });
+        continue;
+      }
+    }
+
     // Guardian: CPA too high
     if (profileConfig.cpa_max_toleravel > 0 && c.spend > 0) {
       const threshold = profileConfig.cpa_max_toleravel * 1.15;
