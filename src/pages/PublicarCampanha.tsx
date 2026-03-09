@@ -521,6 +521,21 @@ export default function PublicarCampanha() {
                             </div>
                           </div>
 
+                          <div className="space-y-1.5">
+                            <Label className="text-xs">ID do Público (Audience ID)</Label>
+                            <Input
+                              placeholder="Ex: 120243487645360596"
+                              value={form.audienceId}
+                              onChange={(e) => updateField("audienceId", e.target.value)}
+                              className="h-9 font-mono text-xs"
+                            />
+                            <p className="text-[11px] text-muted-foreground">
+                              Cole o ID do público criado anteriormente para segmentar esta campanha.
+                            </p>
+                          </div>
+
+                          <Separator className="my-2" />
+
                           <Button
                             variant="outline"
                             size="sm"
@@ -529,7 +544,7 @@ export default function PublicarCampanha() {
                             className="gap-1.5 w-full"
                           >
                             {creatingAudience ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Users className="w-3.5 h-3.5" />}
-                            {creatingAudience ? "Criando público..." : "Criar Público de Remarketing"}
+                            {creatingAudience ? "Criando público..." : "Criar Novo Público de Remarketing"}
                           </Button>
 
                           <p className="text-[11px] text-muted-foreground">
