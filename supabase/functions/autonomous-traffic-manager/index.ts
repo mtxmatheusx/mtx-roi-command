@@ -142,6 +142,7 @@ Analise e retorne as decisões.`,
       return { decisions: [], summary: "AI indisponível, usando regras estáticas." };
     }
 
+    clearTimeout(timeout);
     const data = await resp.json();
     const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
     if (!toolCall?.function?.arguments) {
