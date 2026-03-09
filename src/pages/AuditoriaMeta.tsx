@@ -44,6 +44,7 @@ export default function AuditoriaMeta() {
   const [recommendations, setRecommendations] = useState<AuditedRecommendation[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [profileSummary, setProfileSummary] = useState<any>(null);
+  const [accountMetrics, setAccountMetrics] = useState<any>(null);
 
   const fetchRecommendations = async () => {
     if (!activeProfile?.id) {
