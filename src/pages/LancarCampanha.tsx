@@ -134,6 +134,7 @@ export default function LancarCampanha() {
   const [selectedAssetUrls, setSelectedAssetUrls] = useState<string[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [useCatalog, setUseCatalog] = useState(false);
 
   // Load draft history filtered by profile
   useEffect(() => {
