@@ -22,6 +22,7 @@ export default function AppSidebar() {
     { to: "/personagens-ugc", label: "Personagens UGC", icon: Users },
     { to: "/agente-autonomo", label: "Agente Autônomo", icon: Bot },
     { to: "/feedback-copy", label: "Feedbacks de Copy", icon: MessageSquare },
+    { to: "/publicar", label: "Central de Publicação", icon: Rocket },
   ];
 
   return (
