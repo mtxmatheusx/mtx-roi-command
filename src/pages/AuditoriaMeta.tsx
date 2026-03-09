@@ -92,6 +92,7 @@ export default function AuditoriaMeta() {
           recommendation: rec.recommendation,
           profileSummary,
           profileId: activeProfile?.id,
+          accountMetrics,
         },
       });
       if (data?.blocked) {
