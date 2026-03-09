@@ -25,6 +25,7 @@ import MetodoRIC from "./pages/MetodoRIC";
 import NotFound from "./pages/NotFound";
 import AgenteAutonomo from "./pages/AgenteAutonomo";
 import FeedbackAdmin from "./pages/FeedbackAdmin";
+import PublicarCampanha from "./pages/PublicarCampanha";
 
 const queryClient = new QueryClient();
 
