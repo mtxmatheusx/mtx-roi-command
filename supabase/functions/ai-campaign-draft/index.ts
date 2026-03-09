@@ -113,6 +113,10 @@ serve(async (req) => {
 
 ${campaignData ? `**Dados atuais de performance:**\n${JSON.stringify(campaignData, null, 2)}` : "Sem dados de performance disponíveis."}
 
+${productContext ? `**Contexto adicional do produto/serviço (enviado pelo gestor):**\n${productContext}` : ""}
+
+IMPORTANTE: Baseie TODA a segmentação, copies e sementes semânticas EXCLUSIVAMENTE no Dossiê do Avatar e no Contexto do Produto acima. NÃO invente nichos, públicos ou interesses que não estejam alinhados com o perfil "${ctx.profile.name}".
+
 Gere EXATAMENTE 3 copies (direct_response, storytelling, social_proof), nome no padrão MTX, segmentação, orçamento diário e seu raciocínio estratégico completo.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
