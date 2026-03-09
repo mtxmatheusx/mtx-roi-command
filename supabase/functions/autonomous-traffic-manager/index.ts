@@ -321,6 +321,10 @@ serve(async (req) => {
               limite_escala: profile.limite_escala,
             }, campaignInsights, adsetsList);
             decisions = aiResult.decisions.filter((d: Decision) => d.action !== "maintain");
+            // Filter out duplicate_scale if vertical scaling is disabled
+            if (!profile.vertical_scale_enabled) {
+              decisions = decisions.filter((d: Decision) => d.action !== "duplicate_scale");
+            }
             aiSummary = aiResult.summary;
           } else {
             decisions = applyStaticRules(campaignInsights, profile, adsetsList);
