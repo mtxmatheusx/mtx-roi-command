@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Bot, Play, Pause, TrendingUp, ShieldCheck, Activity, AlertTriangle, Clock, Zap, RefreshCw, Loader2 } from "lucide-react";
+import { Bot, Play, Pause, TrendingUp, ShieldCheck, Activity, AlertTriangle, Clock, Zap, RefreshCw, Loader2, Copy } from "lucide-react";
 
 interface AgentLog {
   id: string;
@@ -98,6 +98,9 @@ export default function AgenteAutonomo() {
 
   const hasGuardianEnabled = (activeProfile?.cpa_max_toleravel || 0) > 0;
   const hasScaleEnabled = (activeProfile?.roas_min_escala || 0) > 0;
+  const duplicateCount = logs.filter(l => l.action_type === "agent_duplicate").length;
+  const scaleCount = logs.filter(l => l.action_type === "agent_scale" || l.action_type === "auto_scale").length;
+  const pauseCount = logs.filter(l => l.action_type === "agent_pause" || l.action_type === "guardian").length;
 
   return (
     <AppLayout>
@@ -121,7 +124,7 @@ export default function AgenteAutonomo() {
         </div>
 
         {/* Status Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
             <Card className={hasGuardianEnabled ? "border-success/30" : "border-border"}>
               <CardHeader className="pb-2">
@@ -144,6 +147,8 @@ export default function AgenteAutonomo() {
                     Limite: R$ {activeProfile?.cpa_max_toleravel?.toFixed(2)} (+15% tolerância)
                   </p>
                 )}
+                <p className="text-2xl font-bold mt-2 text-destructive">{pauseCount}</p>
+                <p className="text-[10px] text-muted-foreground">pausas executadas</p>
               </CardContent>
             </Card>
           </motion.div>
@@ -170,6 +175,34 @@ export default function AgenteAutonomo() {
                     ROAS min: {activeProfile?.roas_min_escala} | Teto: R$ {activeProfile?.teto_diario_escala}
                   </p>
                 )}
+                <p className="text-2xl font-bold mt-2 text-success">{scaleCount}</p>
+                <p className="text-[10px] text-muted-foreground">escalas horizontais</p>
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
+            <Card className={duplicateCount > 0 ? "border-primary/30 bg-primary/5" : "border-border"}>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <Copy className="w-4 h-4 text-primary" />
+                  MTX Vertical Scale
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground">Duplicação de adsets</span>
+                  {hasScaleEnabled ? (
+                    <Badge className="bg-primary/15 text-primary border-primary/30">Ativo</Badge>
+                  ) : (
+                    <Badge variant="outline">Inativo</Badge>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Duplica adsets quando budget ≥ 80% do teto
+                </p>
+                <p className="text-2xl font-bold mt-2 text-primary">{duplicateCount}</p>
+                <p className="text-[10px] text-muted-foreground">duplicações realizadas</p>
               </CardContent>
             </Card>
           </motion.div>
