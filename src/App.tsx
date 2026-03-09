@@ -25,6 +25,7 @@ import MetodoRIC from "./pages/MetodoRIC";
 import NotFound from "./pages/NotFound";
 import AgenteAutonomo from "./pages/AgenteAutonomo";
 import FeedbackAdmin from "./pages/FeedbackAdmin";
+import PublicarCampanha from "./pages/PublicarCampanha";
 
 const queryClient = new QueryClient();
 
@@ -51,6 +52,7 @@ const App = () => (
             <Route path="/personagens-ugc" element={<ProtectedRoute><PersonagensUGC /></ProtectedRoute>} />
             <Route path="/agente-autonomo" element={<ProtectedRoute><AgenteAutonomo /></ProtectedRoute>} />
             <Route path="/feedback-copy" element={<ProtectedRoute><FeedbackAdmin /></ProtectedRoute>} />
+            <Route path="/publicar" element={<ProtectedRoute><PublicarCampanha /></ProtectedRoute>} />
             <Route path="/laboratorio-visual/landing" element={<LaboratorioVisualLanding />} />
             <Route path="/laboratorio-visual" element={<ProtectedRoute><LaboratorioVisual /></ProtectedRoute>} />
             <Route path="/legacy" element={<LegacyLanding />} />
