@@ -1,18 +1,43 @@
 import { useState, useRef, useEffect } from "react";
-import { MessageCircle, X, Send, Brain, Loader2 } from "lucide-react";
+import { X, Send, Brain, Loader2, Rocket } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ReactMarkdown from "react-markdown";
 import { useClientProfiles } from "@/hooks/useClientProfiles";
 import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 
 type Msg = { role: "user" | "assistant"; content: string };
 
+interface CampaignAction {
+  action: string;
+  campaign_name: string;
+  objective: string;
+  daily_budget: number;
+  targeting_notes?: string;
+  reasoning?: string;
+}
+
 const AI_CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-chat`;
+
+function parseMtxAction(content: string): CampaignAction | null {
+  const match = content.match(/```mtx-action\s*([\s\S]*?)```/);
+  if (!match) return null;
+  try {
+    return JSON.parse(match[1].trim());
+  } catch {
+    return null;
+  }
+}
+
+function stripMtxAction(content: string): string {
+  return content.replace(/```mtx-action\s*[\s\S]*?```/g, "").trim();
+}
 
 async function streamChat({
   messages,
   campaignData,
   mode,
+  profileId,
   onDelta,
   onDone,
   onError,
@@ -20,6 +45,7 @@ async function streamChat({
   messages: Msg[];
   campaignData?: unknown;
   mode: "chat" | "diagnostico";
+  profileId?: string;
   onDelta: (t: string) => void;
   onDone: () => void;
   onError: (msg: string) => void;
@@ -30,7 +56,7 @@ async function streamChat({
       "Content-Type": "application/json",
       Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
     },
-    body: JSON.stringify({ messages, campaignData, mode }),
+    body: JSON.stringify({ messages, campaignData, mode, profileId }),
   });
 
   if (!resp.ok) {
@@ -77,6 +103,7 @@ export default function AIChatPanel() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
   const { activeProfile, cpaMeta, ticketMedio, limiteEscala, budgetMaximo } = useClientProfiles();
   const { toast } = useToast();
 
@@ -87,6 +114,22 @@ export default function AIChatPanel() {
   const campaignContext = activeProfile
     ? { perfil: activeProfile.name, cpa_meta: cpaMeta, ticket_medio: ticketMedio, limite_escala: limiteEscala, budget_maximo: budgetMaximo }
     : undefined;
+
+  const handleExecuteAction = (action: CampaignAction) => {
+    navigate("/lancar-campanha", {
+      state: {
+        prefill: {
+          campaign_name: action.campaign_name,
+          objective: action.objective,
+          daily_budget: action.daily_budget,
+          targeting_notes: action.targeting_notes || "",
+        },
+        reasoning: action.reasoning || "",
+      },
+    });
+    setOpen(false);
+    toast({ title: "🚀 Campanha carregada", description: "Revise os detalhes e clique em Publicar para subir no Meta Ads." });
+  };
 
   const send = async () => {
     const text = input.trim();
@@ -112,6 +155,7 @@ export default function AIChatPanel() {
       messages: [...messages, userMsg],
       campaignData: campaignContext,
       mode: "chat",
+      profileId: activeProfile?.id,
       onDelta: upsert,
       onDone: () => setLoading(false),
       onError: (msg) => {
@@ -119,6 +163,45 @@ export default function AIChatPanel() {
         toast({ title: "Erro na IA", description: msg, variant: "destructive" });
       },
     });
+  };
+
+  const renderMessage = (m: Msg, i: number) => {
+    if (m.role === "user") {
+      return (
+        <div key={i} className="flex justify-end">
+          <div className="max-w-[85%] rounded-lg px-3 py-2 text-sm bg-primary text-primary-foreground">
+            {m.content}
+          </div>
+        </div>
+      );
+    }
+
+    const action = parseMtxAction(m.content);
+    const cleanContent = stripMtxAction(m.content);
+
+    return (
+      <div key={i} className="flex justify-start">
+        <div className="max-w-[85%] space-y-2">
+          {cleanContent && (
+            <div className="rounded-lg px-3 py-2 text-sm bg-muted text-foreground">
+              <div className="prose prose-sm max-w-none [&_p]:my-1 [&_ul]:my-1 [&_li]:my-0.5">
+                <ReactMarkdown>{cleanContent}</ReactMarkdown>
+              </div>
+            </div>
+          )}
+          {action && (
+            <Button
+              onClick={() => handleExecuteAction(action)}
+              className="w-full gap-2 bg-green-600 hover:bg-green-700 text-white"
+              size="sm"
+            >
+              <Rocket className="h-4 w-4" />
+              🚀 Executar no Meta Ads: {action.campaign_name?.slice(0, 30)}...
+            </Button>
+          )}
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -160,28 +243,10 @@ export default function AIChatPanel() {
                   <Brain className="h-5 w-5 text-primary" />
                 </div>
                 <p className="font-medium text-foreground">Olá! Sou seu Gestor de Tráfego IA.</p>
-                <p className="mt-1 text-xs">Pergunte sobre suas campanhas, peça sugestões de criativos ou estratégias de otimização.</p>
+                <p className="mt-1 text-xs">Pergunte sobre suas campanhas, peça para criar campanhas, ou solicite estratégias de otimização. Posso executar diretamente no Meta Ads!</p>
               </div>
             )}
-            {messages.map((m, i) => (
-              <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
-                <div
-                  className={`max-w-[85%] rounded-lg px-3 py-2 text-sm ${
-                    m.role === "user"
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted text-foreground"
-                  }`}
-                >
-                  {m.role === "assistant" ? (
-                    <div className="prose prose-sm max-w-none [&_p]:my-1 [&_ul]:my-1 [&_li]:my-0.5">
-                      <ReactMarkdown>{m.content}</ReactMarkdown>
-                    </div>
-                  ) : (
-                    m.content
-                  )}
-                </div>
-              </div>
-            ))}
+            {messages.map((m, i) => renderMessage(m, i))}
             {loading && messages[messages.length - 1]?.role !== "assistant" && (
               <div className="flex justify-start">
                 <div className="bg-muted rounded-lg px-3 py-2">
@@ -197,7 +262,7 @@ export default function AIChatPanel() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && send()}
-              placeholder="Pergunte ao Gestor IA..."
+              placeholder="Ex: Crie uma campanha de vendas com R$100/dia..."
               className="flex-1 bg-background border border-input rounded-md px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
               disabled={loading}
             />
