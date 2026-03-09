@@ -597,6 +597,16 @@ export default function LancarCampanha() {
                   {campaignCount} campanhas independentes serão criadas em paralelo, cada uma com seu próprio conjunto e anúncios.
                 </div>
               )}
+              {profileCatalogId && (
+                <div className="flex items-center gap-3 p-3 rounded-lg border bg-secondary/50">
+                  <Checkbox id="useCatalog" checked={useCatalog} onCheckedChange={(v) => setUseCatalog(!!v)} />
+                  <label htmlFor="useCatalog" className="text-sm cursor-pointer flex items-center gap-2">
+                    <ShoppingBag className="w-4 h-4 text-primary" />
+                    Usar Catálogo de Produtos (DPA / Advantage+ Catalog)
+                    <span className="text-xs text-muted-foreground">ID: {profileCatalogId}</span>
+                  </label>
+                </div>
+              )}
               <div className="flex gap-3 pt-2">
                 <Button onClick={handleGenerateAI} disabled={isGenerating} className="gap-2">
                   {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Brain className="w-4 h-4" />}
