@@ -147,6 +147,7 @@ export default function Configuracoes() {
       setAbsorbResult(null);
       setShowManualInput(false);
       setManualText("");
+      setCatalogId((activeProfile as any).catalog_id || "");
     }
   }, [activeProfile?.id]);
 
