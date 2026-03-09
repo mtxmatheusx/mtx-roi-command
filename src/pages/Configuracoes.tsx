@@ -501,6 +501,70 @@ export default function Configuracoes() {
           </CardContent>
         </Card>
 
+        {/* Catálogo de Produtos Meta */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Target className="w-5 h-5 text-primary" />
+              Catálogo de Produtos (Meta)
+            </CardTitle>
+            <CardDescription>Vincule um catálogo de produtos para campanhas DPA (Advantage+ Catalog).</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="catalogId">Catalog ID</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="catalogId"
+                  placeholder="Ex: 123456789"
+                  value={catalogId}
+                  onChange={(e) => setCatalogId(e.target.value)}
+                  className="font-mono text-sm flex-1"
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleFetchCatalogs}
+                  disabled={catalogsLoading}
+                  className="gap-2"
+                >
+                  {catalogsLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Target className="w-4 h-4" />}
+                  Buscar Catálogos
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                ID do catálogo no Facebook Commerce Manager. Clique em "Buscar Catálogos" para listar os disponíveis.
+              </p>
+            </div>
+            {availableCatalogs.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-xs font-semibold uppercase text-muted-foreground">Catálogos Encontrados</p>
+                <div className="space-y-1">
+                  {availableCatalogs.map((cat: any) => (
+                    <div
+                      key={cat.id}
+                      onClick={() => setCatalogId(cat.id)}
+                      className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-all text-sm ${catalogId === cat.id ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"}`}
+                    >
+                      <div>
+                        <p className="font-medium">{cat.name}</p>
+                        <p className="text-xs text-muted-foreground">{cat.product_count || 0} produtos · {cat.vertical || "commerce"}</p>
+                      </div>
+                      <span className="font-mono text-xs text-muted-foreground">{cat.id}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {catalogId && (
+              <div className="flex items-center gap-2 p-3 rounded-lg border bg-emerald-500/10 border-emerald-500/20">
+                <Target className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span className="text-sm text-emerald-400 font-medium">Catálogo vinculado: {catalogId}</span>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
 
         <Card>
           <CardHeader>
