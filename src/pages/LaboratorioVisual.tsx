@@ -80,7 +80,7 @@ export default function LaboratorioVisual() {
                         className="gap-2 px-6 h-10 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
                     >
                         <Wand2 className="w-4 h-4" />
-                        2. Criação de Carrossel
+                        2. Criação de Conteúdo
                     </TabsTrigger>
                 </TabsList>
 
