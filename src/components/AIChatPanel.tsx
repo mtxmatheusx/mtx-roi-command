@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { X, Send, Brain, Loader2, Rocket, Plus, MessageSquare, Trash2, Users } from "lucide-react";
+import { X, Send, Brain, Loader2, Rocket, Plus, MessageSquare, Trash2, Users, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ReactMarkdown from "react-markdown";
 import { useClientProfiles } from "@/hooks/useClientProfiles";
