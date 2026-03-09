@@ -24,9 +24,10 @@ interface CampaignInsight {
 interface Decision {
   campaign_id: string;
   adset_id?: string;
-  action: string; // "pause" | "scale" | "duplicate_scale" | "maintain"
+  action: string; // "pause" | "scale" | "duplicate_scale" | "rollback" | "maintain"
   reason: string;
   new_budget?: number;
+  previous_budget?: number;
 }
 
 async function getAIDecision(
@@ -64,7 +65,14 @@ REGRAS DE ESCALA HORIZONTAL (Budget Increase):
 - Teto diário: R$ ${profileConfig.teto_diario_escala}
 - NÃO escalar se frequência > 2.5 e CTR < 1.0% (saturação)
 
-REGRAS DE ESCALA VERTICAL (Duplicação — NOVO):
+REGRAS DE ROLLBACK DE ESCALA (Proteção ROAS — CRÍTICO):
+- Se a campanha/conjunto foi escalado (budget atual > budget do período anterior) E ROAS ≥ 10x E o aumento percentual do investimento é MAIOR que o aumento percentual do ROAS E purchases == 0 no período atual → ROLLBACK
+- Ação: Retornar o orçamento ao valor anterior (antes da escala) para estabilizar
+- Use "rollback" como action, informe new_budget com o valor anterior estimado
+- EXCEÇÃO: Se o ROAS era < 10x antes da escala, NÃO fazer rollback — continuar escalando normalmente
+- Esta regra se aplica novamente sempre que as condições forem atendidas após nova escala
+
+REGRAS DE ESCALA VERTICAL (Duplicação):
 - Se um adset já está com orçamento >= 80% do teto diário (R$ ${profileConfig.teto_diario_escala}) E ROAS > ${profileConfig.roas_min_escala} E purchases >= 3 → DUPLICAR_ESCALAR
 - A duplicação cria uma cópia do adset com orçamento inicial igual ao orçamento original (não escalado)
 - Use "duplicate_scale" como action para esta decisão
@@ -117,9 +125,10 @@ Analise e retorne as decisões.`,
                       properties: {
                         campaign_id: { type: "string" },
                         adset_id: { type: "string", description: "Required for duplicate_scale actions" },
-                        action: { type: "string", enum: ["pause", "scale", "duplicate_scale", "maintain"] },
+                        action: { type: "string", enum: ["pause", "scale", "duplicate_scale", "rollback", "maintain"] },
                         reason: { type: "string" },
-                        new_budget: { type: "number", description: "New daily budget in currency (not cents). Only for scale actions." },
+                        new_budget: { type: "number", description: "New daily budget in currency (not cents). For scale or rollback actions." },
+                        previous_budget: { type: "number", description: "Previous budget before scale, used for rollback context." },
                       },
                       required: ["campaign_id", "action", "reason"],
                       additionalProperties: false,
@@ -160,6 +169,23 @@ function applyStaticRules(campaigns: CampaignInsight[], profileConfig: any, adse
   const decisions: Decision[] = [];
 
   for (const c of campaigns) {
+    // Rollback Rule: ROAS >= 10x, budget was scaled, spend increase > ROAS increase, 0 purchases
+    if (c.roas >= 10 && c.purchases === 0 && c.spend > 0) {
+      const incrementalRatio = 1 + (profileConfig.limite_escala / 100);
+      const estimatedPrevBudget = c.daily_budget / incrementalRatio;
+      // If budget looks scaled (current > estimated previous by at least the increment)
+      if (c.daily_budget > estimatedPrevBudget * 1.05) {
+        decisions.push({
+          campaign_id: c.id,
+          action: "rollback",
+          reason: `ROAS ${c.roas.toFixed(2)}x ≥ 10x mas 0 vendas no período. Investimento escalado sem retorno proporcional. Rollback para R$ ${estimatedPrevBudget.toFixed(2)}.`,
+          new_budget: estimatedPrevBudget,
+          previous_budget: c.daily_budget,
+        });
+        continue;
+      }
+    }
+
     // Guardian: CPA too high
     if (profileConfig.cpa_max_toleravel > 0 && c.spend > 0) {
       const threshold = profileConfig.cpa_max_toleravel * 1.15;
@@ -359,6 +385,24 @@ serve(async (req) => {
                   details: { campaign_id: decision.campaign_id, campaign_name: campaign?.name, original_adset_id: adsetId, original_adset_name: adset?.name, new_adset_id: dupResult.new_adset_id || null, reason: decision.reason, ai_driven: !!LOVABLE_API_KEY, success: dupResult.success, error: dupResult.error || null },
                 });
                 profileResult.actions.push({ ...decision, adset_name: adset?.name, new_adset_id: dupResult.new_adset_id, status: dupResult.success ? "DUPLICATED" : "FAILED", error: dupResult.error });
+              } else if (decision.action === "rollback") {
+                // Rollback: reduce budget back to previous value
+                const campaignId = decision.campaign_id;
+                const campaign = campaignInsights.find((c: CampaignInsight) => c.id === campaignId);
+                const campaignBudgetRaw = (campaignData.data || []).find((c: any) => c.id === campaignId)?.daily_budget;
+                const currentBudget = parseInt(campaignBudgetRaw || "0", 10) / 100;
+                const rollbackBudget = decision.new_budget || currentBudget / (1 + profile.limite_escala / 100);
+
+                const rollbackResp = await fetch(`https://graph.facebook.com/v21.0/${campaignId}`, {
+                  method: "POST", headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ daily_budget: Math.round(rollbackBudget * 100), access_token: accessToken }),
+                });
+                const rollbackData = await rollbackResp.json();
+                await sb.from("emergency_logs").insert({
+                  profile_id: profile.id, user_id: profile.user_id, action_type: "agent_rollback",
+                  details: { campaign_id: campaignId, campaign_name: campaign?.name, old_budget: currentBudget, new_budget: rollbackBudget, reason: decision.reason, ai_driven: !!LOVABLE_API_KEY, success: rollbackData.success || false },
+                });
+                profileResult.actions.push({ action: "rollback", campaign_id: campaignId, old_budget: currentBudget, new_budget: rollbackBudget, reason: decision.reason, status: rollbackData.success ? "ROLLED_BACK" : "FAILED" });
               } else if (decision.action === "scale") {
                 const campaignId = decision.campaign_id;
                 const campaign = campaignInsights.find((c: CampaignInsight) => c.id === campaignId);
