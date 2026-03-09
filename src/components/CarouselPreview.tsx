@@ -140,13 +140,19 @@ export default function CarouselPreview({ visualDNA }: CarouselPreviewProps) {
                 <CardHeader className="pb-4">
                     <CardTitle className="text-lg flex items-center gap-2">
                         <Sparkles className="w-5 h-5 text-primary" />
-                        Criador de Carrossel Estratégico
+                        Criador de Conteúdo Estratégico
                     </CardTitle>
                     <CardDescription>
-                        Defina um tema e a IA criará um carrossel alinhado ao seu DNA Visual.
+                        Escolha plataformas, tipo de conteúdo e a IA criará alinhado ao seu DNA Visual.
                     </CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-4">
+                    <ContentPlatformSelector
+                        platforms={platforms}
+                        onPlatformsChange={setPlatforms}
+                        contentType={contentType}
+                        onContentTypeChange={setContentType}
+                    />
                     <div className="flex gap-2">
                         <Input
                             placeholder="Ex: 5 erros comuns no tráfego pago..."
