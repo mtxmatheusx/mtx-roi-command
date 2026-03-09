@@ -1,0 +1,1 @@
+ALTER TABLE public.client_profiles ADD COLUMN vertical_scale_enabled boolean NOT NULL DEFAULT false;

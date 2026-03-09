@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { Switch } from "@/components/ui/switch";
 import { Shield, Save, Loader2, CheckCircle, KeyRound, Globe, Brain, X, ExternalLink, Trash2, Upload, FileText, Target } from "lucide-react";
 import { z } from "zod";
 import { useNavigate } from "react-router-dom";
@@ -882,6 +883,20 @@ export default function Configuracoes() {
                 <Label>Teto Máximo Diário (R$)</Label>
                 <Input type="number" min="0" step="1" value={(activeProfile as any)?.teto_diario_escala ?? 0} onChange={async (e) => { if (!activeProfile) return; await updateProfile({ id: activeProfile.id, teto_diario_escala: Number(e.target.value) } as any); }} />
               </div>
+            </div>
+            <Separator className="my-4" />
+            <div className="flex items-center justify-between p-3 rounded-lg border border-border">
+              <div className="space-y-1">
+                <Label className="text-sm font-medium flex items-center gap-2">🚀 Escala Vertical (Duplicação)</Label>
+                <p className="text-xs text-muted-foreground">Duplica adsets automaticamente quando o budget atinge ≥80% do teto diário. Independente da escala horizontal.</p>
+              </div>
+              <Switch
+                checked={(activeProfile as any)?.vertical_scale_enabled ?? false}
+                onCheckedChange={async (checked) => {
+                  if (!activeProfile) return;
+                  await updateProfile({ id: activeProfile.id, vertical_scale_enabled: checked } as any);
+                }}
+              />
             </div>
             {(activeProfile as any)?.last_autonomous_run && (
               <div className="mt-6 flex items-center justify-center p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/10">

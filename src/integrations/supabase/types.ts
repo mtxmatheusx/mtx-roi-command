@@ -184,6 +184,7 @@ export type Database = {
           ticket_medio: number
           updated_at: string
           user_id: string
+          vertical_scale_enabled: boolean
         }
         Insert: {
           ad_account_id?: string
@@ -210,6 +211,7 @@ export type Database = {
           ticket_medio?: number
           updated_at?: string
           user_id: string
+          vertical_scale_enabled?: boolean
         }
         Update: {
           ad_account_id?: string
@@ -236,6 +238,7 @@ export type Database = {
           ticket_medio?: number
           updated_at?: string
           user_id?: string
+          vertical_scale_enabled?: boolean
         }
         Relationships: []
       }
