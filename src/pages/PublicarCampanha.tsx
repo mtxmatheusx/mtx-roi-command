@@ -37,6 +37,9 @@ interface CampaignForm {
   headline: string;
   cta: string;
   useCatalog: boolean;
+  isRemarketing: boolean;
+  remarketingType: string;
+  retentionDays: string;
 }
 
 interface CatalogItem {
