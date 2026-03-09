@@ -151,6 +151,16 @@ serve(async (req) => {
     steps.push(`✅ Conjunto: ${metaAdSetId}`);
 
     // ─── Step 3: Ad ───
+    const linkData: Record<string, unknown> = {
+      message: targeting_notes || "Descubra como transformar seus resultados",
+      link: linkUrl,
+      name: headline || campaign_name,
+      call_to_action: { type: cta_type || "LEARN_MORE", value: { link: linkUrl } },
+    };
+    if (creative_url) {
+      linkData.picture = creative_url;
+    }
+
     const adBody = {
       name: `${campaign_name} - Anúncio Auto`,
       adset_id: metaAdSetId,
@@ -159,12 +169,7 @@ serve(async (req) => {
       creative: {
         object_story_spec: {
           page_id: String(pageId),
-          link_data: {
-            message: targeting_notes || "Descubra como transformar seus resultados",
-            link: linkUrl,
-            name: campaign_name,
-            call_to_action: { type: "LEARN_MORE", value: { link: linkUrl } },
-          },
+          link_data: linkData,
         },
       },
     };
