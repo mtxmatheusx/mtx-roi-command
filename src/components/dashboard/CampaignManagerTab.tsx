@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useClientProfiles } from "@/hooks/useClientProfiles";
@@ -15,10 +16,21 @@ import ReactMarkdown from "react-markdown";
 import {
   Plus, Loader2, AlertTriangle, Users, Zap, Target, DollarSign,
   MessageSquare, Send, Bot, User, Sparkles, Upload, X, Image as ImageIcon,
-  Globe, BarChart3, Settings2, Megaphone, ChevronRight
+  Globe, BarChart3, Settings2, Megaphone, ChevronRight, Trash2, ShieldMinus
 } from "lucide-react";
 
 type Msg = { role: "user" | "assistant"; content: string };
+
+interface AudienceEntry {
+  id: string;
+  name: string;
+  type: "include" | "exclude";
+}
+
+const PIXEL_EVENTS = [
+  "PageView", "ViewContent", "ViewCategory", "AddToCart",
+  "Search", "InitiateCheckout", "Purchase", "AddPaymentInfo",
+];
 
 const OBJECTIVES = [
   { value: "OUTCOME_SALES", label: "Vendas", icon: "💰" },
@@ -61,10 +73,12 @@ export default function CampaignManagerTab({ campaigns, isLoading }: Props) {
     headline: "",
     ctaType: "LEARN_MORE",
     isRemarketing: false,
-    audienceId: "",
     remarketingType: "website_visitors",
     retentionDays: "30",
+    pixelEvent: "PageView",
+    newAudienceId: "",
   });
+  const [audiences, setAudiences] = useState<AudienceEntry[]>([]);
   const [creativeUrls, setCreativeUrls] = useState<string[]>([]);
   const [publishing, setPublishing] = useState(false);
   const [publishLogs, setPublishLogs] = useState<string[]>([]);
@@ -125,7 +139,8 @@ export default function CampaignManagerTab({ campaigns, isLoading }: Props) {
           creative_url: creativeUrls[0] || undefined,
           headline: form.headline || form.name,
           cta_type: form.ctaType,
-          audience_id: form.isRemarketing && form.audienceId ? form.audienceId : undefined,
+          audience_ids: form.isRemarketing ? audiences.filter(a => a.type === "include").map(a => a.id) : undefined,
+          excluded_audience_ids: form.isRemarketing ? audiences.filter(a => a.type === "exclude").map(a => a.id) : undefined,
         },
       });
 
@@ -170,7 +185,10 @@ export default function CampaignManagerTab({ campaigns, isLoading }: Props) {
         toast({ title: "Erro", description: data.error, variant: "destructive" });
       } else {
         const newId = data?.id || data?.audience_id;
-        if (newId) setForm(prev => ({ ...prev, audienceId: newId }));
+        const audienceName = `${form.remarketingType === "website_visitors" ? "Visitantes" : "Engajamento"} ${form.retentionDays}d`;
+        if (newId) {
+          setAudiences(prev => [...prev, { id: newId, name: audienceName, type: "include" }]);
+        }
         toast({ title: "✅ Público criado!", description: `ID: ${newId}` });
       }
     } catch (err) {
@@ -394,6 +412,7 @@ export default function CampaignManagerTab({ campaigns, isLoading }: Props) {
 
                 {form.isRemarketing && (
                   <div className="space-y-4 p-4 rounded-lg border border-primary/20 bg-primary/5">
+                    {/* Audience Creator */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label>Tipo de Público</Label>
@@ -418,16 +437,96 @@ export default function CampaignManagerTab({ campaigns, isLoading }: Props) {
                       </div>
                     </div>
 
+                    {/* Pixel Event Selector (for website_visitors) */}
+                    {form.remarketingType === "website_visitors" && (
+                      <div className="space-y-2">
+                        <Label>Eventos do Pixel</Label>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                          {PIXEL_EVENTS.map(evt => (
+                            <label key={evt} className="flex items-center gap-2 text-xs p-2 rounded-md border border-border hover:bg-muted/50 cursor-pointer">
+                              <Checkbox
+                                checked={form.pixelEvent === evt}
+                                onCheckedChange={() => setForm(prev => ({ ...prev, pixelEvent: evt }))}
+                              />
+                              {evt}
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
                     <Button onClick={handleCreateAudience} disabled={publishing} variant="outline" className="gap-2">
                       {publishing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Users className="w-4 h-4" />}
-                      Criar Público
+                      Criar Público & Adicionar
                     </Button>
 
+                    {/* Manual Add */}
                     <div className="space-y-2">
-                      <Label>ID do Público (Custom Audience)</Label>
-                      <Input placeholder="Ex: 120243487645360596" value={form.audienceId} onChange={e => setForm({ ...form, audienceId: e.target.value })} className="font-mono text-sm" />
-                      <p className="text-xs text-muted-foreground">Cole o ID de um público existente ou crie um novo acima.</p>
+                      <Label>Adicionar Público Existente (ID)</Label>
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder="Ex: 120243487645360596"
+                          value={form.newAudienceId}
+                          onChange={e => setForm({ ...form, newAudienceId: e.target.value })}
+                          className="font-mono text-sm flex-1"
+                        />
+                        <Button
+                          variant="outline" size="sm"
+                          disabled={!form.newAudienceId.trim()}
+                          onClick={() => {
+                            setAudiences(prev => [...prev, { id: form.newAudienceId.trim(), name: `Público ${form.newAudienceId.slice(-6)}`, type: "include" }]);
+                            setForm(prev => ({ ...prev, newAudienceId: "" }));
+                          }}
+                        >
+                          <Plus className="w-3 h-3 mr-1" />Incluir
+                        </Button>
+                        <Button
+                          variant="outline" size="sm"
+                          disabled={!form.newAudienceId.trim()}
+                          onClick={() => {
+                            setAudiences(prev => [...prev, { id: form.newAudienceId.trim(), name: `Público ${form.newAudienceId.slice(-6)}`, type: "exclude" }]);
+                            setForm(prev => ({ ...prev, newAudienceId: "" }));
+                          }}
+                          className="text-destructive border-destructive/30 hover:bg-destructive/10"
+                        >
+                          <ShieldMinus className="w-3 h-3 mr-1" />Excluir
+                        </Button>
+                      </div>
                     </div>
+
+                    {/* Audience List */}
+                    {audiences.length > 0 && (
+                      <div className="space-y-2">
+                        <Label>Públicos no Conjunto ({audiences.length})</Label>
+                        <div className="space-y-1.5">
+                          {audiences.map((a, i) => (
+                            <div key={i} className={`flex items-center justify-between p-2.5 rounded-lg border text-sm ${a.type === "exclude" ? "border-destructive/30 bg-destructive/5" : "border-border bg-muted/30"}`}>
+                              <div className="flex items-center gap-2">
+                                <Badge variant={a.type === "exclude" ? "destructive" : "secondary"} className="text-[10px]">
+                                  {a.type === "include" ? "INCLUIR" : "EXCLUIR"}
+                                </Badge>
+                                <span className="text-xs">{a.name}</span>
+                                <span className="text-[10px] font-mono text-muted-foreground">{a.id}</span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  variant="ghost" size="icon" className="h-6 w-6"
+                                  onClick={() => setAudiences(prev => prev.map((au, idx) => idx === i ? { ...au, type: au.type === "include" ? "exclude" : "include" } : au))}
+                                >
+                                  <ShieldMinus className="w-3 h-3" />
+                                </Button>
+                                <Button
+                                  variant="ghost" size="icon" className="h-6 w-6 text-destructive"
+                                  onClick={() => setAudiences(prev => prev.filter((_, idx) => idx !== i))}
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 
