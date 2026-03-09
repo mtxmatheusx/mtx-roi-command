@@ -28,6 +28,16 @@ serve(async (req) => {
         }
 
         const { visualDNA, theme, profileId, platforms, contentType } = body;
+
+        // Fetch master context (Dossiê) for caption personalization
+        let dossierBlock = "";
+        if (profileId) {
+            const ctx = await fetchMasterContext(profileId);
+            if (!ctx.blocked) {
+                dossierBlock = ctx.systemPromptBlock;
+            }
+        }
+
         const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 
         if (!LOVABLE_API_KEY) {
