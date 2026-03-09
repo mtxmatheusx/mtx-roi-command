@@ -46,7 +46,7 @@ export default function CampaignsTable({ campaigns, disableScale }: CampaignsTab
         </div>
       </div>
       <div className="overflow-x-auto -mx-px">
-        <table className="w-full text-sm">
+        <table className="w-full text-sm min-w-[700px]">
           <thead>
             <tr className="border-b border-border text-muted-foreground">
               <th className="text-left px-5 py-3 font-medium text-xs">Campanha</th>
