@@ -111,6 +111,9 @@ serve(async (req) => {
       geo_locations: { countries: ["BR"] },
       targeting_automation: { advantage_audience: 1 },
     };
+    if (audience_id) {
+      targetingObj.custom_audiences = [{ id: audience_id }];
+    }
 
     const adSetBody: Record<string, unknown> = {
       name: `${campaign_name} - Conjunto Auto`,
