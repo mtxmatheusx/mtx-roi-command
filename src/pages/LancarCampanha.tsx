@@ -719,10 +719,40 @@ export default function LancarCampanha() {
                           )}
                           {ct && <span className="text-xs text-muted-foreground">{ct.desc}</span>}
                         </div>
-                        <span className="text-xs text-muted-foreground">{copy.cta}</span>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2 text-xs gap-1 text-muted-foreground hover:text-primary"
+                            onClick={(e) => { e.stopPropagation(); setFeedbackIdx(feedbackIdx === i ? null : i); setFeedbackText(""); }}
+                          >
+                            <MessageSquarePlus className="w-3.5 h-3.5" />
+                            Corrigir
+                          </Button>
+                          <span className="text-xs text-muted-foreground">{copy.cta}</span>
+                        </div>
                       </div>
                       <p className="font-semibold text-sm">{copy.headline}</p>
                       <p className="text-sm text-muted-foreground mt-1">{copy.primary_text}</p>
+
+                      {feedbackIdx === i && (
+                        <div className="mt-3 p-3 rounded-md border border-primary/20 bg-primary/5 space-y-2" onClick={(e) => e.stopPropagation()}>
+                          <p className="text-xs font-medium text-primary">Sugerir correção para esta copy:</p>
+                          <Textarea
+                            placeholder="Descreva o que está errado ou como deveria ser..."
+                            value={feedbackText}
+                            onChange={(e) => setFeedbackText(e.target.value)}
+                            className="text-sm min-h-[70px]"
+                          />
+                          <div className="flex justify-end gap-2">
+                            <Button variant="ghost" size="sm" onClick={() => { setFeedbackIdx(null); setFeedbackText(""); }}>Cancelar</Button>
+                            <Button size="sm" disabled={!feedbackText.trim() || isSendingFeedback} onClick={() => handleSendFeedback(i)} className="gap-1">
+                              {isSendingFeedback ? <Loader2 className="w-3 h-3 animate-spin" /> : <MessageSquarePlus className="w-3 h-3" />}
+                              Enviar
+                            </Button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
