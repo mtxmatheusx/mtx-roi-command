@@ -90,6 +90,7 @@ export default function AgenteAutonomo() {
       case "guardian": return <Badge className="bg-destructive/15 text-destructive border-destructive/30">PAUSADO</Badge>;
       case "agent_scale":
       case "auto_scale": return <Badge className="bg-success/15 text-success border-success/30">ESCALADO</Badge>;
+      case "agent_duplicate": return <Badge className="bg-primary/15 text-primary border-primary/30">DUPLICADO</Badge>;
       case "kill_switch": return <Badge className="bg-amber-500/15 text-amber-500 border-amber-500/30">KILL SWITCH</Badge>;
       default: return <Badge variant="outline">{type}</Badge>;
     }
