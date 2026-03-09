@@ -19,6 +19,11 @@ interface CampaignInsight {
   ctr: number;
   frequency: number;
   daily_budget: number;
+  // Today-only metrics for rollback evaluation
+  today_spend: number;
+  today_purchases: number;
+  today_revenue: number;
+  today_roas: number;
 }
 
 interface Decision {
