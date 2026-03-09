@@ -23,6 +23,7 @@ import LaboratorioVisualLanding from "./pages/LaboratorioVisualLanding";
 import LegacyLanding from "./pages/LegacyLanding";
 import MetodoRIC from "./pages/MetodoRIC";
 import NotFound from "./pages/NotFound";
+import AgenteAutonomo from "./pages/AgenteAutonomo";
 
 const queryClient = new QueryClient();
 
