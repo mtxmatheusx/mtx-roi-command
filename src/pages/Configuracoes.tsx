@@ -174,6 +174,7 @@ export default function Configuracoes() {
         pixel_id: parsed.data.pixelId || "", page_id: form.pageId || null, cpa_meta: parsed.data.cpaMeta, ticket_medio: parsed.data.ticketMedio,
         limite_escala: parsed.data.limiteEscala, budget_maximo: parsed.data.budgetMaximo, budget_frequency: parsed.data.budgetFrequency,
         api_base_url: form.apiBaseUrl.trim() || null,
+        catalog_id: catalogId.trim() || null,
       };
       if (tokenEditing && form.metaAccessToken) updateData.meta_access_token = form.metaAccessToken;
       else if (tokenEditing && !form.metaAccessToken) updateData.meta_access_token = null;
