@@ -150,6 +150,7 @@ export default function Dashboard() {
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="bg-card border border-border">
           <TabsTrigger value="dashboard" className="gap-2"><BarChart3 className="w-4 h-4" />Dashboard</TabsTrigger>
+          <TabsTrigger value="campaign-manager" className="gap-2"><Briefcase className="w-4 h-4" />Gestão de Campanhas</TabsTrigger>
           <TabsTrigger value="create-campaign" className="gap-2"><Plus className="w-4 h-4" />Criar Campanha</TabsTrigger>
           <TabsTrigger value="audiences" className="gap-2"><Users className="w-4 h-4" />Públicos</TabsTrigger>
           <TabsTrigger value="ads" className="gap-2"><Zap className="w-4 h-4" />Anúncios</TabsTrigger>
