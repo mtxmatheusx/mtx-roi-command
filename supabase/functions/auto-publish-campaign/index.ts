@@ -111,8 +111,15 @@ serve(async (req) => {
       geo_locations: { countries: ["BR"] },
       targeting_automation: { advantage_audience: 1 },
     };
-    if (audience_id) {
-      targetingObj.custom_audiences = [{ id: audience_id }];
+    // Support single audience_id or multiple audience_ids
+    const includeIds: string[] = audience_ids?.length ? audience_ids : (audience_id ? [audience_id] : []);
+    const excludeIds: string[] = excluded_audience_ids || [];
+
+    if (includeIds.length > 0) {
+      targetingObj.custom_audiences = includeIds.map((id: string) => ({ id }));
+    }
+    if (excludeIds.length > 0) {
+      targetingObj.excluded_custom_audiences = excludeIds.map((id: string) => ({ id }));
     }
 
     const adSetBody: Record<string, unknown> = {
