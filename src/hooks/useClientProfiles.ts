@@ -143,5 +143,6 @@ export function useClientProfiles() {
     productContext: activeProfile?.product_context ?? null,
     productUrls: activeProfile?.product_urls ?? [],
     apiBaseUrl: (activeProfile as any)?.api_base_url ?? "https://thor-backend.mtxestrategia.com.br",
+    catalogId: (activeProfile as any)?.catalog_id ?? null,
   };
 }
