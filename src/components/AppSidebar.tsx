@@ -17,7 +17,7 @@ export default function AppSidebar() {
     { to: "/simulador", label: t("nav.simulator"), icon: Zap },
     { to: "/criativos", label: t("nav.creatives"), icon: ImageIcon },
     { to: "/auditoria-meta", label: t("nav.auditMeta"), icon: Shield },
-    { to: "/laboratorio-visual/landing", label: "Landing Laboratório", icon: Layout },
+    
     { to: "/laboratorio-visual", label: "Laboratório Visual", icon: Wand2 },
     { to: "/personagens-ugc", label: "Personagens UGC", icon: Users },
   ];
