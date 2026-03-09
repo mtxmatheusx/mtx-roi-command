@@ -185,7 +185,10 @@ export default function CampaignManagerTab({ campaigns, isLoading }: Props) {
         toast({ title: "Erro", description: data.error, variant: "destructive" });
       } else {
         const newId = data?.id || data?.audience_id;
-        if (newId) setForm(prev => ({ ...prev, audienceId: newId }));
+        const audienceName = `${form.remarketingType === "website_visitors" ? "Visitantes" : "Engajamento"} ${form.retentionDays}d`;
+        if (newId) {
+          setAudiences(prev => [...prev, { id: newId, name: audienceName, type: "include" }]);
+        }
         toast({ title: "✅ Público criado!", description: `ID: ${newId}` });
       }
     } catch (err) {
