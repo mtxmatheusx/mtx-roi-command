@@ -18,9 +18,6 @@ export default function AppSidebar() {
     { to: "/criativos", label: t("nav.creatives"), icon: ImageIcon },
     { to: "/auditoria-meta", label: t("nav.auditMeta"), icon: Shield },
     { to: "/laboratorio-visual/landing", label: "Landing Laboratório", icon: Layout },
-    { to: "/laboratorio-visual", label: "Laboratório Visual", icon: Wand2 },
-    { to: "/legacy", label: "Legacy Landing", icon: Sparkles },
-    { to: "/metodo-ric", label: "Método RIC", icon: Target },
     { to: "/personagens-ugc", label: "Personagens UGC", icon: Users },
   ];
 
