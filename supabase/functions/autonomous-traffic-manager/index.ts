@@ -178,8 +178,8 @@ function applyStaticRules(campaigns: CampaignInsight[], profileConfig: any, adse
       const incrementalRatio = 1 + (profileConfig.limite_escala / 100);
       const newBudget = c.daily_budget * incrementalRatio;
 
-      // Check if budget is near ceiling → duplicate instead
-      if (teto > 0 && c.daily_budget >= teto * 0.8) {
+      // Check if budget is near ceiling → duplicate instead (only if vertical scale enabled)
+      if (profileConfig.vertical_scale_enabled && teto > 0 && c.daily_budget >= teto * 0.8) {
         // Find the best adset for this campaign to duplicate
         const campaignAdsets = adsets.filter((a: any) => a.campaign_id === c.id);
         if (campaignAdsets.length > 0) {
