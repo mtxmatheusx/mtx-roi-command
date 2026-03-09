@@ -432,6 +432,70 @@ export default function PublicarCampanha() {
                         <p className="text-xs text-muted-foreground">Anúncios dinâmicos com seu catálogo de produtos</p>
                       </div>
                     </div>
+
+                    {/* ─── Remarketing Section ─── */}
+                    <Separator />
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-3 p-3 rounded-lg border border-border bg-muted/30">
+                        <Switch
+                          checked={form.isRemarketing}
+                          onCheckedChange={(v) => updateField("isRemarketing", v)}
+                        />
+                        <div>
+                          <p className="text-sm font-medium text-foreground flex items-center gap-1.5">
+                            <Users className="w-4 h-4 text-primary" />
+                            Campanha de Remarketing
+                          </p>
+                          <p className="text-xs text-muted-foreground">Alcance pessoas que já interagiram com seu negócio</p>
+                        </div>
+                      </div>
+
+                      {form.isRemarketing && (
+                        <div className="p-4 rounded-lg border border-primary/20 bg-primary/5 space-y-3">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div className="space-y-1.5">
+                              <Label className="text-xs">Tipo de Público</Label>
+                              <Select value={form.remarketingType} onValueChange={(v) => updateField("remarketingType", v)}>
+                                <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="website_visitors">🌐 Visitantes do Site</SelectItem>
+                                  <SelectItem value="engagement">💬 Engajamento (Página)</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-1.5">
+                              <Label className="text-xs">Retenção (dias)</Label>
+                              <Select value={form.retentionDays} onValueChange={(v) => updateField("retentionDays", v)}>
+                                <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="7">7 dias</SelectItem>
+                                  <SelectItem value="14">14 dias</SelectItem>
+                                  <SelectItem value="30">30 dias</SelectItem>
+                                  <SelectItem value="60">60 dias</SelectItem>
+                                  <SelectItem value="90">90 dias</SelectItem>
+                                  <SelectItem value="180">180 dias</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleCreateAudience}
+                            disabled={creatingAudience}
+                            className="gap-1.5 w-full"
+                          >
+                            {creatingAudience ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Users className="w-3.5 h-3.5" />}
+                            {creatingAudience ? "Criando público..." : "Criar Público de Remarketing"}
+                          </Button>
+
+                          <p className="text-[11px] text-muted-foreground">
+                            💡 O público será criado na sua conta Meta e poderá ser usado imediatamente nesta e em futuras campanhas.
+                          </p>
+                        </div>
+                      )}
+                    </div>
                   </CardContent>
                 </Card>
               </div>
