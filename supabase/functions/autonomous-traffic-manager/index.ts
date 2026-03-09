@@ -2,177 +2,345 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-serve(async (req) => {
-    if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+interface CampaignInsight {
+  id: string;
+  name: string;
+  effective_status: string;
+  spend: number;
+  purchases: number;
+  revenue: number;
+  cpa: number;
+  roas: number;
+  ctr: number;
+  frequency: number;
+  daily_budget: number;
+}
 
-    try {
-        const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-        const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-        const sb = createClient(supabaseUrl, supabaseKey);
+async function getAIDecision(
+  LOVABLE_API_KEY: string,
+  profileName: string,
+  profileConfig: any,
+  campaigns: CampaignInsight[]
+): Promise<{ decisions: { campaign_id: string; action: string; reason: string; new_budget?: number }[]; summary: string }> {
+  try {
+    const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash-lite",
+        messages: [
+          {
+            role: "system",
+            content: `Você é o MTX Autonomous Agent, um gestor de tráfego autônomo. Analise campanhas e tome decisões baseado nestas regras ABSOLUTAS:
 
-        // Get all profiles with any autonomous feature enabled
-        const { data: profiles, error } = await sb
-            .from("client_profiles")
-            .select("*")
-            .or("cpa_max_toleravel.gt.0,roas_min_escala.gt.0");
+REGRAS DE PAUSA (Guardian):
+- Se CPA real > CPA máximo tolerável × 1.15 → PAUSAR
+- Se gasto > 0 e 0 conversões nas últimas 24h e gasto > 50% do orçamento diário → PAUSAR
+- Se frequência > 3.0 e CTR < 0.8% → PAUSAR (saturação)
 
-        if (error) throw error;
-        if (!profiles || profiles.length === 0) {
-            return new Response(JSON.stringify({ message: "No profiles with autonomous features enabled" }), {
-                headers: { ...corsHeaders, "Content-Type": "application/json" },
-            });
-        }
+REGRAS DE ESCALA (Auto-Scale):
+- Se ROAS > ROAS mínimo de escala E purchases >= 3 → ESCALAR
+- Incremento: +${profileConfig.limite_escala}% do orçamento atual
+- Teto diário: R$ ${profileConfig.teto_diario_escala}
+- NÃO escalar se frequência > 2.5 e CTR < 1.0% (saturação)
 
-        const results: any[] = [];
-        const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
-        const twoDaysAgo = new Date(Date.now() - 2 * 86400000).toISOString().slice(0, 10);
-        const today = new Date().toISOString().slice(0, 10);
+REGRAS DE MANUTENÇÃO:
+- Se performance está dentro dos parâmetros → MANTER (sem ação)
 
-        for (const profile of profiles) {
-            const accessToken = profile.meta_access_token || Deno.env.get("META_ACCESS_TOKEN");
-            if (!accessToken || !profile.ad_account_id || profile.ad_account_id === "act_") continue;
+Retorne decisões APENAS para campanhas que precisam de ação (pausar ou escalar). Campanhas saudáveis não precisam ser listadas.`,
+          },
+          {
+            role: "user",
+            content: `Perfil: ${profileName}
+CPA Meta: R$ ${profileConfig.cpa_meta}
+CPA Máximo Tolerável: R$ ${profileConfig.cpa_max_toleravel}
+ROAS Mínimo para Escala: ${profileConfig.roas_min_escala}
+Teto Diário de Escala: R$ ${profileConfig.teto_diario_escala}
+Limite de Escala: ${profileConfig.limite_escala}%
 
-            const profileResults: any = { profile: profile.name, actions: [] };
+Campanhas ativas:
+${JSON.stringify(campaigns, null, 2)}
 
-            try {
-                // --- 1. GUARDIAN LOGIC (Campaign Level) ---
-                if (profile.cpa_max_toleravel > 0) {
-                    const url = `https://graph.facebook.com/v21.0/${profile.ad_account_id}/campaigns?fields=id,name,effective_status,insights.time_range({"since":"${yesterday}","until":"${today}"}){spend,actions}&effective_status=["ACTIVE"]&access_token=${accessToken}&limit=100`;
-                    const resp = await fetch(url);
-                    const data = await resp.json();
+Analise e retorne as decisões.`,
+          },
+        ],
+        tools: [
+          {
+            type: "function",
+            function: {
+              name: "execute_decisions",
+              description: "Execute autonomous campaign management decisions",
+              parameters: {
+                type: "object",
+                properties: {
+                  decisions: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        campaign_id: { type: "string" },
+                        action: { type: "string", enum: ["pause", "scale", "maintain"] },
+                        reason: { type: "string" },
+                        new_budget: { type: "number", description: "New daily budget in currency (not cents). Only for scale actions." },
+                      },
+                      required: ["campaign_id", "action", "reason"],
+                      additionalProperties: false,
+                    },
+                  },
+                  summary: { type: "string", description: "Resumo executivo de todas as decisões em 2-3 frases." },
+                },
+                required: ["decisions", "summary"],
+                additionalProperties: false,
+              },
+            },
+          },
+        ],
+        tool_choice: { type: "function", function: { name: "execute_decisions" } },
+      }),
+    });
 
-                    if (!data.error) {
-                        const threshold = profile.cpa_max_toleravel * 1.15; // 15% tolerance
-                        for (const campaign of (data.data || [])) {
-                            const insights = campaign.insights?.data?.[0];
-                            if (!insights) continue;
-
-                            const spend = parseFloat(insights.spend || "0");
-                            const purchases = (insights.actions || [])
-                                .filter((a: any) => a.action_type === "purchase" || a.action_type === "omni_purchase")
-                                .reduce((s: number, a: any) => s + parseInt(a.value || "0", 10), 0);
-
-                            if (spend <= 0) continue;
-                            const cpa = purchases > 0 ? spend / purchases : spend;
-
-                            if (cpa > threshold) {
-                                // Pause campaign
-                                const pauseResp = await fetch(`https://graph.facebook.com/v21.0/${campaign.id}`, {
-                                    method: "POST",
-                                    headers: { "Content-Type": "application/json" },
-                                    body: JSON.stringify({ status: "PAUSED", access_token: accessToken }),
-                                });
-                                const pauseData = await pauseResp.json();
-
-                                // Log
-                                await sb.from("emergency_logs").insert({
-                                    profile_id: profile.id,
-                                    user_id: profile.user_id,
-                                    action_type: "guardian",
-                                    details: {
-                                        campaign_id: campaign.id,
-                                        campaign_name: campaign.name,
-                                        cpa_real: cpa,
-                                        cpa_max: profile.cpa_max_toleravel,
-                                        spend,
-                                        purchases,
-                                        success: pauseData.success || false,
-                                    },
-                                });
-
-                                profileResults.actions.push({ type: "guardian", campaign: campaign.name, status: "PAUSED", cpa });
-                            }
-                        }
-                    }
-                }
-
-                // --- 2. AUTO-SCALE LOGIC (AdSet Level) ---
-                if (profile.roas_min_escala > 0) {
-                    const url = `https://graph.facebook.com/v21.0/${profile.ad_account_id}/adsets?fields=id,name,daily_budget,effective_status,insights.time_range({"since":"${twoDaysAgo}","until":"${today}"}){spend,actions,action_values,ctr,frequency}&effective_status=["ACTIVE"]&access_token=${accessToken}&limit=100`;
-                    const resp = await fetch(url);
-                    const data = await resp.json();
-
-                    if (!data.error) {
-                        for (const adset of (data.data || [])) {
-                            const insights = adset.insights?.data?.[0];
-                            if (!insights) continue;
-
-                            const spend = parseFloat(insights.spend || "0");
-                            const revenue = (insights.action_values || [])
-                                .filter((a: any) => a.action_type === "purchase" || a.action_type === "omni_purchase")
-                                .reduce((s: number, a: any) => s + parseFloat(a.value || "0"), 0);
-                            const purchases = (insights.actions || [])
-                                .filter((a: any) => a.action_type === "purchase" || a.action_type === "omni_purchase")
-                                .reduce((s: number, a: any) => s + parseInt(a.value || "0", 10), 0);
-                            const ctr = parseFloat(insights.ctr || "0");
-                            const frequency = parseFloat(insights.frequency || "0");
-
-                            if (spend <= 0 || purchases < 3) continue;
-                            const roas = revenue / spend;
-
-                            if (roas >= profile.roas_min_escala) {
-                                // Saturation check
-                                if (frequency > 2.5 && ctr < 1.0) continue;
-
-                                const currentBudget = parseInt(adset.daily_budget || "0", 10) / 100;
-                                const incrementalRatio = 1 + (profile.limite_escala / 100);
-                                const newBudget = currentBudget * incrementalRatio;
-                                const teto = profile.teto_diario_escala || 0;
-
-                                if (teto > 0 && newBudget > teto) continue;
-
-                                // Scale budget
-                                const scaleResp = await fetch(`https://graph.facebook.com/v21.0/${adset.id}`, {
-                                    method: "POST",
-                                    headers: { "Content-Type": "application/json" },
-                                    body: JSON.stringify({
-                                        daily_budget: Math.round(newBudget * 100),
-                                        access_token: accessToken,
-                                    }),
-                                });
-                                const scaleData = await scaleResp.json();
-
-                                // Log
-                                await sb.from("emergency_logs").insert({
-                                    profile_id: profile.id,
-                                    user_id: profile.user_id,
-                                    action_type: "auto_scale",
-                                    details: {
-                                        adset_id: adset.id,
-                                        adset_name: adset.name,
-                                        old_budget: currentBudget,
-                                        new_budget: newBudget,
-                                        roas,
-                                        success: scaleData.success || false,
-                                    },
-                                });
-
-                                profileResults.actions.push({ type: "auto_scale", adset: adset.name, status: "SCALED", roas, newBudget });
-                            }
-                        }
-                    }
-                }
-
-                // Update last run
-                await sb.from("client_profiles").update({ last_autonomous_run: new Date().toISOString() }).eq("id", profile.id);
-                results.push(profileResults);
-
-            } catch (e) {
-                results.push({ profile: profile.name, error: (e as Error).message });
-            }
-        }
-
-        return new Response(JSON.stringify({ results, timestamp: new Date().toISOString() }), {
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-    } catch (e) {
-        return new Response(JSON.stringify({ error: (e as Error).message }), {
-            status: 500,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+    if (!resp.ok) {
+      console.warn("AI decision failed:", resp.status);
+      return { decisions: [], summary: "AI indisponível, usando regras estáticas." };
     }
+
+    const data = await resp.json();
+    const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
+    if (!toolCall?.function?.arguments) {
+      return { decisions: [], summary: "AI não retornou decisões estruturadas." };
+    }
+
+    return JSON.parse(toolCall.function.arguments);
+  } catch (e) {
+    console.error("AI decision error:", e);
+    return { decisions: [], summary: "Erro na IA, usando regras estáticas." };
+  }
+}
+
+function applyStaticRules(campaigns: CampaignInsight[], profileConfig: any): { campaign_id: string; action: string; reason: string; new_budget?: number }[] {
+  const decisions: { campaign_id: string; action: string; reason: string; new_budget?: number }[] = [];
+
+  for (const c of campaigns) {
+    // Guardian: CPA too high
+    if (profileConfig.cpa_max_toleravel > 0 && c.spend > 0) {
+      const threshold = profileConfig.cpa_max_toleravel * 1.15;
+      const cpa = c.purchases > 0 ? c.spend / c.purchases : c.spend;
+      if (cpa > threshold) {
+        decisions.push({ campaign_id: c.id, action: "pause", reason: `CPA R$ ${cpa.toFixed(2)} > limite R$ ${threshold.toFixed(2)}` });
+        continue;
+      }
+    }
+
+    // Auto-Scale: ROAS above threshold
+    if (profileConfig.roas_min_escala > 0 && c.purchases >= 3 && c.roas >= profileConfig.roas_min_escala) {
+      if (c.frequency > 2.5 && c.ctr < 1.0) continue; // Saturation
+      const incrementalRatio = 1 + (profileConfig.limite_escala / 100);
+      const newBudget = c.daily_budget * incrementalRatio;
+      const teto = profileConfig.teto_diario_escala || 0;
+      if (teto > 0 && newBudget > teto) continue;
+      decisions.push({ campaign_id: c.id, action: "scale", reason: `ROAS ${c.roas.toFixed(2)} > mínimo ${profileConfig.roas_min_escala}`, new_budget: newBudget });
+    }
+  }
+
+  return decisions;
+}
+
+serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+
+  try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    const sb = createClient(supabaseUrl, supabaseKey);
+
+    // Get all profiles with autonomous features enabled
+    const { data: profiles, error } = await sb
+      .from("client_profiles")
+      .select("*")
+      .or("cpa_max_toleravel.gt.0,roas_min_escala.gt.0");
+
+    if (error) throw error;
+    if (!profiles || profiles.length === 0) {
+      return new Response(JSON.stringify({ message: "No profiles with autonomous features enabled", timestamp: new Date().toISOString() }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const results: any[] = [];
+    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    const twoDaysAgo = new Date(Date.now() - 2 * 86400000).toISOString().slice(0, 10);
+    const today = new Date().toISOString().slice(0, 10);
+
+    for (const profile of profiles) {
+      const accessToken = profile.meta_access_token || Deno.env.get("META_ACCESS_TOKEN");
+      if (!accessToken || !profile.ad_account_id || profile.ad_account_id === "act_") continue;
+
+      const profileResult: any = { profile: profile.name, profile_id: profile.id, actions: [], ai_summary: "" };
+
+      try {
+        // Fetch campaign-level data
+        const campaignUrl = `https://graph.facebook.com/v21.0/${profile.ad_account_id}/campaigns?fields=id,name,effective_status,daily_budget,insights.time_range({"since":"${yesterday}","until":"${today}"}){spend,actions,action_values,ctr,frequency}&effective_status=["ACTIVE"]&access_token=${accessToken}&limit=100`;
+        const campaignResp = await fetch(campaignUrl);
+        const campaignData = await campaignResp.json();
+
+        if (campaignData.error) {
+          profileResult.error = campaignData.error.message;
+          results.push(profileResult);
+          continue;
+        }
+
+        // Also fetch adset-level for scaling
+        const adsetUrl = `https://graph.facebook.com/v21.0/${profile.ad_account_id}/adsets?fields=id,name,daily_budget,effective_status,campaign_id,insights.time_range({"since":"${twoDaysAgo}","until":"${today}"}){spend,actions,action_values,ctr,frequency}&effective_status=["ACTIVE"]&access_token=${accessToken}&limit=100`;
+        const adsetResp = await fetch(adsetUrl);
+        const adsetData = await adsetResp.json();
+
+        // Build campaign insights
+        const campaignInsights: CampaignInsight[] = (campaignData.data || []).map((c: any) => {
+          const ins = c.insights?.data?.[0];
+          const spend = parseFloat(ins?.spend || "0");
+          const purchases = (ins?.actions || [])
+            .filter((a: any) => a.action_type === "purchase" || a.action_type === "omni_purchase")
+            .reduce((s: number, a: any) => s + parseInt(a.value || "0", 10), 0);
+          const revenue = (ins?.action_values || [])
+            .filter((a: any) => a.action_type === "purchase" || a.action_type === "omni_purchase")
+            .reduce((s: number, a: any) => s + parseFloat(a.value || "0"), 0);
+          return {
+            id: c.id,
+            name: c.name,
+            effective_status: c.effective_status,
+            spend,
+            purchases,
+            revenue,
+            cpa: purchases > 0 ? spend / purchases : (spend > 0 ? spend : 0),
+            roas: spend > 0 ? revenue / spend : 0,
+            ctr: parseFloat(ins?.ctr || "0"),
+            frequency: parseFloat(ins?.frequency || "0"),
+            daily_budget: parseInt(c.daily_budget || "0", 10) / 100,
+          };
+        });
+
+        // Get decisions (AI-powered or static fallback)
+        let decisions: { campaign_id: string; action: string; reason: string; new_budget?: number }[];
+        let aiSummary = "";
+
+        if (LOVABLE_API_KEY && campaignInsights.length > 0) {
+          const aiResult = await getAIDecision(LOVABLE_API_KEY, profile.name, {
+            cpa_meta: profile.cpa_meta,
+            cpa_max_toleravel: profile.cpa_max_toleravel,
+            roas_min_escala: profile.roas_min_escala,
+            teto_diario_escala: profile.teto_diario_escala,
+            limite_escala: profile.limite_escala,
+          }, campaignInsights);
+          decisions = aiResult.decisions.filter(d => d.action !== "maintain");
+          aiSummary = aiResult.summary;
+        } else {
+          decisions = applyStaticRules(campaignInsights, profile);
+          aiSummary = `Análise estática: ${campaignInsights.length} campanhas verificadas.`;
+        }
+
+        profileResult.ai_summary = aiSummary;
+        profileResult.campaigns_analyzed = campaignInsights.length;
+
+        // Execute decisions
+        for (const decision of decisions) {
+          try {
+            if (decision.action === "pause") {
+              const pauseResp = await fetch(`https://graph.facebook.com/v21.0/${decision.campaign_id}`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ status: "PAUSED", access_token: accessToken }),
+              });
+              const pauseData = await pauseResp.json();
+
+              await sb.from("emergency_logs").insert({
+                profile_id: profile.id,
+                user_id: profile.user_id,
+                action_type: "agent_pause",
+                details: {
+                  campaign_id: decision.campaign_id,
+                  campaign_name: campaignInsights.find(c => c.id === decision.campaign_id)?.name,
+                  reason: decision.reason,
+                  ai_driven: !!LOVABLE_API_KEY,
+                  success: pauseData.success || false,
+                },
+              });
+
+              profileResult.actions.push({ ...decision, status: pauseData.success ? "EXECUTED" : "FAILED" });
+            } else if (decision.action === "scale" && decision.new_budget) {
+              // Find the adset to scale (scale at adset level for precision)
+              const campaignId = decision.campaign_id;
+              const adsetsForCampaign = (adsetData.data || []).filter((a: any) => a.campaign_id === campaignId);
+
+              for (const adset of adsetsForCampaign) {
+                const currentBudget = parseInt(adset.daily_budget || "0", 10) / 100;
+                const incrementalRatio = 1 + (profile.limite_escala / 100);
+                const newBudget = currentBudget * incrementalRatio;
+                const teto = profile.teto_diario_escala || 0;
+
+                if (teto > 0 && newBudget > teto) continue;
+
+                const scaleResp = await fetch(`https://graph.facebook.com/v21.0/${adset.id}`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ daily_budget: Math.round(newBudget * 100), access_token: accessToken }),
+                });
+                const scaleData = await scaleResp.json();
+
+                await sb.from("emergency_logs").insert({
+                  profile_id: profile.id,
+                  user_id: profile.user_id,
+                  action_type: "agent_scale",
+                  details: {
+                    adset_id: adset.id,
+                    adset_name: adset.name,
+                    campaign_id: campaignId,
+                    old_budget: currentBudget,
+                    new_budget: newBudget,
+                    reason: decision.reason,
+                    ai_driven: !!LOVABLE_API_KEY,
+                    success: scaleData.success || false,
+                  },
+                });
+
+                profileResult.actions.push({
+                  action: "scale",
+                  campaign_id: campaignId,
+                  adset_id: adset.id,
+                  adset_name: adset.name,
+                  old_budget: currentBudget,
+                  new_budget: newBudget,
+                  reason: decision.reason,
+                  status: scaleData.success ? "EXECUTED" : "FAILED",
+                });
+              }
+            }
+          } catch (execErr) {
+            profileResult.actions.push({ ...decision, status: "ERROR", error: (execErr as Error).message });
+          }
+        }
+
+        results.push(profileResult);
+      } catch (e) {
+        results.push({ profile: profile.name, error: (e as Error).message });
+      }
+    }
+
+    return new Response(JSON.stringify({ results, timestamp: new Date().toISOString(), ai_enabled: !!LOVABLE_API_KEY }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  } catch (e) {
+    return new Response(JSON.stringify({ error: (e as Error).message }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
 });
