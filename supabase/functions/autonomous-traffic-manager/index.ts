@@ -273,10 +273,12 @@ serve(async (req) => {
       const profileResult: any = { profile: profile.name, profile_id: profile.id, actions: [], ai_summary: "" };
 
       try {
-        // Fetch campaign-level data
+        // Fetch campaign + adset data in parallel
         const campaignUrl = `https://graph.facebook.com/v21.0/${profile.ad_account_id}/campaigns?fields=id,name,effective_status,daily_budget,insights.time_range({"since":"${yesterday}","until":"${today}"}){spend,actions,action_values,ctr,frequency}&effective_status=["ACTIVE"]&access_token=${accessToken}&limit=100`;
-        const campaignResp = await fetch(campaignUrl);
-        const campaignData = await campaignResp.json();
+        const adsetUrl = `https://graph.facebook.com/v21.0/${profile.ad_account_id}/adsets?fields=id,name,daily_budget,effective_status,campaign_id,insights.time_range({"since":"${twoDaysAgo}","until":"${today}"}){spend,actions,action_values,ctr,frequency}&effective_status=["ACTIVE"]&access_token=${accessToken}&limit=100`;
+
+        const [campaignResp, adsetResp] = await Promise.all([fetch(campaignUrl), fetch(adsetUrl)]);
+        const [campaignData, adsetData] = await Promise.all([campaignResp.json(), adsetResp.json()]);
 
         if (campaignData.error) {
           profileResult.error = campaignData.error.message;
@@ -284,10 +286,6 @@ serve(async (req) => {
           continue;
         }
 
-        // Also fetch adset-level for scaling & duplication
-        const adsetUrl = `https://graph.facebook.com/v21.0/${profile.ad_account_id}/adsets?fields=id,name,daily_budget,effective_status,campaign_id,insights.time_range({"since":"${twoDaysAgo}","until":"${today}"}){spend,actions,action_values,ctr,frequency}&effective_status=["ACTIVE"]&access_token=${accessToken}&limit=100`;
-        const adsetResp = await fetch(adsetUrl);
-        const adsetData = await adsetResp.json();
         const adsetsList = adsetData.data || [];
 
         // Build campaign insights
