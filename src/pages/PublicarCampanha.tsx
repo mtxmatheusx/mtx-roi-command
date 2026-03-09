@@ -167,7 +167,40 @@ export default function PublicarCampanha() {
     }
   };
 
-  /* ─── Validation ─── */
+  /* ─── Create Remarketing Audience ─── */
+  const handleCreateAudience = async () => {
+    if (!profileId) return;
+    if (form.remarketingType === "website_visitors" && (!pixelId || pixelId.trim() === "")) {
+      toast({ title: "Pixel ID obrigatório", description: "Configure o Pixel ID em Configurações para criar público de visitantes.", variant: "destructive" });
+      return;
+    }
+    if (form.remarketingType === "engagement" && (!pageId || pageId.trim() === "")) {
+      toast({ title: "Page ID obrigatório", description: "Configure o Page ID em Configurações.", variant: "destructive" });
+      return;
+    }
+    setCreatingAudience(true);
+    try {
+      const body: Record<string, unknown> = {
+        profileId,
+        audienceType: form.remarketingType,
+        name: `${activeProfile?.name} | ${form.remarketingType === "website_visitors" ? "Visitantes" : "Engajamento"} - ${form.retentionDays}d`,
+      };
+      if (form.remarketingType === "website_visitors") {
+        body.rule = { retention_seconds: parseInt(form.retentionDays) * 86400, url_filter: "" };
+      } else if (form.remarketingType === "engagement") {
+        body.rule = { retention_seconds: parseInt(form.retentionDays) * 86400 };
+      }
+      const { data, error } = await supabase.functions.invoke("manage-audiences", { body });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast({ title: "✅ Público criado!", description: `${data.name} (ID: ${data.audience_id})` });
+    } catch (e) {
+      toast({ title: "Erro ao criar público", description: (e as Error).message, variant: "destructive" });
+    } finally {
+      setCreatingAudience(false);
+    }
+  };
+
   const getValidationErrors = (): string[] => {
     const errors: string[] = [];
     if (!form.name.trim()) errors.push("Nome da campanha é obrigatório");
