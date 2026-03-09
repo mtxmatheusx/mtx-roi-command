@@ -1542,6 +1542,7 @@ export default function LancarCampanha() {
                 )}
               </CardContent>
             </Card>
+            </div> {/* close grid */}
 
             {!publishResult && (
               <div className="flex gap-3">
