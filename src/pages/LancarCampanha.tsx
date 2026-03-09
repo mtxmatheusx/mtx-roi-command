@@ -139,6 +139,31 @@ export default function LancarCampanha() {
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [useCatalog, setUseCatalog] = useState(false);
+  const [feedbackIdx, setFeedbackIdx] = useState<number | null>(null);
+  const [feedbackText, setFeedbackText] = useState("");
+  const [isSendingFeedback, setIsSendingFeedback] = useState(false);
+
+  const handleSendFeedback = async (copyIdx: number) => {
+    if (!user?.id || !draft || !feedbackText.trim()) return;
+    setIsSendingFeedback(true);
+    try {
+      const copy = draft.copy_options[copyIdx];
+      await supabase.from("copy_feedback" as any).insert({
+        user_id: user.id,
+        profile_id: activeProfile?.id || null,
+        copy_type: copy.copy_type || null,
+        original_copy: `${copy.headline}\n\n${copy.primary_text}`,
+        suggested_correction: feedbackText.trim(),
+      } as any);
+      toast({ title: "Feedback enviado!", description: "Sua sugestão será analisada para melhorar as próximas gerações." });
+      setFeedbackIdx(null);
+      setFeedbackText("");
+    } catch {
+      toast({ title: "Erro ao enviar", description: "Tente novamente.", variant: "destructive" });
+    } finally {
+      setIsSendingFeedback(false);
+    }
+  };
 
   // Load draft history filtered by profile
   useEffect(() => {
