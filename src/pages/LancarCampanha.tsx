@@ -1318,12 +1318,90 @@ export default function LancarCampanha() {
           <div className="space-y-4">
             {/* Page ID warning */}
             {(!activeProfile?.page_id || activeProfile.page_id.trim() === "") && (
-              <div className="flex items-center gap-2 text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-lg px-4 py-3">
+              <div className="flex items-center gap-2 text-xs text-warning bg-warning/10 border border-warning/20 rounded-lg px-4 py-3">
                 <AlertTriangle className="w-4 h-4 shrink-0" />
-                ⚠️ Vincule uma Página do Facebook nas Configurações para publicar. O botão "Aprovar Execução" está desabilitado.
+                ⚠️ Vincule uma Página do Facebook nas Configurações para publicar.
               </div>
             )}
-            <Card className="border-primary/30">
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              {/* Ad Preview */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm font-medium flex items-center gap-2">
+                    <Eye className="w-4 h-4 text-primary" />
+                    Pré-visualização
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="rounded-xl border border-border bg-card overflow-hidden">
+                    <div className="p-3 flex items-center gap-2 border-b border-border">
+                      <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
+                        <span className="text-xs font-bold text-primary">M</span>
+                      </div>
+                      <div>
+                        <p className="text-xs font-semibold text-foreground">{activeProfile?.name || "Seu Negócio"}</p>
+                        <p className="text-[10px] text-muted-foreground">Patrocinado · 🌍</p>
+                      </div>
+                    </div>
+                    <div className="p-3">
+                      <p className="text-sm text-foreground whitespace-pre-wrap">
+                        {draft.copy_options[selectedCopyIdx]?.primary_text || "Texto do anúncio..."}
+                      </p>
+                    </div>
+                    <div className="bg-muted/50 h-36 flex items-center justify-center border-y border-border">
+                      {selectedAssetUrls.length > 0 && !/\.(mp4|mov|webm)/i.test(selectedAssetUrls[0]) ? (
+                        <img src={selectedAssetUrls[0]} alt="Preview" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="text-center text-muted-foreground">
+                          <ImageIcon className="w-8 h-8 mx-auto mb-1" />
+                          <p className="text-xs">Criativo</p>
+                        </div>
+                      )}
+                    </div>
+                    <div className="p-3 flex items-center justify-between">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[10px] text-muted-foreground uppercase truncate">
+                          {destinationUrl || "seu-site.com"}
+                        </p>
+                        <p className="text-sm font-semibold text-foreground truncate">
+                          {draft.copy_options[selectedCopyIdx]?.headline || "Headline"}
+                        </p>
+                      </div>
+                      <Badge variant="outline" className="shrink-0 ml-2 text-[10px]">
+                        {ctaType.replace(/_/g, " ")}
+                      </Badge>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Validation Checklist */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm font-medium">Checklist de Publicação</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {[
+                    { ok: !!draft.campaign_name.trim(), label: "Nome da campanha" },
+                    { ok: !!activeProfile?.ad_account_id && activeProfile.ad_account_id !== "act_", label: "Ad Account ID" },
+                    { ok: !!activeProfile?.page_id, label: "Page ID" },
+                    { ok: !(objective === "OUTCOME_SALES" || objective === "OUTCOME_LEADS") || !!activeProfile?.pixel_id, label: "Pixel ID (conversão)" },
+                    { ok: !!activeProfile?.meta_access_token, label: "Token Meta" },
+                    { ok: dailyBudget >= 5, label: "Orçamento ≥ R$5" },
+                    { ok: !!destinationUrl || useCatalog, label: "URL ou Catálogo" },
+                    { ok: selectedAssetUrls.length > 0, label: "Criativos selecionados" },
+                  ].map((item, i) => (
+                    <div key={i} className="flex items-center gap-2 text-sm">
+                      {item.ok ? <CheckCircle2 className="w-4 h-4 text-success shrink-0" /> : <XCircle className="w-4 h-4 text-destructive shrink-0" />}
+                      <span className={item.ok ? "text-foreground" : "text-muted-foreground"}>{item.label}</span>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+
+              {/* Summary */}
+              <Card className="border-primary/30">
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
                   <CheckCircle2 className="w-5 h-5 text-success" />
