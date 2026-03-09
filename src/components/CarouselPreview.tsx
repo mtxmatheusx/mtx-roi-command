@@ -50,7 +50,7 @@ export default function CarouselPreview({ visualDNA }: CarouselPreviewProps) {
 
         try {
             const { data, error } = await supabase.functions.invoke("generate-carousel", {
-                body: { visualDNA, theme, platforms, contentType },
+                body: { visualDNA, theme, platforms, contentType, profileId: activeProfile?.id },
             });
 
             if (error) throw error;
