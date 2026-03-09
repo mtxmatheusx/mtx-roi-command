@@ -43,7 +43,7 @@ export default function AgenteAutonomo() {
       .select("*")
       .eq("user_id", user!.id)
       .eq("profile_id", activeProfile!.id)
-      .in("action_type", ["agent_pause", "agent_scale", "guardian", "auto_scale", "kill_switch"])
+      .in("action_type", ["agent_pause", "agent_scale", "agent_duplicate", "guardian", "auto_scale", "kill_switch"])
       .order("created_at", { ascending: false })
       .limit(50);
     if (data) {
