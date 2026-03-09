@@ -62,14 +62,25 @@ serve(async (req) => {
       });
     }
 
-    // Fetch product catalogs owned by the business
-    const catalogsUrl = `${META_API}/${adAccountId}/product_catalogs?fields=id,name,product_count,vertical&access_token=${accessToken}&limit=50`;
-    const catalogsRes = await fetch(catalogsUrl);
-    const catalogsData = await catalogsRes.json();
+    // Fetch catalogs via the business that owns the ad account
+    // First, get the business ID from the ad account
+    const acctInfoUrl = `${META_API}/${adAccountId}?fields=business&access_token=${accessToken}`;
+    const acctInfoRes = await fetch(acctInfoUrl);
+    const acctInfo = await acctInfoRes.json();
 
-    if (catalogsData.error) {
-      // Try alternative: fetch from business
-      const businessUrl = `${META_API}/${adAccountId}/owned_product_catalogs?fields=id,name,product_count,vertical&access_token=${accessToken}&limit=50`;
+    let catalogsData: any = { error: null, data: [] };
+
+    if (acctInfo?.business?.id) {
+      const bizCatalogsUrl = `${META_API}/${acctInfo.business.id}/owned_product_catalogs?fields=id,name,product_count,vertical&access_token=${accessToken}&limit=50`;
+      const bizRes = await fetch(bizCatalogsUrl);
+      catalogsData = await bizRes.json();
+    }
+
+    if (!acctInfo?.business?.id || catalogsData.error) {
+      // Fallback: try direct edge on ad account with correct connection
+      const fallbackUrl = `${META_API}/${adAccountId}?fields=product_catalog_ids&access_token=${accessToken}`;
+      const fallbackRes = await fetch(fallbackUrl);
+      const fallbackData = await fallbackRes.json();
       const businessRes = await fetch(businessUrl);
       const businessData = await businessRes.json();
 
