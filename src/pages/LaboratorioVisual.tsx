@@ -116,14 +116,50 @@ export default function LaboratorioVisual() {
                                                 <div>
                                                     <p className="text-[10px] uppercase font-bold text-muted-foreground mb-2">Paleta de Cores</p>
                                                     <div className="flex gap-2">
-                                                        {visualDNA.palette.map((color, i) => (
-                                                            <div
-                                                                key={i}
-                                                                className="w-8 h-8 rounded-full border border-border shadow-sm"
-                                                                style={{ backgroundColor: color }}
-                                                                title={color}
-                                                            />
-                                                        ))}
+                                                        {visualDNA.palette.map((color, i) => {
+                                                            const rgb = hexToRgb(color);
+                                                            return (
+                                                                <Popover key={i}>
+                                                                    <PopoverTrigger asChild>
+                                                                        <button
+                                                                            className="w-8 h-8 rounded-full border border-border shadow-sm cursor-pointer transition-transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                                                                            style={{ backgroundColor: color }}
+                                                                            title={`Editar ${color}`}
+                                                                        />
+                                                                    </PopoverTrigger>
+                                                                    <PopoverContent className="w-64 space-y-3" side="bottom" align="start">
+                                                                        <p className="text-xs font-semibold text-muted-foreground">Editar Cor</p>
+                                                                        <div
+                                                                            className="w-full h-10 rounded-md border"
+                                                                            style={{ backgroundColor: color }}
+                                                                        />
+                                                                        <div className="space-y-2">
+                                                                            <div className="space-y-1">
+                                                                                <Label className="text-[10px] text-destructive font-bold">R: {rgb.r}</Label>
+                                                                                <Slider min={0} max={255} step={1} value={[rgb.r]} onValueChange={([v]) => handleColorChange(i, rgbToHex(v, rgb.g, rgb.b))} className="[&_[role=slider]]:bg-destructive [&_.bg-primary]:bg-destructive" />
+                                                                            </div>
+                                                                            <div className="space-y-1">
+                                                                                <Label className="text-[10px] text-green-600 font-bold">G: {rgb.g}</Label>
+                                                                                <Slider min={0} max={255} step={1} value={[rgb.g]} onValueChange={([v]) => handleColorChange(i, rgbToHex(rgb.r, v, rgb.b))} className="[&_[role=slider]]:bg-green-600 [&_.bg-primary]:bg-green-600" />
+                                                                            </div>
+                                                                            <div className="space-y-1">
+                                                                                <Label className="text-[10px] text-blue-600 font-bold">B: {rgb.b}</Label>
+                                                                                <Slider min={0} max={255} step={1} value={[rgb.b]} onValueChange={([v]) => handleColorChange(i, rgbToHex(rgb.r, rgb.g, v))} className="[&_[role=slider]]:bg-blue-600 [&_.bg-primary]:bg-blue-600" />
+                                                                            </div>
+                                                                        </div>
+                                                                        <Input
+                                                                            value={color}
+                                                                            onChange={(e) => {
+                                                                                const val = e.target.value;
+                                                                                if (/^#[0-9a-fA-F]{6}$/.test(val)) handleColorChange(i, val);
+                                                                            }}
+                                                                            className="text-xs font-mono h-8"
+                                                                            maxLength={7}
+                                                                        />
+                                                                    </PopoverContent>
+                                                                </Popover>
+                                                            );
+                                                        })}
                                                     </div>
                                                 </div>
                                                 <div className="grid grid-cols-2 gap-3">
