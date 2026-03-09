@@ -72,7 +72,7 @@ const defaultForm: CampaignForm = {
   name: "", objective: "OUTCOME_SALES", dailyBudget: "50",
   destinationUrl: "", primaryText: "", headline: "", cta: "LEARN_MORE",
   useCatalog: false, isRemarketing: false, remarketingType: "website_visitors",
-  retentionDays: "30",
+  retentionDays: "30", audienceId: "",
 };
 
 export default function PublicarCampanha() {
