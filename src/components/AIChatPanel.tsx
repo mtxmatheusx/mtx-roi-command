@@ -486,6 +486,12 @@ export default function AIChatPanel() {
                     <p className="mt-1 text-xs">Pergunte sobre campanhas, peça para criar ou otimizar. Posso executar no Meta Ads!</p>
                     <div className="mt-3 space-y-1">
                       <button
+                        onClick={() => { setInput("Me guie passo a passo para publicar uma campanha. Verifique se meu perfil tem todas as permissões necessárias e me ajude a configurar tudo."); }}
+                        className="block w-full text-left text-xs px-3 py-1.5 rounded-md bg-primary/10 border border-primary/20 hover:bg-primary/20 transition-colors font-medium text-primary"
+                      >
+                        🧭 Publicação guiada (passo a passo)
+                      </button>
+                      <button
                         onClick={() => setInput("Crie uma campanha de remarketing para visitantes do meu site")}
                         className="block w-full text-left text-xs px-3 py-1.5 rounded-md bg-muted hover:bg-accent transition-colors"
                       >
