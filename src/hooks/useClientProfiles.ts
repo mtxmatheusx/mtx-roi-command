@@ -16,8 +16,13 @@ export interface ClientProfile {
   limite_escala: number;
   budget_maximo: number;
   budget_frequency: string;
+  cpa_max_toleravel: number;
+  roas_min_escala: number;
+  teto_diario_escala: number;
   meta_access_token: string | null;
   gemini_api_key: string | null;
+  api_base_url: string | null;
+  avatar_dossier: string | null;
   product_context: string | null;
   product_urls: string[];
   is_active: boolean;

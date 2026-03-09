@@ -23,6 +23,7 @@ import LaboratorioVisualLanding from "./pages/LaboratorioVisualLanding";
 import LegacyLanding from "./pages/LegacyLanding";
 import MetodoRIC from "./pages/MetodoRIC";
 import NotFound from "./pages/NotFound";
+import AgenteAutonomo from "./pages/AgenteAutonomo";
 
 const queryClient = new QueryClient();
 
@@ -47,6 +48,7 @@ const App = () => (
             <Route path="/auditoria-meta" element={<ProtectedRoute><AuditoriaMeta /></ProtectedRoute>} />
             <Route path="/configuracoes" element={<ProtectedRoute><Configuracoes /></ProtectedRoute>} />
             <Route path="/personagens-ugc" element={<ProtectedRoute><PersonagensUGC /></ProtectedRoute>} />
+            <Route path="/agente-autonomo" element={<ProtectedRoute><AgenteAutonomo /></ProtectedRoute>} />
             <Route path="/laboratorio-visual/landing" element={<LaboratorioVisualLanding />} />
             <Route path="/laboratorio-visual" element={<ProtectedRoute><LaboratorioVisual /></ProtectedRoute>} />
             <Route path="/legacy" element={<LegacyLanding />} />
