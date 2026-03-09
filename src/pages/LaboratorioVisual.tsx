@@ -41,6 +41,14 @@ export default function LaboratorioVisual() {
         setActiveTab("criacao");
     };
 
+    const handleColorChange = useCallback((index: number, newColor: string) => {
+        if (!visualDNA) return;
+        setVisualDNA({
+            ...visualDNA,
+            palette: visualDNA.palette.map((c, i) => (i === index ? newColor : c)),
+        });
+    }, [visualDNA]);
+
     return (
         <AppLayout>
             <ActiveProfileHeader />
