@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { VisualDNA } from "@/pages/LaboratorioVisual";
 import { motion, AnimatePresence } from "framer-motion";
+import ContentPlatformSelector, { Platform, ContentType } from "@/components/ContentPlatformSelector";
 
 interface CarouselPreviewProps {
     visualDNA: VisualDNA;
