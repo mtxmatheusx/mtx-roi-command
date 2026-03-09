@@ -64,10 +64,31 @@ type DraftRecord = {
   created_at: string;
 };
 
+interface CatalogItem {
+  id: string;
+  name: string;
+  product_count?: number;
+}
+
+const OBJECTIVES = [
+  { value: "OUTCOME_SALES", label: "🛒 Vendas" },
+  { value: "OUTCOME_LEADS", label: "📋 Geração de Leads" },
+  { value: "OUTCOME_TRAFFIC", label: "🌐 Tráfego" },
+  { value: "OUTCOME_AWARENESS", label: "📢 Reconhecimento" },
+  { value: "OUTCOME_ENGAGEMENT", label: "💬 Engajamento" },
+];
+
+const CTA_OPTIONS = [
+  "LEARN_MORE", "SHOP_NOW", "SIGN_UP", "SUBSCRIBE", "CONTACT_US",
+  "APPLY_NOW", "BOOK_NOW", "DOWNLOAD", "GET_OFFER", "ORDER_NOW",
+];
+
 const objectiveLabels: Record<string, string> = {
   OUTCOME_SALES: "Vendas",
   OUTCOME_LEADS: "Leads",
   OUTCOME_ENGAGEMENT: "Engajamento",
+  OUTCOME_TRAFFIC: "Tráfego",
+  OUTCOME_AWARENESS: "Reconhecimento",
 };
 
 const statusConfig: Record<string, { label: string; className: string; icon: typeof CheckCircle2 }> = {
