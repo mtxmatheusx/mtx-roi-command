@@ -39,7 +39,7 @@ serve(async (req) => {
     let body: any;
     try { body = JSON.parse(rawBody); } catch { return fail("JSON inválido"); }
 
-    const { profileId, campaign_name, objective, daily_budget, targeting_notes, use_catalog, destination_url } = body;
+    const { profileId, campaign_name, objective, daily_budget, targeting_notes, use_catalog, destination_url, creative_url, headline, cta_type, audience_id } = body;
     if (!profileId || !campaign_name) return fail("profileId e campaign_name obrigatórios");
 
     // Fetch profile

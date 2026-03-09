@@ -275,6 +275,10 @@ export default function PublicarCampanha() {
           targeting_notes: form.primaryText,
           use_catalog: form.useCatalog,
           destination_url: form.destinationUrl,
+          creative_url: creativeUrls.length > 0 ? creativeUrls[0] : undefined,
+          headline: form.headline,
+          cta_type: form.cta,
+          audience_id: form.isRemarketing && form.audienceId ? form.audienceId : undefined,
         },
       });
 
