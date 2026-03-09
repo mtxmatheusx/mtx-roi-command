@@ -171,8 +171,8 @@ export default function CampanhasPage() {
                           <div className="text-xs text-muted-foreground mt-0.5">ID: {c.id}</div>
                         </td>
                         <td className="text-right px-3 py-3">
-                          <Badge variant={c.status === "ACTIVE" ? "default" : "secondary"} className="text-[10px]">
-                            {c.status === "ACTIVE" ? "ATIVO" : c.status}
+                          <Badge variant={c.status === "active" ? "default" : "secondary"} className="text-[10px]">
+                            {c.status === "active" ? "ATIVO" : c.status.toUpperCase()}
                           </Badge>
                         </td>
                         <td className="text-right px-3 py-3">{formatCurrency(c.spend)}</td>
