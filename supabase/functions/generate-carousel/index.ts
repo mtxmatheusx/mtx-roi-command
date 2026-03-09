@@ -26,7 +26,7 @@ serve(async (req) => {
             });
         }
 
-        const { visualDNA, theme, profileId } = body;
+        const { visualDNA, theme, profileId, platforms, contentType } = body;
         const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 
         if (!LOVABLE_API_KEY) {
@@ -39,15 +39,36 @@ serve(async (req) => {
             });
         }
 
-        console.log(`Generating Carousel for: ${theme}`);
+        const selectedPlatforms = platforms?.length ? platforms : ["instagram"];
+        const isStatic = contentType === "static";
+
+        console.log(`Generating content for: ${theme} | Platforms: ${selectedPlatforms.join(",")} | Type: ${contentType || "carousel"}`);
+
+        const platformFormats: Record<string, string> = {
+            instagram: "1080×1350 portrait",
+            tiktok: "1080×1920 vertical (9:16)",
+            linkedin: "1200×627 landscape, tom profissional e corporativo",
+            blog: "1200×630 landscape, visual editorial com foco em legibilidade",
+        };
+
+        const platformInstructions = selectedPlatforms
+            .map((p: string) => `- ${p.charAt(0).toUpperCase() + p.slice(1)}: ${platformFormats[p] || "formato padrão"}`)
+            .join("\n");
 
         const paletteInfo = visualDNA?.palette?.length
             ? `Paleta de cores da marca: ${visualDNA.palette.join(", ")}`
             : "Use cores profissionais e contrastantes.";
 
-        const systemPrompt = `Você é um Especialista em Copywriting para Instagram e Design Estratégico de carrosséis de alta conversão.
+        const slideCountInstruction = isStatic
+            ? "Gere EXATAMENTE 1 slide com todo o conteúdo condensado em um único visual impactante."
+            : "Gere entre 7 e 10 slides. A distribuição ideal: 1 hook, 5-7 value/solution, 1 cta.";
 
-MISSÃO: Criar um carrossel magnético que siga os frameworks StoryBrand (Donald Miller) e AIDA (Atenção, Interesse, Desejo, Ação).
+        const systemPrompt = `Você é um Especialista em Copywriting e Design Estratégico de conteúdos de alta conversão para redes sociais.
+
+MISSÃO: Criar ${isStatic ? "um post estático" : "um carrossel"} magnético que siga os frameworks StoryBrand (Donald Miller) e AIDA (Atenção, Interesse, Desejo, Ação).
+
+PLATAFORMAS ALVO E FORMATOS:
+${platformInstructions}
 
 DNA VISUAL DO CLIENTE (OBRIGATÓRIO SEGUIR):
 - Tom de Voz: ${visualDNA?.tone || "Profissional e direto"}
@@ -64,10 +85,18 @@ REGRAS DE CRIAÇÃO:
 5. Cada headline deve ser curta (máx 8 palavras), impactante e scroll-stopping.
 6. O body text deve complementar sem repetir a headline.
 7. Os image_prompts devem descrever cenas que refletem a estética da marca.
+8. ADAPTE o conteúdo para as plataformas selecionadas: ${selectedPlatforms.join(", ")}.
+${selectedPlatforms.includes("linkedin") ? "9. Para LinkedIn: use tom mais profissional, dados e insights de mercado." : ""}
+${selectedPlatforms.includes("tiktok") ? "9. Para TikTok: use linguagem mais casual, tendências e hooks virais." : ""}
+${selectedPlatforms.includes("blog") ? "9. Para Blog: use formato mais editorial, aprofundado e com subtítulos." : ""}
+
+${slideCountInstruction}
 
 Retorne APENAS um JSON válido (sem markdown, sem backticks) com esta estrutura:
 {
-  "title": "Título do carrossel",
+  "title": "Título do conteúdo",
+  "platforms": ${JSON.stringify(selectedPlatforms)},
+  "content_type": "${isStatic ? "static" : "carousel"}",
   "slides": [
     {
       "headline": "Título curto e impactante",
@@ -76,9 +105,7 @@ Retorne APENAS um JSON válido (sem markdown, sem backticks) com esta estrutura:
       "type": "hook | value | solution | cta"
     }
   ]
-}
-
-Gere entre 7 e 10 slides. A distribuição ideal: 1 hook, 5-7 value/solution, 1 cta.`;
+}`;
 
         const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
             method: "POST",

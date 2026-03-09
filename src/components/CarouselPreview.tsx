@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { VisualDNA } from "@/pages/LaboratorioVisual";
 import { motion, AnimatePresence } from "framer-motion";
+import ContentPlatformSelector, { Platform, ContentType } from "@/components/ContentPlatformSelector";
 
 interface CarouselPreviewProps {
     visualDNA: VisualDNA;
@@ -32,6 +33,8 @@ export default function CarouselPreview({ visualDNA }: CarouselPreviewProps) {
     const [slideImages, setSlideImages] = useState<Record<number, string>>({});
     const [generatingImages, setGeneratingImages] = useState<Record<number, boolean>>({});
     const [generatingAll, setGeneratingAll] = useState(false);
+    const [platforms, setPlatforms] = useState<Platform[]>(["instagram"]);
+    const [contentType, setContentType] = useState<ContentType>("carousel");
     const { toast } = useToast();
 
     const handleGenerate = async () => {
@@ -43,7 +46,7 @@ export default function CarouselPreview({ visualDNA }: CarouselPreviewProps) {
 
         try {
             const { data, error } = await supabase.functions.invoke("generate-carousel", {
-                body: { visualDNA, theme },
+                body: { visualDNA, theme, platforms, contentType },
             });
 
             if (error) throw error;
@@ -137,13 +140,19 @@ export default function CarouselPreview({ visualDNA }: CarouselPreviewProps) {
                 <CardHeader className="pb-4">
                     <CardTitle className="text-lg flex items-center gap-2">
                         <Sparkles className="w-5 h-5 text-primary" />
-                        Criador de Carrossel Estratégico
+                        Criador de Conteúdo Estratégico
                     </CardTitle>
                     <CardDescription>
-                        Defina um tema e a IA criará um carrossel alinhado ao seu DNA Visual.
+                        Escolha plataformas, tipo de conteúdo e a IA criará alinhado ao seu DNA Visual.
                     </CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-4">
+                    <ContentPlatformSelector
+                        platforms={platforms}
+                        onPlatformsChange={setPlatforms}
+                        contentType={contentType}
+                        onContentTypeChange={setContentType}
+                    />
                     <div className="flex gap-2">
                         <Input
                             placeholder="Ex: 5 erros comuns no tráfego pago..."
