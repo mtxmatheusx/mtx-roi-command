@@ -62,51 +62,36 @@ serve(async (req) => {
       });
     }
 
-    // Fetch catalogs via the business that owns the ad account
-    // First, get the business ID from the ad account
+    // Step 1: Get Business ID from Ad Account
     const acctInfoUrl = `${META_API}/${adAccountId}?fields=business&access_token=${accessToken}`;
     const acctInfoRes = await fetch(acctInfoUrl);
     const acctInfo = await acctInfoRes.json();
 
-    let catalogsData: any = { error: null, data: [] };
-
+    // Step 2: Fetch catalogs from Business
     if (acctInfo?.business?.id) {
       const bizCatalogsUrl = `${META_API}/${acctInfo.business.id}/owned_product_catalogs?fields=id,name,product_count,vertical&access_token=${accessToken}&limit=50`;
       const bizRes = await fetch(bizCatalogsUrl);
-      catalogsData = await bizRes.json();
-    }
+      const bizData = await bizRes.json();
 
-    if (!acctInfo?.business?.id || catalogsData.error) {
-      // Fallback: try direct edge on ad account with correct connection
-      const fallbackUrl = `${META_API}/${adAccountId}?fields=product_catalog_ids&access_token=${accessToken}`;
-      const fallbackRes = await fetch(fallbackUrl);
-      const fallbackData = await fallbackRes.json();
-      const businessRes = await fetch(businessUrl);
-      const businessData = await businessRes.json();
-
-      if (businessData.error) {
+      if (!bizData.error) {
         return new Response(JSON.stringify({
-          error: `Erro ao buscar catálogos: ${catalogsData.error.message}`,
-          catalogs: [],
+          catalogs: bizData.data || [],
+          source: "business_owned_catalogs",
         }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-
-      return new Response(JSON.stringify({
-        catalogs: businessData.data || [],
-        source: "owned_product_catalogs",
-      }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
     }
 
+    // Fallback: no business or error — return empty
+    const errorMsg = acctInfo?.error?.message || "Nenhum catálogo encontrado. Verifique se o Business Manager tem catálogos configurados.";
     return new Response(JSON.stringify({
-      catalogs: catalogsData.data || [],
-      source: "product_catalogs",
+      error: errorMsg,
+      catalogs: [],
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
+
   } catch (e) {
     console.error("fetch-meta-catalogs error:", e);
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Erro desconhecido" }), {
