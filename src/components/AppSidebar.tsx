@@ -21,6 +21,7 @@ export default function AppSidebar() {
     { to: "/laboratorio-visual", label: "Laboratório Visual", icon: Wand2 },
     { to: "/personagens-ugc", label: "Personagens UGC", icon: Users },
     { to: "/agente-autonomo", label: "Agente Autônomo", icon: Bot },
+    { to: "/feedback-copy", label: "Feedbacks de Copy", icon: MessageSquare },
   ];
 
   return (
