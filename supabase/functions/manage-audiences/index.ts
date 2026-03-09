@@ -199,7 +199,6 @@ serve(async (req) => {
       const audiencePayload = {
         name: name || `Engajamento Página - ${retentionDays}d`,
         description: description || `Pessoas que interagiram com a página nos últimos ${retentionDays} dias`,
-        subtype: "ENGAGEMENT",
         rule: JSON.stringify({
           inclusions: {
             operator: "or",
