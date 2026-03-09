@@ -81,7 +81,7 @@ export default function LancarCampanha() {
   const { user } = useAuth();
   const { toast } = useToast();
   const location = useLocation();
-  const { activeProfile, budgetMaximo, cpaMeta, ticketMedio, limiteEscala, budgetFrequency, productContext } = useClientProfiles();
+  const { activeProfile, budgetMaximo, cpaMeta, ticketMedio, limiteEscala, budgetFrequency, productContext, catalogId: profileCatalogId } = useClientProfiles();
   const { campaigns } = useMetaAds();
 
   const [step, setStep] = useState(1);
