@@ -319,11 +319,16 @@ export default function AgenteAutonomo() {
                       {log.details?.reason && (
                         <p className="text-xs text-muted-foreground mt-0.5">{log.details.reason}</p>
                       )}
-                      {log.action_type === "agent_scale" || log.action_type === "auto_scale" ? (
+                      {(log.action_type === "agent_scale" || log.action_type === "auto_scale") && (
                         <p className="text-xs text-success mt-0.5">
                           Budget: R$ {log.details?.old_budget?.toFixed(2)} → R$ {log.details?.new_budget?.toFixed(2)}
                         </p>
-                      ) : null}
+                      )}
+                      {log.action_type === "agent_duplicate" && (
+                        <p className="text-xs text-primary mt-0.5">
+                          Adset duplicado: {log.details?.original_adset_name} → {log.details?.new_adset_id ? `ID ${log.details.new_adset_id}` : "Falhou"}
+                        </p>
+                      )}
                       {log.details?.cpa_real && (
                         <p className="text-xs text-destructive mt-0.5">
                           CPA: R$ {log.details.cpa_real.toFixed(2)} (limite: R$ {log.details.cpa_max?.toFixed(2)})
