@@ -177,7 +177,15 @@ export default function AIChatPanel() {
 
       const { data, error } = await supabase.functions.invoke("manage-audiences", { body });
 
-      if (error) throw error;
+      if (error) {
+        // Extract meaningful message from FunctionsHttpError
+        let errMsg = error.message || "Erro desconhecido";
+        try {
+          const ctx = await (error as any).context?.json?.();
+          if (ctx?.error) errMsg = ctx.error;
+        } catch {}
+        throw new Error(errMsg);
+      }
       if (data?.error) throw new Error(data.error);
 
       toast({
