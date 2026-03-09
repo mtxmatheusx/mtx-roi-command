@@ -24,6 +24,7 @@ import LegacyLanding from "./pages/LegacyLanding";
 import MetodoRIC from "./pages/MetodoRIC";
 import NotFound from "./pages/NotFound";
 import AgenteAutonomo from "./pages/AgenteAutonomo";
+import FeedbackAdmin from "./pages/FeedbackAdmin";
 
 const queryClient = new QueryClient();
 
