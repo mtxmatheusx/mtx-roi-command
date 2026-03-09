@@ -215,6 +215,47 @@ export default function AIChatPanel() {
     }
   };
 
+  const handleAutoPublish = async (action: CampaignAction) => {
+    if (!activeProfile?.id) {
+      toast({ title: "Erro", description: "Selecione um perfil ativo.", variant: "destructive" });
+      return;
+    }
+    setExecutingAction(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("auto-publish-campaign", {
+        body: {
+          profileId: activeProfile.id,
+          campaign_name: action.campaign_name,
+          objective: action.objective || "OUTCOME_SALES",
+          daily_budget: action.daily_budget || 50,
+          targeting_notes: action.targeting_notes || "",
+          use_catalog: action.use_catalog || false,
+          destination_url: action.destination_url || "",
+        },
+      });
+      if (error) {
+        let errMsg = error.message || "Erro desconhecido";
+        try { const ctx = await (error as any).context?.json?.(); if (ctx?.error) errMsg = ctx.error; } catch {}
+        throw new Error(errMsg);
+      }
+      if (data?.error) throw new Error(data.error);
+
+      toast({ title: "⚡ Campanha publicada!", description: `ID: ${data.meta_campaign_id}` });
+      setMessages((p) => [...p, {
+        role: "assistant",
+        content: `⚡ **Campanha publicada com sucesso (Deploy Autônomo)!**\n\n${(data.steps || []).map((s: string) => `- ${s}`).join("\n")}\n\n🔗 [Abrir no Ads Manager](${data.ads_manager_url})\n\n> ⚠️ Campanha criada em modo **PAUSADO**. Ative manualmente quando estiver pronto.`,
+      }]);
+    } catch (e: any) {
+      toast({ title: "Erro no deploy autônomo", description: e.message, variant: "destructive" });
+      setMessages((p) => [...p, {
+        role: "assistant",
+        content: `❌ **Erro no deploy autônomo:** ${e.message}\n\nVerifique as configurações do perfil (Token, Pixel ID, Page ID) e tente novamente.`,
+      }]);
+    } finally {
+      setExecutingAction(false);
+    }
+  };
+
   const send = async () => {
     const text = input.trim();
     if (!text || loading) return;
