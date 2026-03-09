@@ -8,7 +8,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen bg-background">
       <AppSidebar />
-      <div className="ml-60">
+      <div className="ml-[52px] md:ml-60 transition-all duration-200" id="main-content">
         <header className="flex justify-end items-center px-8 py-3 border-b border-border bg-card">
           <LanguageSelector />
         </header>
