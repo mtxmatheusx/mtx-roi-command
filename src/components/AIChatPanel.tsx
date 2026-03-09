@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { X, Send, Brain, Loader2, Rocket, Plus, MessageSquare, Trash2, Users } from "lucide-react";
+import { X, Send, Brain, Loader2, Rocket, Plus, MessageSquare, Trash2, Users, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ReactMarkdown from "react-markdown";
 import { useClientProfiles } from "@/hooks/useClientProfiles";
@@ -215,6 +215,47 @@ export default function AIChatPanel() {
     }
   };
 
+  const handleAutoPublish = async (action: CampaignAction) => {
+    if (!activeProfile?.id) {
+      toast({ title: "Erro", description: "Selecione um perfil ativo.", variant: "destructive" });
+      return;
+    }
+    setExecutingAction(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("auto-publish-campaign", {
+        body: {
+          profileId: activeProfile.id,
+          campaign_name: action.campaign_name,
+          objective: action.objective || "OUTCOME_SALES",
+          daily_budget: action.daily_budget || 50,
+          targeting_notes: action.targeting_notes || "",
+          use_catalog: action.use_catalog || false,
+          destination_url: action.destination_url || "",
+        },
+      });
+      if (error) {
+        let errMsg = error.message || "Erro desconhecido";
+        try { const ctx = await (error as any).context?.json?.(); if (ctx?.error) errMsg = ctx.error; } catch {}
+        throw new Error(errMsg);
+      }
+      if (data?.error) throw new Error(data.error);
+
+      toast({ title: "⚡ Campanha publicada!", description: `ID: ${data.meta_campaign_id}` });
+      setMessages((p) => [...p, {
+        role: "assistant",
+        content: `⚡ **Campanha publicada com sucesso (Deploy Autônomo)!**\n\n${(data.steps || []).map((s: string) => `- ${s}`).join("\n")}\n\n🔗 [Abrir no Ads Manager](${data.ads_manager_url})\n\n> ⚠️ Campanha criada em modo **PAUSADO**. Ative manualmente quando estiver pronto.`,
+      }]);
+    } catch (e: any) {
+      toast({ title: "Erro no deploy autônomo", description: e.message, variant: "destructive" });
+      setMessages((p) => [...p, {
+        role: "assistant",
+        content: `❌ **Erro no deploy autônomo:** ${e.message}\n\nVerifique as configurações do perfil (Token, Pixel ID, Page ID) e tente novamente.`,
+      }]);
+    } finally {
+      setExecutingAction(false);
+    }
+  };
+
   const send = async () => {
     const text = input.trim();
     if (!text || loading) return;
@@ -305,14 +346,26 @@ export default function AIChatPanel() {
             </Button>
           )}
           {action && action.action === "create_campaign" && (
-            <Button
-              onClick={() => handleExecuteAction(action)}
-              className="w-full gap-2 bg-green-600 hover:bg-green-700 text-white"
-              size="sm"
-            >
-              <Rocket className="h-4 w-4" />
-              🚀 Executar: {action.campaign_name?.slice(0, 30)}...
-            </Button>
+            <div className="space-y-1.5 w-full">
+              <Button
+                onClick={() => handleAutoPublish(action)}
+                disabled={executingAction}
+                className="w-full gap-2 bg-primary hover:bg-primary/90 text-primary-foreground"
+                size="sm"
+              >
+                {executingAction ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
+                ⚡ Publicar Direto (sem wizard)
+              </Button>
+              <Button
+                onClick={() => handleExecuteAction(action)}
+                variant="outline"
+                className="w-full gap-2"
+                size="sm"
+              >
+                <Rocket className="h-4 w-4" />
+                🚀 Abrir no Wizard: {action.campaign_name?.slice(0, 25)}...
+              </Button>
+            </div>
           )}
         </div>
       </div>
