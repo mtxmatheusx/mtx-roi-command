@@ -52,7 +52,12 @@ export default function Dashboard() {
     if (apiBaseUrl && metaAccessToken) {
       metaApi.configure(apiBaseUrl, metaAccessToken, { meta_token: metaAccessToken, ad_account_id: adAccountId })
         .then(() => setApiConfigured(true))
-        .catch(() => setApiConfigured(false));
+        .catch((err) => {
+          console.warn("API externa indisponível:", err.message);
+          setApiConfigured(false);
+        });
+    } else {
+      setApiConfigured(false);
     }
   }, [apiBaseUrl, metaAccessToken, adAccountId]);
 
