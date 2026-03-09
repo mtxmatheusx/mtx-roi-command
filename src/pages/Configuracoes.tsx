@@ -572,28 +572,6 @@ export default function Configuracoes() {
           </CardContent>
         </Card>
 
-  const handleFetchCatalogs = async () => {
-    if (!activeProfile?.id) return;
-    setCatalogsLoading(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("fetch-meta-catalogs", {
-        body: { profileId: activeProfile.id },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-      setAvailableCatalogs(data.catalogs || []);
-      if (data.catalogs?.length === 0) {
-        toast({ title: "Nenhum catálogo encontrado", description: "Nenhum catálogo de produtos foi encontrado nesta conta." });
-      } else {
-        toast({ title: `${data.catalogs.length} catálogo(s) encontrado(s)`, description: "Selecione um para vincular." });
-      }
-    } catch (err) {
-      toast({ title: "Erro ao buscar catálogos", description: (err as Error).message, variant: "destructive" });
-    } finally {
-      setCatalogsLoading(false);
-    }
-  };
-
 
         <Card>
           <CardHeader>
