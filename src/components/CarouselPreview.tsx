@@ -33,6 +33,8 @@ export default function CarouselPreview({ visualDNA }: CarouselPreviewProps) {
     const [slideImages, setSlideImages] = useState<Record<number, string>>({});
     const [generatingImages, setGeneratingImages] = useState<Record<number, boolean>>({});
     const [generatingAll, setGeneratingAll] = useState(false);
+    const [platforms, setPlatforms] = useState<Platform[]>(["instagram"]);
+    const [contentType, setContentType] = useState<ContentType>("carousel");
     const { toast } = useToast();
 
     const handleGenerate = async () => {
