@@ -19,6 +19,11 @@ interface CampaignInsight {
   ctr: number;
   frequency: number;
   daily_budget: number;
+  // Today-only metrics for rollback evaluation
+  today_spend: number;
+  today_purchases: number;
+  today_revenue: number;
+  today_roas: number;
 }
 
 interface Decision {
@@ -65,12 +70,13 @@ REGRAS DE ESCALA HORIZONTAL (Budget Increase):
 - Teto diário: R$ ${profileConfig.teto_diario_escala}
 - NÃO escalar se frequência > 2.5 e CTR < 1.0% (saturação)
 
-REGRAS DE ROLLBACK DE ESCALA (Proteção ROAS — CRÍTICO):
-- Se a campanha/conjunto foi escalado (budget atual > budget do período anterior) E ROAS ≥ 10x E o aumento percentual do investimento é MAIOR que o aumento percentual do ROAS E purchases == 0 no período atual → ROLLBACK
+REGRAS DE ROLLBACK DE ESCALA (Proteção ROAS — CRÍTICO — avaliada com dados do DIA ATUAL):
+- Se a campanha/conjunto foi escalado (budget atual > budget anterior estimado) E ROAS do DIA ATUAL (today_roas) ≥ 10x E o aumento percentual do investimento é MAIOR que o aumento percentual do ROAS E purchases do DIA ATUAL (today_purchases) == 0 → ROLLBACK
 - Ação: Retornar o orçamento ao valor anterior (antes da escala) para estabilizar
 - Use "rollback" como action, informe new_budget com o valor anterior estimado
-- EXCEÇÃO: Se o ROAS era < 10x antes da escala, NÃO fazer rollback — continuar escalando normalmente
+- EXCEÇÃO: Se o ROAS do dia anterior era < 10x antes da escala, NÃO fazer rollback — continuar escalando
 - Esta regra se aplica novamente sempre que as condições forem atendidas após nova escala
+- IMPORTANTE: Use os campos today_spend, today_purchases, today_roas para esta avaliação, NÃO os campos aggregados
 
 REGRAS DE ESCALA VERTICAL (Duplicação):
 - Se um adset já está com orçamento >= 80% do teto diário (R$ ${profileConfig.teto_diario_escala}) E ROAS > ${profileConfig.roas_min_escala} E purchases >= 3 → DUPLICAR_ESCALAR
@@ -93,8 +99,8 @@ ROAS Mínimo para Escala: ${profileConfig.roas_min_escala}
 Teto Diário de Escala: R$ ${profileConfig.teto_diario_escala}
 Limite de Escala: ${profileConfig.limite_escala}%
 
-Campanhas ativas (resumo):
-${campaigns.map(c => `- ${c.name}: spend=R$${c.spend.toFixed(0)} purchases=${c.purchases} roas=${c.roas.toFixed(2)} cpa=R$${c.cpa.toFixed(0)} ctr=${c.ctr.toFixed(2)}% freq=${c.frequency.toFixed(1)} budget=R$${c.daily_budget.toFixed(0)}`).join("\n")}
+Campanhas ativas (resumo — dados agregados + dados de HOJE):
+${campaigns.map(c => `- ${c.name}: spend=R$${c.spend.toFixed(0)} purchases=${c.purchases} roas=${c.roas.toFixed(2)} cpa=R$${c.cpa.toFixed(0)} ctr=${c.ctr.toFixed(2)}% freq=${c.frequency.toFixed(1)} budget=R$${c.daily_budget.toFixed(0)} | HOJE: spend=R$${c.today_spend.toFixed(0)} purchases=${c.today_purchases} today_roas=${c.today_roas.toFixed(2)}`).join("\n")}
 
 AdSets ativos (resumo):
 ${adsets.slice(0, 30).map((a: any) => {
@@ -103,7 +109,10 @@ ${adsets.slice(0, 30).map((a: any) => {
   const rev = (ins?.action_values || []).filter((v: any) => v.action_type === "purchase" || v.action_type === "omni_purchase").reduce((s: number, v: any) => s + parseFloat(v.value || "0"), 0);
   const purch = (ins?.actions || []).filter((v: any) => v.action_type === "purchase" || v.action_type === "omni_purchase").reduce((s: number, v: any) => s + parseInt(v.value || "0", 10), 0);
   const budget = parseInt(a.daily_budget || "0", 10) / 100;
-  return `- [${a.id}] ${a.name} (camp:${a.campaign_id}): budget=R$${budget} spend=R$${sp.toFixed(0)} roas=${sp > 0 ? (rev/sp).toFixed(2) : "0"} purchases=${purch}`;
+  const todayIns = a.today_insights?.data?.[0];
+  const todaySp = parseFloat(todayIns?.spend || "0");
+  const todayPurch = (todayIns?.actions || []).filter((v: any) => v.action_type === "purchase" || v.action_type === "omni_purchase").reduce((s: number, v: any) => s + parseInt(v.value || "0", 10), 0);
+  return `- [${a.id}] ${a.name} (camp:${a.campaign_id}): budget=R$${budget} spend=R$${sp.toFixed(0)} roas=${sp > 0 ? (rev/sp).toFixed(2) : "0"} purchases=${purch} | HOJE: spend=R$${todaySp.toFixed(0)} purchases=${todayPurch}`;
 }).join("\n")}
 
 Analise e retorne as decisões.`,
@@ -169,8 +178,9 @@ function applyStaticRules(campaigns: CampaignInsight[], profileConfig: any, adse
   const decisions: Decision[] = [];
 
   for (const c of campaigns) {
-    // Rollback Rule: ROAS >= 10x, budget was scaled, spend increase > ROAS increase, 0 purchases
-    if (c.roas >= 10 && c.purchases === 0 && c.spend > 0) {
+    // Rollback Rule: uses TODAY's data only
+    // ROAS >= 10x on aggregated period, 0 purchases TODAY, budget was scaled
+    if (c.today_roas >= 10 && c.today_purchases === 0 && c.today_spend > 0) {
       const incrementalRatio = 1 + (profileConfig.limite_escala / 100);
       const estimatedPrevBudget = c.daily_budget / incrementalRatio;
       // If budget looks scaled (current > estimated previous by at least the increment)
@@ -178,7 +188,7 @@ function applyStaticRules(campaigns: CampaignInsight[], profileConfig: any, adse
         decisions.push({
           campaign_id: c.id,
           action: "rollback",
-          reason: `ROAS ${c.roas.toFixed(2)}x ≥ 10x mas 0 vendas no período. Investimento escalado sem retorno proporcional. Rollback para R$ ${estimatedPrevBudget.toFixed(2)}.`,
+          reason: `ROAS do dia ${c.today_roas.toFixed(2)}x ≥ 10x mas 0 vendas HOJE (spend hoje: R$ ${c.today_spend.toFixed(2)}). Budget escalado sem retorno proporcional. Rollback para R$ ${estimatedPrevBudget.toFixed(2)}.`,
           new_budget: estimatedPrevBudget,
           previous_budget: c.daily_budget,
         });
@@ -302,21 +312,36 @@ serve(async (req) => {
         const profileResult: any = { profile: profile.name, profile_id: profile.id, actions: [], ai_summary: "" };
 
         try {
-          // Fetch campaign + adset data in parallel
+          // Fetch campaign (yesterday-today), campaign today-only, and adset data in parallel
           const campaignUrl = `https://graph.facebook.com/v21.0/${profile.ad_account_id}/campaigns?fields=id,name,effective_status,daily_budget,insights.time_range({"since":"${yesterday}","until":"${today}"}){spend,actions,action_values,ctr,frequency}&effective_status=["ACTIVE"]&access_token=${accessToken}&limit=100`;
+          const campaignTodayUrl = `https://graph.facebook.com/v21.0/${profile.ad_account_id}/campaigns?fields=id,insights.time_range({"since":"${today}","until":"${today}"}){spend,actions,action_values}&effective_status=["ACTIVE"]&access_token=${accessToken}&limit=100`;
           const adsetUrl = `https://graph.facebook.com/v21.0/${profile.ad_account_id}/adsets?fields=id,name,daily_budget,effective_status,campaign_id,insights.time_range({"since":"${twoDaysAgo}","until":"${today}"}){spend,actions,action_values,ctr,frequency}&effective_status=["ACTIVE"]&access_token=${accessToken}&limit=100`;
 
-          const [campaignResp, adsetResp] = await Promise.all([fetch(campaignUrl), fetch(adsetUrl)]);
-          const [campaignData, adsetData] = await Promise.all([campaignResp.json(), adsetResp.json()]);
+          const [campaignResp, campaignTodayResp, adsetResp] = await Promise.all([fetch(campaignUrl), fetch(campaignTodayUrl), fetch(adsetUrl)]);
+          const [campaignData, campaignTodayData, adsetData] = await Promise.all([campaignResp.json(), campaignTodayResp.json(), adsetResp.json()]);
 
           if (campaignData.error) {
             profileResult.error = campaignData.error.message;
             return profileResult;
           }
 
+          // Build today-only lookup map
+          const todayMap = new Map<string, { spend: number; purchases: number; revenue: number }>();
+          for (const c of (campaignTodayData.data || [])) {
+            const ins = c.insights?.data?.[0];
+            const tSpend = parseFloat(ins?.spend || "0");
+            const tPurchases = (ins?.actions || [])
+              .filter((a: any) => a.action_type === "purchase" || a.action_type === "omni_purchase")
+              .reduce((s: number, a: any) => s + parseInt(a.value || "0", 10), 0);
+            const tRevenue = (ins?.action_values || [])
+              .filter((a: any) => a.action_type === "purchase" || a.action_type === "omni_purchase")
+              .reduce((s: number, a: any) => s + parseFloat(a.value || "0"), 0);
+            todayMap.set(c.id, { spend: tSpend, purchases: tPurchases, revenue: tRevenue });
+          }
+
           const adsetsList = adsetData.data || [];
 
-          // Build campaign insights
+          // Build campaign insights with today-only data
           const campaignInsights: CampaignInsight[] = (campaignData.data || []).map((c: any) => {
             const ins = c.insights?.data?.[0];
             const spend = parseFloat(ins?.spend || "0");
@@ -326,6 +351,7 @@ serve(async (req) => {
             const revenue = (ins?.action_values || [])
               .filter((a: any) => a.action_type === "purchase" || a.action_type === "omni_purchase")
               .reduce((s: number, a: any) => s + parseFloat(a.value || "0"), 0);
+            const todayData = todayMap.get(c.id) || { spend: 0, purchases: 0, revenue: 0 };
             return {
               id: c.id, name: c.name, effective_status: c.effective_status, spend, purchases, revenue,
               cpa: purchases > 0 ? spend / purchases : (spend > 0 ? spend : 0),
@@ -333,6 +359,10 @@ serve(async (req) => {
               ctr: parseFloat(ins?.ctr || "0"),
               frequency: parseFloat(ins?.frequency || "0"),
               daily_budget: parseInt(c.daily_budget || "0", 10) / 100,
+              today_spend: todayData.spend,
+              today_purchases: todayData.purchases,
+              today_revenue: todayData.revenue,
+              today_roas: todayData.spend > 0 ? todayData.revenue / todayData.spend : 0,
             };
           });
 
