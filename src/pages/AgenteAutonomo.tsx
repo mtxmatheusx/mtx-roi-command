@@ -62,7 +62,8 @@ export default function AgenteAutonomo() {
       });
       if (error) throw error;
       setRunResult(data);
-      toast({ title: "✅ Agente executado", description: data?.results?.[0]?.ai_summary || `${data?.results?.length || 0} perfis analisados.` });
+      const activeResult = data?.results?.find((r: any) => r.profile_id === activeProfile?.id) || data?.results?.[0];
+      toast({ title: "✅ Agente executado", description: activeResult?.ai_summary || `${data?.results?.length || 0} perfis analisados.` });
       loadLogs();
     } catch (e: any) {
       toast({ title: "Erro", description: e.message, variant: "destructive" });
@@ -192,36 +193,57 @@ export default function AgenteAutonomo() {
         </div>
 
         {/* AI Summary from last run */}
-        {runResult?.results?.[0]?.ai_summary && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-            <Card className="border-primary/30 bg-primary/5">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <Zap className="w-4 h-4 text-primary" />
-                  Relatório da IA
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm">{runResult.results[0].ai_summary}</p>
-                {runResult.results[0].actions?.length > 0 && (
-                  <div className="mt-3 space-y-2">
-                    {runResult.results[0].actions.map((action: any, i: number) => (
-                      <div key={i} className="flex items-center gap-2 text-xs p-2 rounded bg-background border">
-                        {action.action === "pause" ? <Pause className="w-3 h-3 text-destructive" /> : <TrendingUp className="w-3 h-3 text-success" />}
-                        <span className="font-medium">{action.action === "pause" ? "PAUSOU" : "ESCALOU"}</span>
-                        <span className="text-muted-foreground">{action.reason}</span>
-                        <Badge variant="outline" className="ml-auto text-[10px]">{action.status}</Badge>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                {runResult.results[0].actions?.length === 0 && (
-                  <p className="text-xs text-muted-foreground mt-2">✅ Nenhuma ação necessária. Todas as campanhas estão dentro dos parâmetros.</p>
-                )}
-              </CardContent>
-            </Card>
-          </motion.div>
-        )}
+        {runResult?.results && (() => {
+          const activeResult = runResult.results.find((r: any) => r.profile_id === activeProfile?.id) || runResult.results[0];
+          if (!activeResult?.ai_summary) return null;
+          return (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+              <Card className="border-primary/30 bg-primary/5">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <Zap className="w-4 h-4 text-primary" />
+                    Relatório da IA — {activeResult.profile}
+                  </CardTitle>
+                  <CardDescription className="text-xs">{activeResult.campaigns_analyzed} campanhas analisadas</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm">{activeResult.ai_summary}</p>
+                  {activeResult.actions?.length > 0 && (
+                    <div className="mt-3 space-y-2">
+                      {activeResult.actions.map((action: any, i: number) => (
+                        <div key={i} className="flex items-center gap-2 text-xs p-2 rounded bg-background border">
+                          {action.action === "pause" ? <Pause className="w-3 h-3 text-destructive" /> : <TrendingUp className="w-3 h-3 text-success" />}
+                          <span className="font-medium">{action.action === "pause" ? "PAUSOU" : "ESCALOU"}</span>
+                          <span className="text-muted-foreground flex-1">{action.reason}</span>
+                          {action.old_budget != null && action.new_budget != null && (
+                            <span className="text-success font-mono">R$ {action.old_budget.toFixed(2)} → R$ {action.new_budget.toFixed(2)}</span>
+                          )}
+                          <Badge variant="outline" className="ml-auto text-[10px]">{action.status}</Badge>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {activeResult.actions?.length === 0 && (
+                    <p className="text-xs text-muted-foreground mt-2">✅ Nenhuma ação necessária. Todas as campanhas estão dentro dos parâmetros.</p>
+                  )}
+
+                  {/* Show other profiles summary */}
+                  {runResult.results.filter((r: any) => r.profile_id !== activeResult.profile_id).length > 0 && (
+                    <div className="mt-4 pt-3 border-t space-y-1">
+                      <p className="text-xs font-medium text-muted-foreground">Outros perfis:</p>
+                      {runResult.results.filter((r: any) => r.profile_id !== activeResult.profile_id).map((r: any, i: number) => (
+                        <div key={i} className="text-xs text-muted-foreground flex items-center gap-2">
+                          <span className="font-medium">{r.profile}</span>
+                          <span>— {r.campaigns_analyzed} campanhas, {r.actions?.length || 0} ações</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </motion.div>
+          );
+        })()}
 
         {/* Configuration hint */}
         {!hasGuardianEnabled && !hasScaleEnabled && (
