@@ -96,9 +96,12 @@ export default function LancarCampanha() {
       const { prefill, reasoning } = location.state;
       setObjective(prefill.objective || "OUTCOME_SALES");
       setDailyBudget(prefill.daily_budget || 50);
+      if (prefill.use_catalog) {
+        setUseCatalog(true);
+      }
       setDraft({
         campaign_name: prefill.campaign_name,
-        copy_options: [{ headline: "Aguardando sugestão...", primary_text: "Aguardando sugestão...", cta: "Saiba Mais" }],
+        copy_options: [{ headline: "Aguardando sugestão...", primary_text: prefill.destination_url ? `Link: ${prefill.destination_url}\n\nAguardando sugestão...` : "Aguardando sugestão...", cta: "Saiba Mais" }],
         targeting_suggestion: { notes: prefill.targeting_notes },
         daily_budget: prefill.daily_budget || 50,
         ai_reasoning: reasoning || ""
