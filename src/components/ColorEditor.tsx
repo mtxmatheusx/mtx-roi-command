@@ -75,6 +75,16 @@ export default function ColorEditor({ color, index, onChange, onRemove, canRemov
           className="text-xs font-mono h-8"
           maxLength={7}
         />
+        {canRemove && onRemove && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full text-xs text-destructive hover:text-destructive hover:bg-destructive/10 gap-1"
+            onClick={() => onRemove(index)}
+          >
+            <X className="w-3 h-3" /> Remover cor
+          </Button>
+        )}
       </PopoverContent>
     </Popover>
   );
