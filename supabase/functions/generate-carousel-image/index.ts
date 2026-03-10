@@ -48,7 +48,7 @@ serve(async (req) => {
       ? `Color palette: ${visualDNA.palette.join(", ")}.`
       : "";
 
-    const fullPrompt = `Create a hyper-realistic professional Instagram carousel slide image. ${prompt}. ${paletteInfo} Style: ${visualDNA?.aesthetic || "Clean and modern"}. CRITICAL REALISM DIRECTIVES: Shot on Sony A7R V with 85mm f/1.4 GM lens. Camera RAW processing with lifted shadows and compressed highlights. Visible skin texture, pores, micro-imperfections and subsurface scattering. Authentic material rendering with accurate fabric weave, metal reflections and surface wear. Natural volumetric lighting with soft fill and realistic shadow falloff. Subtle chromatic aberration and lens vignette on edges. Film-like color grading with muted tones and organic warmth. NO AI artifacts, NO plastic skin, NO over-saturated colors. 1080x1350 portrait format, social media ready. No text overlays.`;
+    const fullPrompt = `Create a professional-grade Instagram carousel slide image with editorial quality. ${prompt}. ${paletteInfo} Style: ${visualDNA?.aesthetic || "Clean and modern"}. CRITICAL QUALITY DIRECTIVES: Shot on Hasselblad X2D 100C with XCD 90mm f/2.5 lens at native ISO 64. Camera RAW processed in Capture One Pro with careful highlight recovery and shadow detail. HUMAN RENDERING: Anatomically correct proportions, natural asymmetric features, realistic skin with visible pores and subsurface scattering, natural hair texture with individual strand detail, eyes with realistic iris patterns and specular highlights, natural lip texture. MATERIAL QUALITY: Authentic fabric rendering with visible thread count, proper drape physics, realistic leather grain, metal with accurate HDRI reflections. LIGHTING: Three-point studio setup with large octabox key light, edge-lit rim, and negative fill for sculpting. Natural color temperature mixing. POST-PROCESSING: Subtle frequency separation retouching preserving skin texture, dodge-and-burn contouring, color-accurate output. NO uncanny valley effects, NO waxy skin, NO anatomical errors, NO AI artifacts. 1080x1350 portrait format, social media ready. No text overlays.`;
 
     console.log("Generating image with prompt:", fullPrompt.substring(0, 100));
 
@@ -59,7 +59,7 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3.1-flash-image-preview",
+        model: "google/gemini-3-pro-image-preview",
         messages: [
           {
             role: "user",

@@ -6,24 +6,31 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const PHOTOREALISTIC_PROMPT = `You are a Senior Art Director and Photo Retoucher specialized in High-Conversion creatives for Meta Ads. Your mission is to take the user's raw idea and transform it into an EXTREMELY detailed image generation prompt in ENGLISH that produces HYPER-REALISTIC results indistinguishable from real photography.
+const PHOTOREALISTIC_PROMPT = `You are a Senior Art Director, Photo Retoucher and Human Anatomy Specialist for High-Conversion Meta Ads creatives. Transform the user's raw idea into an EXTREMELY detailed image generation prompt in ENGLISH that produces results indistinguishable from professional studio photography.
 
-IMMUTABLE STYLE RULES (inject ALL of these into every prompt):
+IMMUTABLE STYLE RULES (inject ALL into every prompt):
 1. "Aspect ratio: 4:5 portrait (1080x1350 pixels)."
 2. "Background: Dark textured background with minimalist elements and subtle red or soft neon accents."
-3. "Shot on Sony A7R V with 85mm f/1.4 GM lens at ISO 200. Camera RAW processed with Adobe Camera Raw."
-4. "Color palette: Deep blacks, warm highlights, strategic pops of brand color. Film-like color grading with muted organic tones."
+3. "Shot on Hasselblad X2D 100C with XCD 90mm f/2.5 lens at native ISO 64. Camera RAW processed in Capture One Pro with careful highlight recovery."
+4. "Color palette: Deep blacks, warm highlights, strategic pops of brand color. Professional color science with skin-tone-safe LUT."
 5. "Mood: Premium, aspirational, high-converting ad creative."
 
-HYPER-REALISM DIRECTIVES (mandatory in every prompt you generate):
-- Visible skin texture: pores, fine lines, subsurface scattering, micro-imperfections. NEVER plastic or airbrushed.
-- Authentic materials: visible fabric weave and thread texture, metal with realistic reflections and micro-scratches, surfaces with natural wear patterns.
-- Natural volumetric lighting: soft fill, realistic shadow falloff, ambient occlusion in creases and folds.
-- Lens characteristics: subtle chromatic aberration on edges, natural vignette, shallow depth of field with organic bokeh circles.
-- Environmental realism: dust particles catching light, subtle atmospheric haze, accurate reflections on glossy surfaces.
-- NO AI artifacts, NO over-saturated colors, NO unnaturally smooth gradients, NO symmetrical perfection.
+PROFESSIONAL HUMAN RENDERING (mandatory for any person):
+- Anatomically correct proportions following real skeletal/muscular structure.
+- Natural facial asymmetry — NO perfectly symmetric faces.
+- Skin: visible pores, fine lines, natural redness zones (nose, cheeks, ears), subsurface scattering. Frequency separation retouching preserving texture.
+- Eyes: realistic iris patterns with limbal ring, natural catchlights from light source, visible eyelash detail.
+- Hair: individual strand texture, natural flyaway hairs, realistic scalp transition. NO helmet hair.
+- Hands: correct finger count, natural nail beds, visible knuckle wrinkles, proportional fingers.
+- Expression: natural micro-expressions with muscle engagement — NO mannequin faces.
 
-RETURN ONLY the image prompt text in English. No explanations, no quotes, no Markdown formatting. Just the raw visual instruction. Maximum 300 words.`;
+MATERIAL & LIGHTING QUALITY:
+- Fabric: visible thread count, proper drape physics, realistic joint wrinkles.
+- Studio: three-point lighting with large octabox key, edge-lit rim, negative fill for depth.
+- Lens: subtle chromatic aberration, natural vignette, shallow DOF with organic bokeh.
+- NO AI artifacts, NO waxy/plastic skin, NO over-saturation, NO anatomical errors.
+
+RETURN ONLY the image prompt text in English. No explanations, no quotes, no Markdown. Maximum 300 words.`;
 
 const STYLIZED_PROMPT = `You are a Senior Creative Director specialized in stylized, artistic ad creatives for Meta Ads. Your mission is to take the user's raw idea and transform it into an EXTREMELY detailed image generation prompt in ENGLISH that produces visually striking STYLIZED artwork.
 
