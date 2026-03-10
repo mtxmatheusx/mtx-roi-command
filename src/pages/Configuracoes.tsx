@@ -689,9 +689,13 @@ export default function Configuracoes() {
                     <div className="flex gap-2">
                       <Button size="sm" variant="ghost" onClick={() => { setEditingContext(false); setEditContextValue(productContext); }}>Cancelar</Button>
                       <Button size="sm" onClick={async () => {
-                        await updateProfile({ product_context: editContextValue });
-                        toast({ title: "Contexto atualizado!" });
-                        setEditingContext(false);
+                        const { error } = await supabase.from("client_profiles").update({ product_context: editContextValue }).eq("id", activeProfile.id);
+                        if (error) {
+                          toast({ title: "Erro ao salvar", description: error.message, variant: "destructive" });
+                        } else {
+                          toast({ title: "Contexto atualizado!" });
+                          setEditingContext(false);
+                        }
                       }}>Salvar</Button>
                     </div>
                   ) : (
