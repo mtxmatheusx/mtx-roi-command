@@ -160,6 +160,7 @@ export default function LancarCampanha() {
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [useCatalog, setUseCatalog] = useState(false);
+  const [inlineCatalogId, setInlineCatalogId] = useState("");
   const [feedbackIdx, setFeedbackIdx] = useState<number | null>(null);
   const [feedbackText, setFeedbackText] = useState("");
   const [isSendingFeedback, setIsSendingFeedback] = useState(false);
