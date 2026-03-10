@@ -1553,6 +1553,16 @@ export default function LancarCampanha() {
                     {publishResult.fbtrace_id && (
                       <p className="text-xs text-muted-foreground/60 font-mono">fbtrace_id: {publishResult.fbtrace_id}</p>
                     )}
+                    {publishResult.targeting_debug && (
+                      <details className="mt-2">
+                        <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors flex items-center gap-1">
+                          🔍 Payload de Targeting (debug)
+                        </summary>
+                        <pre className="mt-2 text-[10px] font-mono bg-secondary/50 border border-border rounded-md p-3 overflow-x-auto max-h-48 overflow-y-auto text-muted-foreground whitespace-pre-wrap break-all">
+                          {JSON.stringify(publishResult.targeting_debug, null, 2)}
+                        </pre>
+                      </details>
+                    )}
                   </div>
                 )}
 

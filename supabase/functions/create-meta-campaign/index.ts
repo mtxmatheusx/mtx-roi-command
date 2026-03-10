@@ -418,7 +418,7 @@ serve(async (req) => {
         status: "failed",
         error_message: `Todos os anúncios falharam: ${errorMsg} | Rollback executado.`,
       }).eq("id", draftId);
-      return fail(`Todos os anúncios falharam: ${errorMsg}`, { step: "ad", meta_campaign_id: metaCampaignId, meta_adset_id: metaAdSetId, steps, rollback: true });
+      return fail(`Todos os anúncios falharam: ${errorMsg}`, { step: "ad", meta_campaign_id: metaCampaignId, meta_adset_id: metaAdSetId, steps, rollback: true, targeting_debug: { targeting: targetingObj, objective: draft.objective, advantage_audience: useAdvantagePlus ? 1 : 0 } });
     }
 
     // At least some ads succeeded
