@@ -687,7 +687,7 @@ export default function AIChatPanel() {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && send()}
-                  placeholder="Crie campanhas, públicos, analise métricas..."
+                  placeholder="Cole uma URL ou peça para criar campanhas..."
                   className="flex-1 bg-background border border-input rounded-md px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring min-w-0"
                   disabled={loading}
                 />
