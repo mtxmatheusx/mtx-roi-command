@@ -35,6 +35,14 @@ export default function LaboratorioVisual() {
         });
     }, [visualDNA]);
 
+    const handleColorRemove = useCallback((index: number) => {
+        if (!visualDNA || visualDNA.palette.length <= 1) return;
+        setVisualDNA({
+            ...visualDNA,
+            palette: visualDNA.palette.filter((_, i) => i !== index),
+        });
+    }, [visualDNA]);
+
     return (
         <AppLayout>
             <ActiveProfileHeader />
