@@ -25,7 +25,7 @@ interface ColorEditorProps {
   canRemove?: boolean;
 }
 
-export default function ColorEditor({ color, index, onChange }: ColorEditorProps) {
+export default function ColorEditor({ color, index, onChange, onRemove, canRemove }: ColorEditorProps) {
   const [hexInput, setHexInput] = useState(color);
   const rgb = hexToRgb(color);
 
