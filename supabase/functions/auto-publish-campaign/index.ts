@@ -127,35 +127,35 @@ serve(async (req) => {
       targetingObj.excluded_custom_audiences = excludeIds.map((id: string) => ({ id }));
     }
 
-    const adSetPayload: Record<string, unknown> = {
-      name: `${campaign_name} - Conjunto Auto`,
-      campaign_id: metaCampaignId,
-      daily_budget: Math.round(budget * 100),
-      billing_event: "IMPRESSIONS",
-      optimization_goal: obj === "OUTCOME_LEADS" ? "LEAD_GENERATION"
-        : obj === "OUTCOME_SALES" ? "OFFSITE_CONVERSIONS"
-        : obj === "OUTCOME_TRAFFIC" ? "LANDING_PAGE_VIEWS"
-        : obj === "OUTCOME_ENGAGEMENT" ? "POST_ENGAGEMENT"
-        : obj === "OUTCOME_AWARENESS" ? "REACH" : "LINK_CLICKS",
-      bid_strategy: "LOWEST_COST_WITHOUT_CAP",
-      targeting: targetingObj,
-      is_adset_budget_sharing_enabled: false,
-      status: "PAUSED",
-      access_token: accessToken,
-    };
+    const optimizationGoal = obj === "OUTCOME_LEADS" ? "LEAD_GENERATION"
+      : obj === "OUTCOME_SALES" ? "OFFSITE_CONVERSIONS"
+      : obj === "OUTCOME_TRAFFIC" ? "LANDING_PAGE_VIEWS"
+      : obj === "OUTCOME_ENGAGEMENT" ? "POST_ENGAGEMENT"
+      : obj === "OUTCOME_AWARENESS" ? "REACH" : "LINK_CLICKS";
+
+    const adSetForm = new URLSearchParams();
+    adSetForm.append("name", `${campaign_name} - Conjunto Auto`);
+    adSetForm.append("campaign_id", metaCampaignId);
+    adSetForm.append("daily_budget", String(Math.round(budget * 100)));
+    adSetForm.append("billing_event", "IMPRESSIONS");
+    adSetForm.append("optimization_goal", optimizationGoal);
+    adSetForm.append("bid_strategy", "LOWEST_COST_WITHOUT_CAP");
+    adSetForm.append("targeting", JSON.stringify(targetingObj));
+    adSetForm.append("is_adset_budget_sharing_enabled", "false");
+    adSetForm.append("status", "PAUSED");
+    adSetForm.append("access_token", accessToken);
 
     if (isConversion) {
-      adSetPayload.promoted_object = {
+      adSetForm.append("promoted_object", JSON.stringify({
         pixel_id: pixelId,
         custom_event_type: obj === "OUTCOME_LEADS" ? "LEAD" : "PURCHASE",
-      };
+      }));
     }
 
-    // Use JSON for AdSet to preserve boolean/object types required by Meta v23.0
     const adSetRes = await fetch(`${META_API}/${adAccountId}/adsets`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(adSetPayload),
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: adSetForm.toString(),
     });
     const adSetData = await adSetRes.json();
     if (adSetData.error) {
