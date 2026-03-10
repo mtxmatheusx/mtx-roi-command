@@ -249,7 +249,7 @@ function applyStaticRules(campaigns: CampaignInsight[], profileConfig: any, adse
 async function duplicateAdset(adsetId: string, accessToken: string, newName?: string): Promise<{ success: boolean; new_adset_id?: string; error?: string }> {
   try {
     // Use Meta API copy endpoint
-    const copyResp = await fetch(`https://graph.facebook.com/v21.0/${adsetId}/copies`, {
+    const copyResp = await fetch(`https://graph.facebook.com/v23.0/${adsetId}/copies`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
