@@ -1,14 +1,23 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, Sparkles, ChevronLeft, ChevronRight, Share2, Download, Copy, Play, ImageIcon, Wand2, FileText } from "lucide-react";
+import { Loader2, Sparkles, ChevronLeft, ChevronRight, Share2, Download, Copy, Play, ImageIcon, Wand2, FileText, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useClientProfiles } from "@/hooks/useClientProfiles";
+import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { VisualDNA } from "@/pages/LaboratorioVisual";
 import { motion, AnimatePresence } from "framer-motion";
 import ContentPlatformSelector, { Platform, ContentType } from "@/components/ContentPlatformSelector";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+interface UGCCharacter {
+    id: string;
+    name: string;
+    fixed_description: string;
+    image_references: string[] | null;
+}
 
 interface CarouselPreviewProps {
     visualDNA: VisualDNA;
@@ -38,8 +47,25 @@ export default function CarouselPreview({ visualDNA }: CarouselPreviewProps) {
     const [platforms, setPlatforms] = useState<Platform[]>(["instagram"]);
     const [contentType, setContentType] = useState<ContentType>("carousel");
     const [showCaptions, setShowCaptions] = useState(false);
+    const [ugcCharacters, setUgcCharacters] = useState<UGCCharacter[]>([]);
+    const [selectedCharacterId, setSelectedCharacterId] = useState<string>("");
     const { toast } = useToast();
     const { activeProfile } = useClientProfiles();
+    const { user } = useAuth();
+
+    // Load UGC characters
+    useEffect(() => {
+        if (!user?.id || !activeProfile?.id) return;
+        const load = async () => {
+            const { data } = await supabase
+                .from("ugc_characters")
+                .select("id, name, fixed_description, image_references")
+                .eq("user_id", user.id)
+                .eq("profile_id", activeProfile.id);
+            if (data) setUgcCharacters(data);
+        };
+        load();
+    }, [user?.id, activeProfile?.id]);
 
     const handleGenerate = async () => {
         if (!theme) return;
@@ -80,10 +106,21 @@ export default function CarouselPreview({ visualDNA }: CarouselPreviewProps) {
         setGeneratingImages((prev) => ({ ...prev, [slideIndex]: true }));
 
         try {
+            // Build prompt with UGC character context if selected
+            const selectedChar = selectedCharacterId && selectedCharacterId !== "none"
+                ? ugcCharacters.find(c => c.id === selectedCharacterId)
+                : null;
+            
+            let fullPrompt = `${slide.image_prompt}. ${visualDNA.image_prompt_style}`;
+            if (selectedChar) {
+                fullPrompt += `. The person in the image: ${selectedChar.fixed_description}`;
+            }
+
             const { data, error } = await supabase.functions.invoke("generate-carousel-image", {
                 body: {
-                    prompt: `${slide.image_prompt}. ${visualDNA.image_prompt_style}`,
+                    prompt: fullPrompt,
                     visualDNA,
+                    ...(selectedChar?.image_references?.[0] ? { referenceImageUrl: selectedChar.image_references[0] } : {}),
                 },
             });
 
@@ -157,6 +194,24 @@ export default function CarouselPreview({ visualDNA }: CarouselPreviewProps) {
                         contentType={contentType}
                         onContentTypeChange={setContentType}
                     />
+                    {ugcCharacters.length > 0 && (
+                        <div className="flex items-center gap-2">
+                            <Users className="w-4 h-4 text-muted-foreground" />
+                            <Select value={selectedCharacterId} onValueChange={setSelectedCharacterId}>
+                                <SelectTrigger className="flex-1 h-9 text-xs">
+                                    <SelectValue placeholder="Personagem UGC (opcional)" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="none">Nenhum personagem</SelectItem>
+                                    {ugcCharacters.map((c) => (
+                                        <SelectItem key={c.id} value={c.id}>
+                                            {c.name}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    )}
                     <div className="flex gap-2">
                         <Input
                             placeholder="Ex: 5 erros comuns no tráfego pago..."
