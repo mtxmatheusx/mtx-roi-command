@@ -32,6 +32,8 @@ interface CampaignAction {
   headline?: string;
   primary_text?: string;
   cta?: string;
+  remarketing?: boolean;
+  remarketing_days?: number;
 }
 
 interface PublishStep {
@@ -307,13 +309,15 @@ export default function AIChatPanel() {
           campaign_name: action.campaign_name,
           objective: action.objective || "OUTCOME_SALES",
           daily_budget: action.daily_budget || 50,
-          targeting_notes: action.targeting_notes || "",
+          targeting_notes: action.targeting_notes || undefined,
           use_catalog: action.use_catalog || false,
-          destination_url: action.destination_url || "",
-          creative_url: uploadedCreatives.length > 0 ? uploadedCreatives[0] : (action.creative_url || ""),
-          headline: action.headline || "",
-          primary_text: action.primary_text || "",
+          destination_url: action.destination_url || undefined,
+          creative_url: uploadedCreatives.length > 0 ? uploadedCreatives[0] : (action.creative_url || undefined),
+          headline: action.headline || undefined,
+          primary_text: action.primary_text || undefined,
           cta: action.cta || "LEARN_MORE",
+          remarketing: action.remarketing || undefined,
+          remarketing_days: action.remarketing_days || undefined,
         },
       });
 
