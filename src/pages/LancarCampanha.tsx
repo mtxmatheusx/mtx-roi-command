@@ -511,7 +511,7 @@ export default function LancarCampanha() {
           const failedStep = result.step ? stepLabels[result.step] || result.step : "";
           addLog(`Falha${suffix}: ${failedStep} — ${result.error}`, "error");
           if (result.rollback) addLog(`Rollback executado${suffix}`, "done");
-          campaignResults.push({ success: false, error: result.error, step: result.step, name: campaignName });
+          campaignResults.push({ success: false, error: result.error, step: result.step, name: campaignName, targeting_debug: result.targeting_debug });
         } else {
           const adCount = result.total_ads || 1;
           addLog(`✅ Campanha${suffix} publicada! ${adCount} anúncio(s) criados`, "done");
