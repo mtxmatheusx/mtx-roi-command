@@ -19,6 +19,8 @@ interface ColorEditorProps {
   color: string;
   index: number;
   onChange: (index: number, newColor: string) => void;
+  onRemove?: (index: number) => void;
+  canRemove?: boolean;
 }
 
 export default function ColorEditor({ color, index, onChange }: ColorEditorProps) {
