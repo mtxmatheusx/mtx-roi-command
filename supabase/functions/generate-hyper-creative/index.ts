@@ -45,7 +45,7 @@ serve(async (req) => {
         ? `Focus on FABRIC TEXTURE and DRAMATIC STUDIO LIGHTING. Show the product being worn or displayed with cinematic depth of field. Emphasize material quality, stitching details, and premium feel.`
         : `Focus on an AUTHORITY FIGURE (Hormozi/Brunson style) - confident pose, direct eye contact, pointing at camera or gesturing toward pain/solution. The person should embody success and expertise.`;
 
-      const promptEngPrompt = `You are an elite Art Director and retoucher for performance marketing creatives. Based on the brand context below, generate a SINGLE detailed image generation prompt in English.
+      const promptEngPrompt = `You are an elite Art Director, retoucher and human anatomy specialist for performance marketing creatives. Based on the brand context below, generate a SINGLE detailed image generation prompt in English.
 
 BRAND CONTEXT:
 - Name: ${profile.name}
@@ -56,20 +56,29 @@ BRAND CONTEXT:
 MANDATORY ART DIRECTION RULES (inject ALL of these):
 1. "Aspect ratio: 4:5 portrait (1080x1350 pixels)."
 2. "Background: Dark textured background with minimalist elements and subtle red or soft neon accents."
-3. "Shot on Sony A7R V with 85mm f/1.4 GM lens at ISO 200. Camera RAW processed."
+3. "Shot on Hasselblad X2D 100C with XCD 90mm f/2.5 lens at native ISO 64. Camera RAW processed in Capture One Pro."
 4. ${artDirectionRules}
 5. "Color palette: Deep blacks, warm highlights, strategic pops of brand color."
 6. "Mood: Premium, aspirational, high-converting ad creative."
 
-HYPER-REALISM DIRECTIVES (mandatory in every prompt):
-- Visible skin texture with pores, micro-imperfections and subsurface scattering. NO plastic or airbrushed skin.
-- Authentic material rendering: fabric weave visible, metal with realistic reflections and micro-scratches, surfaces with natural wear.
-- Natural volumetric lighting with soft fill light, realistic shadow falloff and ambient occlusion.
-- Subtle chromatic aberration and lens vignette on edges. Shallow depth of field with natural bokeh.
-- Film-like color grading: muted organic tones, lifted shadows, compressed highlights. NO over-saturation.
-- Environmental micro-details: dust particles in light beams, subtle atmospheric haze, realistic reflections.
+PROFESSIONAL HUMAN RENDERING (mandatory for any person in the image):
+- Anatomically correct body proportions following real human skeletal and muscular structure.
+- Natural facial asymmetry — NO perfectly symmetric faces. Subtle differences between left/right.
+- Skin: visible pores, fine lines, natural redness zones (nose tip, cheeks, ears), subsurface scattering showing blood flow beneath skin. Frequency separation retouching that PRESERVES texture.
+- Eyes: realistic iris patterns with limbal ring, natural catchlights reflecting the light source, visible eyelash detail.
+- Hair: individual strand texture, natural flyaway hairs, realistic scalp transition. NO helmet hair.
+- Hands: correct finger count, natural nail beds, visible knuckle wrinkles, proportional fingers.
+- Expression: micro-expressions with natural muscle engagement — NO stiff or mannequin-like faces.
 
-Generate ONLY the image prompt, nothing else. Make it specific, vivid, and production-ready. Maximum 250 words.`;
+MATERIAL & ENVIRONMENT QUALITY:
+- Fabric: visible thread count, proper drape physics following gravity, realistic wrinkles at joints.
+- Metals/jewelry: accurate HDRI reflections with environment mapping, micro-scratches.
+- Studio lighting: three-point setup with large octabox key, edge-lit rim, negative fill for depth sculpting.
+- Environmental context: realistic depth of field falloff, natural bokeh shapes, atmospheric perspective.
+
+POST-PROCESSING: Professional color science with skin-tone-safe LUT, dodge-and-burn contouring, subtle vignette. NO over-sharpening, NO HDR look.
+
+Generate ONLY the image prompt, nothing else. Make it specific, vivid, and production-ready. Maximum 300 words.`;
 
       const promptResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
