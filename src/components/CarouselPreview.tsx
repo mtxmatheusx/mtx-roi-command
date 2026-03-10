@@ -547,6 +547,39 @@ export default function CarouselPreview({ visualDNA }: CarouselPreviewProps) {
                     </CardContent>
                 </Card>
             )}
+
+            {/* Creative Library Picker Dialog */}
+            <Dialog open={showLibrary} onOpenChange={setShowLibrary}>
+                <DialogContent className="max-w-2xl max-h-[70vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <FolderOpen className="w-5 h-5 text-primary" />
+                            Biblioteca de Criativos — Slide {libraryTarget + 1}
+                        </DialogTitle>
+                    </DialogHeader>
+                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 mt-2">
+                        {creativeAssets.map((asset) => (
+                            <button
+                                key={asset.id}
+                                onClick={() => useLibraryImage(libraryTarget, asset.file_url)}
+                                className="group relative aspect-square rounded-lg overflow-hidden border-2 border-transparent hover:border-primary transition-colors cursor-pointer"
+                            >
+                                <img
+                                    src={asset.file_url}
+                                    alt={asset.file_name}
+                                    className="w-full h-full object-cover"
+                                />
+                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
+                                    <span className="text-white text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity">Usar</span>
+                                </div>
+                            </button>
+                        ))}
+                    </div>
+                    {creativeAssets.length === 0 && (
+                        <p className="text-center text-sm text-muted-foreground py-8">Nenhum criativo na biblioteca.</p>
+                    )}
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
