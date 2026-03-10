@@ -133,22 +133,29 @@ serve(async (req) => {
         : obj === "OUTCOME_ENGAGEMENT" ? "POST_ENGAGEMENT"
         : obj === "OUTCOME_AWARENESS" ? "REACH" : "LINK_CLICKS",
       bid_strategy: "LOWEST_COST_WITHOUT_CAP",
-      targeting: targetingObj,
-      is_adset_budget_sharing_enabled: false,
+      targeting: JSON.stringify(targetingObj),
+      is_adset_budget_sharing_enabled: "false",
       status: "PAUSED",
       access_token: accessToken,
     };
 
     if (isConversion) {
-      adSetBody.promoted_object = {
+      adSetBody.promoted_object = JSON.stringify({
         pixel_id: pixelId,
         custom_event_type: obj === "OUTCOME_LEADS" ? "LEAD" : "PURCHASE",
-      };
+      });
+    }
+
+    // Use form-encoded for better Meta API compatibility
+    const adSetForm = new URLSearchParams();
+    for (const [k, v] of Object.entries(adSetBody)) {
+      adSetForm.append(k, String(v));
     }
 
     const adSetRes = await fetch(`${META_API}/${adAccountId}/adsets`, {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(adSetBody),
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: adSetForm.toString(),
     });
     const adSetData = await adSetRes.json();
     if (adSetData.error) {
