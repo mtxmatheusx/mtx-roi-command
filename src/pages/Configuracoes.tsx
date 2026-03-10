@@ -885,6 +885,40 @@ export default function Configuracoes() {
               </div>
             </div>
             <Separator className="my-4" />
+            <h4 className="text-sm font-semibold mb-3 text-muted-foreground uppercase tracking-wide">Regra de Rollback de Escala</h4>
+            <div className="flex items-center justify-between p-3 rounded-lg border border-border mb-3">
+              <div className="space-y-1">
+                <Label className="text-sm font-medium flex items-center gap-2">🔄 Rollback Automático de Escala</Label>
+                <p className="text-xs text-muted-foreground">Se o ROAS atingir o limiar configurado, mas não houver vendas no DIA, reverte o orçamento ao valor anterior para estabilizar.</p>
+              </div>
+              <Switch
+                checked={(activeProfile as any)?.rollback_enabled ?? true}
+                onCheckedChange={async (checked) => {
+                  if (!activeProfile) return;
+                  await updateProfile({ id: activeProfile.id, rollback_enabled: checked } as any);
+                }}
+              />
+            </div>
+            {(activeProfile as any)?.rollback_enabled !== false && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3 pl-3 border-l-2 border-primary/20">
+                <div className="space-y-2">
+                  <Label>ROAS Limiar para Rollback (x)</Label>
+                  <Input type="number" min="1" step="0.5" value={(activeProfile as any)?.rollback_roas_threshold ?? 10} onChange={async (e) => { if (!activeProfile) return; await updateProfile({ id: activeProfile.id, rollback_roas_threshold: Number(e.target.value) } as any); }} />
+                  <p className="text-xs text-muted-foreground">Se ROAS ≥ este valor e 0 vendas no dia → rollback. Padrão: 10x</p>
+                </div>
+                <div className="space-y-2 flex flex-col justify-center">
+                  <div className="rounded-md bg-muted/50 p-3 text-xs text-muted-foreground space-y-1">
+                    <p className="font-medium text-foreground">📋 Condições para Rollback:</p>
+                    <p>• Campanha foi escalada</p>
+                    <p>• ROAS do dia ≥ {(activeProfile as any)?.rollback_roas_threshold ?? 10}x</p>
+                    <p>• 0 vendas no dia atual</p>
+                    <p>• Aumento do investimento &gt; aumento do ROAS</p>
+                    <p className="text-primary font-medium mt-1">⚡ Ação: Reverte ao orçamento anterior</p>
+                  </div>
+                </div>
+              </div>
+            )}
+            <Separator className="my-4" />
             <div className="flex items-center justify-between p-3 rounded-lg border border-border">
               <div className="space-y-1">
                 <Label className="text-sm font-medium flex items-center gap-2">🚀 Escala Vertical (Duplicação)</Label>

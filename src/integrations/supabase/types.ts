@@ -180,6 +180,8 @@ export type Database = {
           product_context: string | null
           product_urls: string[] | null
           roas_min_escala: number
+          rollback_enabled: boolean
+          rollback_roas_threshold: number
           teto_diario_escala: number
           ticket_medio: number
           updated_at: string
@@ -207,6 +209,8 @@ export type Database = {
           product_context?: string | null
           product_urls?: string[] | null
           roas_min_escala?: number
+          rollback_enabled?: boolean
+          rollback_roas_threshold?: number
           teto_diario_escala?: number
           ticket_medio?: number
           updated_at?: string
@@ -234,6 +238,8 @@ export type Database = {
           product_context?: string | null
           product_urls?: string[] | null
           roas_min_escala?: number
+          rollback_enabled?: boolean
+          rollback_roas_threshold?: number
           teto_diario_escala?: number
           ticket_medio?: number
           updated_at?: string

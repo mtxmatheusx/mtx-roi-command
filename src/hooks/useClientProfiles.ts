@@ -25,6 +25,9 @@ export interface ClientProfile {
   avatar_dossier: string | null;
   product_context: string | null;
   product_urls: string[];
+  vertical_scale_enabled: boolean;
+  rollback_enabled: boolean;
+  rollback_roas_threshold: number;
   is_active: boolean;
   created_at: string;
   updated_at: string;
