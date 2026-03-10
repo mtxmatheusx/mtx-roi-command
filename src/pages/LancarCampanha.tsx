@@ -160,6 +160,7 @@ export default function LancarCampanha() {
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [useCatalog, setUseCatalog] = useState(false);
+  const [inlineCatalogId, setInlineCatalogId] = useState("");
   const [feedbackIdx, setFeedbackIdx] = useState<number | null>(null);
   const [feedbackText, setFeedbackText] = useState("");
   const [isSendingFeedback, setIsSendingFeedback] = useState(false);
@@ -494,7 +495,7 @@ export default function LancarCampanha() {
             cta_type: ctaType,
             audience_id: isRemarketing && audienceId ? audienceId : undefined,
             use_catalog: useCatalog,
-            catalog_id: useCatalog && selectedCatalog ? selectedCatalog : undefined,
+            catalog_id: useCatalog ? (selectedCatalog || inlineCatalogId || profileCatalogId || undefined) : undefined,
           },
         });
 
@@ -735,14 +736,40 @@ export default function LancarCampanha() {
                   {campaignCount} campanhas independentes serão criadas em paralelo, cada uma com seu próprio conjunto e anúncios.
                 </div>
               )}
-              <div className="flex items-center gap-3 p-3 rounded-lg border bg-secondary/50">
-                <Checkbox id="useCatalog" checked={useCatalog} onCheckedChange={(v) => setUseCatalog(!!v)} />
-                <label htmlFor="useCatalog" className="text-sm cursor-pointer flex items-center gap-2">
-                  <ShoppingBag className="w-4 h-4 text-primary" />
-                  Usar Catálogo de Produtos (DPA / Advantage+ Catalog)
-                  {profileCatalogId && <span className="text-xs text-muted-foreground">ID: {profileCatalogId}</span>}
-                  {!profileCatalogId && <span className="text-xs text-warning">Configure o Catalog ID em Configurações</span>}
-                </label>
+              <div className="space-y-2">
+                <div className="flex items-center gap-3 p-3 rounded-lg border bg-secondary/50">
+                  <Checkbox id="useCatalog" checked={useCatalog} onCheckedChange={(v) => setUseCatalog(!!v)} />
+                  <label htmlFor="useCatalog" className="text-sm cursor-pointer flex items-center gap-2">
+                    <ShoppingBag className="w-4 h-4 text-primary" />
+                    Usar Catálogo de Produtos (DPA / Advantage+ Catalog)
+                    {profileCatalogId && <span className="text-xs text-muted-foreground">ID: {profileCatalogId}</span>}
+                  </label>
+                </div>
+                {useCatalog && !profileCatalogId && (
+                  <div className="p-3 rounded-lg border border-warning/30 bg-warning/5 space-y-2">
+                    <Label htmlFor="inlineCatalogId" className="text-sm flex items-center gap-1.5">
+                      <ShoppingBag className="w-3.5 h-3.5 text-warning" />
+                      Catalog ID <span className="text-xs text-muted-foreground">(obrigatório)</span>
+                    </Label>
+                    <Input
+                      id="inlineCatalogId"
+                      placeholder="Ex: 123456789012345"
+                      value={inlineCatalogId}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/[^0-9]/g, "");
+                        setInlineCatalogId(val);
+                        if (val) setSelectedCatalog(val);
+                      }}
+                      className="font-mono text-sm"
+                    />
+                    {inlineCatalogId && inlineCatalogId.length < 10 && (
+                      <p className="text-xs text-destructive">O Catalog ID deve ter pelo menos 10 dígitos.</p>
+                    )}
+                    <p className="text-xs text-muted-foreground">
+                      Encontre o ID no Gerenciador de Comércio da Meta ou configure em Configurações para salvar permanentemente.
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Remarketing Section */}
@@ -1393,8 +1420,8 @@ export default function LancarCampanha() {
                     { ok: !(objective === "OUTCOME_SALES" || objective === "OUTCOME_LEADS") || !!activeProfile?.pixel_id, label: "Pixel ID (conversão)" },
                     { ok: !!activeProfile?.meta_access_token, label: "Token Meta" },
                     { ok: dailyBudget >= 5, label: "Orçamento ≥ R$5" },
-                    { ok: !!destinationUrl || useCatalog, label: "URL ou Catálogo" },
-                    { ok: selectedAssetUrls.length > 0 || useCatalog, label: "Criativos ou Catálogo" },
+                    { ok: !!destinationUrl || (useCatalog && !!(selectedCatalog || inlineCatalogId || profileCatalogId)), label: "URL ou Catálogo" },
+                    { ok: selectedAssetUrls.length > 0 || (useCatalog && !!(selectedCatalog || inlineCatalogId || profileCatalogId)), label: "Criativos ou Catálogo" },
                   ].map((item, i) => (
                     <div key={i} className="flex items-center gap-2 text-sm">
                       {item.ok ? <CheckCircle2 className="w-4 h-4 text-success shrink-0" /> : <XCircle className="w-4 h-4 text-destructive shrink-0" />}
