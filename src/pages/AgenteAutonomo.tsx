@@ -296,6 +296,9 @@ export default function AgenteAutonomo() {
           </Card>
         )}
 
+        {/* Inline Rules Editor */}
+        <AgentRulesEditor />
+
         {/* Historical Logs */}
         <Card>
           <CardHeader>
