@@ -315,6 +315,39 @@ export default function CreativeFactory({ winners }: CreativeFactoryProps) {
             <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleFileSelect} />
           </div>
 
+          {/* Style Selector */}
+          <div>
+            <label className="text-sm font-medium mb-2 block">🎨 Estilo de Geração</label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setGenerationStyle("photorealistic")}
+                className={`flex flex-col items-center gap-1.5 p-3 rounded-lg border-2 transition-all cursor-pointer ${
+                  generationStyle === "photorealistic"
+                    ? "border-primary bg-primary/10 text-foreground"
+                    : "border-border bg-muted/30 text-muted-foreground hover:border-muted-foreground/40"
+                }`}
+              >
+                <span className="text-xl">📷</span>
+                <span className="text-xs font-semibold">Fotorrealista</span>
+                <span className="text-[10px] text-muted-foreground leading-tight text-center">Camera RAW, pele real, textura de materiais</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setGenerationStyle("stylized")}
+                className={`flex flex-col items-center gap-1.5 p-3 rounded-lg border-2 transition-all cursor-pointer ${
+                  generationStyle === "stylized"
+                    ? "border-primary bg-primary/10 text-foreground"
+                    : "border-border bg-muted/30 text-muted-foreground hover:border-muted-foreground/40"
+                }`}
+              >
+                <span className="text-xl">🎨</span>
+                <span className="text-xs font-semibold">Estilizado</span>
+                <span className="text-[10px] text-muted-foreground leading-tight text-center">Ilustrações, design gráfico, arte conceitual</span>
+              </button>
+            </div>
+          </div>
+
           {/* Stage 1: Raw Idea */}
           <div>
             <label className="text-sm font-medium mb-2 block">Qual é a ideia da campanha?</label>
