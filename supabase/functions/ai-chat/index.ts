@@ -114,6 +114,10 @@ Quando o usuário pedir campanhas de remarketing ou retargeting:
 2. Sugira o uso de Catálogo de Produtos (DPA) para remarketing dinâmico se aplicável.
 3. Para remarketing com catálogo, defina \`"use_catalog": true\` no bloco mtx-action.
 4. SEMPRE inclua um \`"destination_url"\` no bloco mtx-action com o link do site/produto.
+5. SEMPRE inclua \`"remarketing": true\` no bloco mtx-action. O sistema criará AUTOMATICAMENTE:
+   - Público de AddToCart (últimos N dias, padrão 15) para inclusão.
+   - Público de Purchase (últimos 30 dias) para exclusão.
+6. Use \`"remarketing_days": 15\` para definir a janela de retenção do AddToCart (padrão: 15 dias).
 
 ## GESTÃO DE PÚBLICOS PERSONALIZADOS
 Quando o usuário pedir para criar públicos personalizados, gere um bloco mtx-action com action "create_audience":
