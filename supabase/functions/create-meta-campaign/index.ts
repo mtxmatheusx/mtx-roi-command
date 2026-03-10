@@ -145,34 +145,37 @@ serve(async (req) => {
       }
     }
 
-    // Build targeting
-    const targetingObj: Record<string, unknown> = { geo_locations: { countries: ["BR"] } };
+    // Build targeting — v23.0 REQUIRES advantage_audience on ALL ad sets
+    const targetingObj: Record<string, unknown> = {
+      geo_locations: { countries: ["BR"] },
+      targeting_automation: { advantage_audience: 1 },
+    };
     const useAdvantagePlus = ["OUTCOME_SALES", "OUTCOME_LEADS"].includes(draft.objective);
 
     if (andromedaTargeting) {
-      // age_min: Meta limita a max 25 quando Advantage+ está ativo
       const ageMin = andromedaTargeting.age_min;
       if (ageMin && ageMin >= 18) {
         targetingObj.age_min = useAdvantagePlus ? Math.min(ageMin, 25) : Math.min(ageMin, 65);
       }
-      // age_max: forçar 65 ou omitir quando Advantage+ está ativo
       if (!useAdvantagePlus) {
         const ageMax = andromedaTargeting.age_max;
         if (ageMax && ageMax >= 18 && ageMax <= 65) {
           targetingObj.age_max = ageMax;
         }
       }
-      // Gêneros: 1=Masculino, 2=Feminino, 0=Todos (não enviar 0)
+      if (useAdvantagePlus) {
+        targetingObj.age_max = 65;
+      }
       if (andromedaTargeting.genders?.length && !andromedaTargeting.genders.includes(0)) {
         targetingObj.genders = andromedaTargeting.genders;
       }
       if (resolvedInterests.length > 0) {
         targetingObj.flexible_spec = [{ interests: resolvedInterests }];
       }
-      // Advantage+ audience
-      if (useAdvantagePlus) {
-        targetingObj.targeting_automation = { advantage_audience: 1 };
-      }
+    } else {
+      // No andromeda targeting — still set age defaults
+      targetingObj.age_min = 18;
+      targetingObj.age_max = 65;
     }
 
     // ─── Inject custom audiences (remarketing) ───
