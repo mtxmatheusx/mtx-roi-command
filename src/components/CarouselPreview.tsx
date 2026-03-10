@@ -106,10 +106,21 @@ export default function CarouselPreview({ visualDNA }: CarouselPreviewProps) {
         setGeneratingImages((prev) => ({ ...prev, [slideIndex]: true }));
 
         try {
+            // Build prompt with UGC character context if selected
+            const selectedChar = selectedCharacterId && selectedCharacterId !== "none"
+                ? ugcCharacters.find(c => c.id === selectedCharacterId)
+                : null;
+            
+            let fullPrompt = `${slide.image_prompt}. ${visualDNA.image_prompt_style}`;
+            if (selectedChar) {
+                fullPrompt += `. The person in the image: ${selectedChar.fixed_description}`;
+            }
+
             const { data, error } = await supabase.functions.invoke("generate-carousel-image", {
                 body: {
-                    prompt: `${slide.image_prompt}. ${visualDNA.image_prompt_style}`,
+                    prompt: fullPrompt,
                     visualDNA,
+                    ...(selectedChar?.image_references?.[0] ? { referenceImageUrl: selectedChar.image_references[0] } : {}),
                 },
             });
 
