@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import {
   X, Send, Brain, Loader2, Rocket, Plus, MessageSquare, Trash2,
   Users, Zap, Paperclip, Image, CheckCircle2, XCircle, Clock,
-  Target, BarChart3, Palette, Settings, TrendingUp, Eye
+  Target, BarChart3, Palette, Settings, TrendingUp, Eye, Volume2, Square
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ReactMarkdown from "react-markdown";
@@ -114,6 +114,8 @@ export default function AIChatPanel() {
   const [executingAction, setExecutingAction] = useState(false);
   const [publishSteps, setPublishSteps] = useState<PublishStep[] | null>(null);
   const [uploadedCreatives, setUploadedCreatives] = useState<string[]>([]);
+  const [ttsPlaying, setTtsPlaying] = useState<number | null>(null);
+  const ttsAudioRef = useRef<HTMLAudioElement | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
@@ -460,6 +462,50 @@ export default function AIChatPanel() {
   };
   const profileStatus = getProfileStatus();
 
+  // ── TTS ──
+  const handleTTS = async (text: string, msgIndex: number) => {
+    // If already playing this message, stop
+    if (ttsPlaying === msgIndex) {
+      ttsAudioRef.current?.pause();
+      ttsAudioRef.current = null;
+      setTtsPlaying(null);
+      return;
+    }
+    // Stop any previous
+    ttsAudioRef.current?.pause();
+    setTtsPlaying(msgIndex);
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-tts`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({ text }),
+        }
+      );
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({ error: "Erro TTS" }));
+        toast({ title: "Erro TTS", description: err.error || `Status ${response.status}`, variant: "destructive" });
+        setTtsPlaying(null);
+        return;
+      }
+      const audioBlob = await response.blob();
+      const audioUrl = URL.createObjectURL(audioBlob);
+      const audio = new Audio(audioUrl);
+      ttsAudioRef.current = audio;
+      audio.onended = () => { setTtsPlaying(null); ttsAudioRef.current = null; };
+      audio.onerror = () => { setTtsPlaying(null); ttsAudioRef.current = null; };
+      await audio.play();
+    } catch {
+      setTtsPlaying(null);
+      toast({ title: "Erro TTS", description: "Falha ao reproduzir áudio", variant: "destructive" });
+    }
+  };
+
   // ── Render ──
   const renderMessage = (m: Msg, i: number) => {
     if (m.role === "user") {
@@ -481,6 +527,14 @@ export default function AIChatPanel() {
               <div className="prose prose-sm max-w-none [&_p]:my-1 [&_ul]:my-1 [&_li]:my-0.5 [&_img]:rounded-md [&_img]:max-h-40">
                 <ReactMarkdown>{cleanContent}</ReactMarkdown>
               </div>
+              <button
+                onClick={() => handleTTS(cleanContent, i)}
+                className="mt-1.5 flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+                title={ttsPlaying === i ? "Parar áudio" : "Ouvir mensagem"}
+              >
+                {ttsPlaying === i ? <Square className="h-3 w-3" /> : <Volume2 className="h-3 w-3" />}
+                {ttsPlaying === i ? "Parar" : "Ouvir"}
+              </button>
             </div>
           )}
           {action && action.action === "create_audience" && (
