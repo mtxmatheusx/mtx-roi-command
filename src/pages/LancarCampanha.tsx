@@ -495,7 +495,7 @@ export default function LancarCampanha() {
             cta_type: ctaType,
             audience_id: isRemarketing && audienceId ? audienceId : undefined,
             use_catalog: useCatalog,
-            catalog_id: useCatalog && selectedCatalog ? selectedCatalog : undefined,
+            catalog_id: useCatalog ? (selectedCatalog || inlineCatalogId || profileCatalogId || undefined) : undefined,
           },
         });
 
