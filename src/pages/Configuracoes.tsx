@@ -301,7 +301,8 @@ export default function Configuracoes() {
           toast({ title: "Arquivo muito grande", description: `${file.name} excede 20MB`, variant: "destructive" });
           continue;
         }
-        const path = `${user.id}/${activeProfile.id}/${Date.now()}_${file.name}`;
+        const sanitizedName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+        const path = `${user.id}/${activeProfile.id}/${Date.now()}_${sanitizedName}`;
         const { error: uploadError } = await supabase.storage.from("knowledge-docs").upload(path, file);
         if (uploadError) throw uploadError;
 
