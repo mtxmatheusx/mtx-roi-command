@@ -53,9 +53,10 @@ function stripMtxAction(content: string): string {
 }
 
 async function streamChat({
-  messages, campaignData, mode, profileId, onDelta, onDone, onError,
+  messages, campaignData, mode, profileId, scrapedContext, onDelta, onDone, onError,
 }: {
   messages: Msg[]; campaignData?: unknown; mode: string; profileId?: string;
+  scrapedContext?: string;
   onDelta: (t: string) => void; onDone: () => void; onError: (msg: string) => void;
 }) {
   const resp = await fetch(AI_CHAT_URL, {
@@ -64,7 +65,7 @@ async function streamChat({
       "Content-Type": "application/json",
       Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
     },
-    body: JSON.stringify({ messages, campaignData, mode, profileId }),
+    body: JSON.stringify({ messages, campaignData, mode, profileId, scrapedContext }),
   });
 
   if (!resp.ok) {
@@ -352,6 +353,25 @@ export default function AIChatPanel() {
     }
   };
 
+  // ── URL Detection & Scraping ──
+  const extractUrl = (text: string): string | null => {
+    const match = text.match(/https?:\/\/[^\s<>"{}|\\^`[\]]+/i);
+    return match ? match[0] : null;
+  };
+
+  const scrapeUrl = async (url: string): Promise<string | null> => {
+    try {
+      const { data, error } = await supabase.functions.invoke("scrape-media", {
+        body: { url, mode: "text-only" },
+      });
+      if (error || !data?.text) return null;
+      return data.text.slice(0, 3000); // Limit context size
+    } catch {
+      // Fallback: just send the URL without scraping
+      return null;
+    }
+  };
+
   // ── Send message ──
   const send = async () => {
     const text = input.trim();
@@ -372,6 +392,16 @@ export default function AIChatPanel() {
     setLoading(true);
     await saveMessage(convId, "user", text);
 
+    // Detect URL and try to scrape context
+    let scrapedContext: string | undefined;
+    const detectedUrl = extractUrl(text);
+    if (detectedUrl) {
+      const scraped = await scrapeUrl(detectedUrl);
+      if (scraped) {
+        scrapedContext = `URL: ${detectedUrl}\n\nConteúdo extraído:\n${scraped}`;
+      }
+    }
+
     let assistantSoFar = "";
     const upsert = (chunk: string) => {
       assistantSoFar += chunk;
@@ -390,6 +420,7 @@ export default function AIChatPanel() {
       campaignData: campaignContext,
       mode: "chat",
       profileId: activeProfile?.id,
+      scrapedContext,
       onDelta: upsert,
       onDone: async () => {
         setLoading(false);
@@ -404,12 +435,14 @@ export default function AIChatPanel() {
 
   // ── Quick Actions ──
   const quickActions = [
-    { icon: <Rocket className="h-3.5 w-3.5" />, label: "🧭 Publicação guiada (passo a passo)", prompt: "Me guie passo a passo para publicar uma campanha completa. Verifique meu perfil, me ajude a definir objetivo, orçamento, segmentação, copy e criativo. Quero fazer tudo pelo chat." },
+    { icon: <Rocket className="h-3.5 w-3.5" />, label: "🧭 Publicação guiada", prompt: "Me guie passo a passo para publicar uma campanha completa. Verifique meu perfil, me ajude a definir objetivo, orçamento, segmentação, copy e criativo. Quero fazer tudo pelo chat." },
     { icon: <Target className="h-3.5 w-3.5" />, label: "🎯 Campanha de vendas", prompt: "Crie uma campanha de vendas otimizada para conversão. Sugira o melhor objetivo, orçamento e segmentação com base no meu perfil." },
-    { icon: <Users className="h-3.5 w-3.5" />, label: "🔄 Remarketing + Público", prompt: "Quero criar uma campanha de remarketing completa. Primeiro crie o público personalizado e depois a campanha direcionada a ele." },
-    { icon: <Palette className="h-3.5 w-3.5" />, label: "🛍️ Campanha com catálogo (DPA)", prompt: "Crie uma campanha de vendas com catálogo de produtos (DPA). Configure remarketing dinâmico para visitantes do meu site." },
-    { icon: <BarChart3 className="h-3.5 w-3.5" />, label: "📊 Diagnóstico das campanhas", prompt: "Faça um diagnóstico completo das minhas campanhas ativas. Analise CPA, CTR, CPM e ROAS e me dê recomendações de otimização." },
-    { icon: <TrendingUp className="h-3.5 w-3.5" />, label: "🚀 Escalar campanha", prompt: "Analise minhas campanhas e identifique qual tem melhor desempenho para escalar. Sugira a estratégia de escala ideal." },
+    { icon: <Users className="h-3.5 w-3.5" />, label: "🔄 Remarketing", prompt: "Quero criar uma campanha de remarketing completa. Primeiro crie o público personalizado e depois a campanha direcionada a ele." },
+    { icon: <Eye className="h-3.5 w-3.5" />, label: "👁️ Tráfego", prompt: "Crie uma campanha de tráfego para direcionar visitantes ao meu site. Sugira segmentação e orçamento ideais." },
+    { icon: <Palette className="h-3.5 w-3.5" />, label: "🛍️ Catálogo (DPA)", prompt: "Crie uma campanha de vendas com catálogo de produtos (DPA). Configure remarketing dinâmico para visitantes do meu site." },
+    { icon: <BarChart3 className="h-3.5 w-3.5" />, label: "📊 Diagnóstico", prompt: "Faça um diagnóstico completo das minhas campanhas ativas. Analise CPA, CTR, CPM e ROAS e me dê recomendações de otimização." },
+    { icon: <TrendingUp className="h-3.5 w-3.5" />, label: "🚀 Escalar", prompt: "Analise minhas campanhas e identifique qual tem melhor desempenho para escalar. Sugira a estratégia de escala ideal." },
+    { icon: <Users className="h-3.5 w-3.5" />, label: "👥 Criar público", prompt: "Crie um público personalizado de visitantes do meu site nos últimos 30 dias para usar em campanhas de remarketing." },
   ];
 
   // ── Profile status badge ──
@@ -654,7 +687,7 @@ export default function AIChatPanel() {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && send()}
-                  placeholder="Crie campanhas, públicos, analise métricas..."
+                  placeholder="Cole uma URL ou peça para criar campanhas..."
                   className="flex-1 bg-background border border-input rounded-md px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring min-w-0"
                   disabled={loading}
                 />

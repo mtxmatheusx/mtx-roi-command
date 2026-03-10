@@ -34,11 +34,63 @@ O bloco DEVE estar entre as tags \`\`\`mtx-action e \`\`\`:
   "targeting_notes": "Descrição da segmentação sugerida",
   "reasoning": "Raciocínio estratégico completo",
   "use_catalog": false,
-  "destination_url": "https://exemplo.com/produto"
+  "destination_url": "https://exemplo.com/produto",
+  "headline": "Título do anúncio",
+  "primary_text": "Texto principal do anúncio",
+  "cta": "SHOP_NOW"
 }
 \`\`\`
 
 Objectives válidos: OUTCOME_SALES, OUTCOME_LEADS, OUTCOME_TRAFFIC, OUTCOME_AWARENESS, OUTCOME_ENGAGEMENT.
+CTAs válidos: LEARN_MORE, SHOP_NOW, SIGN_UP, CONTACT_US, SUBSCRIBE, GET_OFFER, BOOK_TRAVEL, DOWNLOAD, ORDER_NOW, SEND_WHATSAPP_MESSAGE.
+
+## TIPOS DE CAMPANHA SUPORTADOS
+
+### 1. Campanha de Vendas (OUTCOME_SALES)
+- Objetivo: Conversões e compras no site/app
+- Requer: Pixel ID, Page ID, URL de destino
+- Ideal para: E-commerce, infoprodutos, serviços
+- Melhor com catálogo (DPA) para remarketing dinâmico
+
+### 2. Campanha de Remarketing
+- Objetivo: OUTCOME_SALES com públicos personalizados
+- Primeiro crie o público (action: "create_audience"), depois a campanha
+- Tipos de remarketing:
+  - **Visitantes do site** (website_visitors): requer Pixel
+  - **Engajamento** (engagement): interações com a Página/Instagram
+  - **Compradores anteriores**: público de valor (purchase events)
+  - **Remarketing Dinâmico (DPA)**: use_catalog: true + catálogo configurado
+
+### 3. Campanha de Engajamento (OUTCOME_ENGAGEMENT)
+- Objetivo: Curtidas, comentários, compartilhamentos
+- Ideal para: Aquecimento de público, prova social, brand awareness
+- Não requer Pixel, apenas Page ID
+
+### 4. Campanha de Tráfego (OUTCOME_TRAFFIC)
+- Objetivo: Cliques e visitas ao site/perfil
+- Ideal para: Landing pages, blogs, perfis de redes sociais
+- URL de destino obrigatória
+
+### 5. Campanha de Leads (OUTCOME_LEADS)
+- Objetivo: Captação de leads (formulários)
+- Ideal para: Serviços, B2B, consultorias
+- Requer Pixel para otimização
+
+### 6. Campanha de Reconhecimento (OUTCOME_AWARENESS)
+- Objetivo: Alcance e impressões
+- Ideal para: Lançamentos, branding
+- Menor exigência técnica
+
+## CRIAÇÃO DE CAMPANHAS A PARTIR DE URL
+Quando o usuário enviar uma URL de produto/site:
+1. Analise o contexto do produto/serviço baseado nos dados do perfil
+2. Sugira o melhor tipo de campanha para aquela URL
+3. Gere copy otimizada usando StoryBrand (Herói → Problema → Guia → Plano → Ação)
+4. Defina a destination_url com a URL fornecida
+5. Sugira segmentação baseada no nicho do produto
+6. Gere o bloco mtx-action completo com todos os campos
+
+Se o perfil tiver product_context ou avatar_dossier, USE esses dados para enriquecer a campanha.
 
 ## REMARKETING / RETARGETING
 Quando o usuário pedir campanhas de remarketing ou retargeting:
@@ -101,11 +153,12 @@ O usuário pode criar uma campanha 100% pelo chat, sem sair dele. O fluxo comple
 
 Quando os dados do contexto mostrarem "uploaded_creatives" com URLs, informe que os criativos já foram recebidos e serão usados automaticamente.
 
-O bloco mtx-action para campanha pode incluir campos adicionais:
-- "creative_url": URL do criativo principal
-- "headline": Título do anúncio  
-- "primary_text": Texto principal do anúncio
-- "cta": Call-to-action (LEARN_MORE, SHOP_NOW, SIGN_UP, CONTACT_US, SUBSCRIBE, GET_OFFER)
+## SCRAPING DE CONTEXTO
+Quando o contexto do perfil incluir "scraped_url_context", use esse conteúdo para:
+- Entender o produto/serviço do cliente
+- Gerar copies mais precisas e alinhadas
+- Sugerir segmentações baseadas no nicho real
+- Criar campanhas com destination_url apontando para a URL original
 
 LEMBRE-SE: Tudo deve ser feito pelo chat! Guie o usuário passo a passo sem mandá-lo para outras páginas.`;
 
@@ -152,7 +205,7 @@ serve(async (req) => {
   }
 
   try {
-    const { messages, campaignData, mode, profileId } = await req.json();
+    const { messages, campaignData, mode, profileId, scrapedContext } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
@@ -176,7 +229,10 @@ serve(async (req) => {
     // Inject campaign context if available
     let contextMessage = "";
     if (campaignData) {
-      contextMessage = `\n\n## Dados Atuais das Campanhas\n\`\`\`json\n${JSON.stringify(campaignData, null, 2)}\n\`\`\``;
+      contextMessage += `\n\n## Dados Atuais das Campanhas\n\`\`\`json\n${JSON.stringify(campaignData, null, 2)}\n\`\`\``;
+    }
+    if (scrapedContext) {
+      contextMessage += `\n\n## Contexto Extraído da URL (scraped_url_context)\n${scrapedContext}`;
     }
 
     const allMessages = [
