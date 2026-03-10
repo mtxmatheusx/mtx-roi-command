@@ -49,7 +49,7 @@ export default function ColorEditor({ color, index, onChange, onRemove, canRemov
           title={`Editar ${color}`}
         />
       </PopoverTrigger>
-      <PopoverContent className="w-64 space-y-3" side="bottom" align="start">
+      <PopoverContent className="w-64 space-y-3" side="bottom" align="start" onPointerDownOutside={(e) => e.preventDefault()} onInteractOutside={(e) => e.preventDefault()}>
         <p className="text-xs font-semibold text-muted-foreground">Editar Cor</p>
         <div
           className="w-full h-10 rounded-md border"
