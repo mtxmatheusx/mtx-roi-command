@@ -48,6 +48,7 @@ export default function CreativeFactory({ winners }: CreativeFactoryProps) {
   // Stage 1: Art Direction
   const [rawIdea, setRawIdea] = useState("");
   const [isElaborating, setIsElaborating] = useState(false);
+  const [generationStyle, setGenerationStyle] = useState<"photorealistic" | "stylized">("photorealistic");
 
   // Reference image
   const [referenceImageUrl, setReferenceImageUrl] = useState<string | null>(null);
