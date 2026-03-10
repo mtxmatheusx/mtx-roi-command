@@ -549,6 +549,7 @@ export default function LancarCampanha() {
           success: false,
           error: failures.map((f: any) => f.error).join(" | "),
           campaign_results: campaignResults,
+          targeting_debug: failures[0]?.targeting_debug,
         });
       }
 
