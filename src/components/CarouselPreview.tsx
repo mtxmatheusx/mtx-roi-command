@@ -136,6 +136,42 @@ export default function CarouselPreview({ visualDNA }: CarouselPreviewProps) {
         }
     };
 
+    // ─── Per-slide reference image upload ───
+    const handleSlideRefUpload = useCallback(async (file: File, slideIndex: number) => {
+        if (!activeProfile?.id || !user?.id) return;
+        const validTypes = ["image/jpeg", "image/png", "image/webp"];
+        if (!validTypes.includes(file.type)) {
+            toast({ title: "Formato inválido", description: "Use JPG, PNG ou WEBP.", variant: "destructive" });
+            return;
+        }
+        if (file.size > 10 * 1024 * 1024) {
+            toast({ title: "Arquivo muito grande", description: "Máximo 10MB.", variant: "destructive" });
+            return;
+        }
+        setUploadingRef(true);
+        try {
+            const ext = file.name.split(".").pop() || "png";
+            const path = `slide-refs/${activeProfile.id}/${Date.now()}_slide${slideIndex}.${ext}`;
+            const { error } = await supabase.storage.from("creative-assets").upload(path, file, { contentType: file.type, upsert: true });
+            if (error) throw error;
+            const { data: { publicUrl } } = supabase.storage.from("creative-assets").getPublicUrl(path);
+            setSlideReferenceImages(prev => ({ ...prev, [slideIndex]: publicUrl }));
+            toast({ title: "📎 Referência adicionada", description: `Imagem de referência aplicada ao slide ${slideIndex + 1}.` });
+        } catch (err) {
+            toast({ title: "Erro no upload", description: (err as Error).message, variant: "destructive" });
+        } finally {
+            setUploadingRef(false);
+        }
+    }, [activeProfile, user, toast]);
+
+    const removeSlideRef = (slideIndex: number) => {
+        setSlideReferenceImages(prev => {
+            const copy = { ...prev };
+            delete copy[slideIndex];
+            return copy;
+        });
+    };
+
     const generateImageForSlide = async (slideIndex: number) => {
         if (!carousel) return;
         const slide = carousel.slides[slideIndex];
@@ -145,10 +181,15 @@ export default function CarouselPreview({ visualDNA }: CarouselPreviewProps) {
                 ? ugcCharacters.find(c => c.id === selectedCharacterId) : null;
             let fullPrompt = `${slide.image_prompt}. ${visualDNA.image_prompt_style}`;
             if (selectedChar) fullPrompt += `. The person in the image: ${selectedChar.fixed_description}`;
+
+            // Use per-slide reference first, then UGC character reference
+            const refImage = slideReferenceImages[slideIndex]
+                || (selectedChar?.image_references?.[0] || undefined);
+
             const { data, error } = await supabase.functions.invoke("generate-carousel-image", {
                 body: {
                     prompt: fullPrompt, visualDNA,
-                    ...(selectedChar?.image_references?.[0] ? { referenceImageUrl: selectedChar.image_references[0] } : {}),
+                    ...(refImage ? { referenceImageUrl: refImage } : {}),
                 },
             });
             if (error) throw error;
