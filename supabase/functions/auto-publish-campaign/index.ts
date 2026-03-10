@@ -39,7 +39,7 @@ serve(async (req) => {
     let body: any;
     try { body = JSON.parse(rawBody); } catch { return fail("JSON inválido"); }
 
-    const { profileId, campaign_name, objective, daily_budget, targeting_notes, use_catalog, destination_url, creative_url, headline, cta_type, audience_id, audience_ids, excluded_audience_ids } = body;
+    const { profileId, campaign_name, objective, daily_budget, targeting_notes, use_catalog, destination_url, creative_url, headline, primary_text, cta_type, cta, audience_id, audience_ids, excluded_audience_ids } = body;
     if (!profileId || !campaign_name) return fail("profileId e campaign_name obrigatórios");
 
     // Fetch profile
@@ -173,32 +173,34 @@ serve(async (req) => {
     steps.push(`✅ Conjunto: ${metaAdSetId}`);
 
     // ─── Step 3: Ad ───
+    const adPrimaryText = primary_text || targeting_notes || "Descubra como transformar seus resultados";
+    const resolvedCta = cta_type || cta || "LEARN_MORE";
     const linkData: Record<string, unknown> = {
-      message: targeting_notes || "Descubra como transformar seus resultados",
+      message: adPrimaryText,
       link: linkUrl,
       name: headline || campaign_name,
-      call_to_action: { type: cta_type || "LEARN_MORE", value: { link: linkUrl } },
+      call_to_action: { type: resolvedCta, value: { link: linkUrl } },
     };
     if (creative_url) {
       linkData.picture = creative_url;
     }
 
-    const adBody = {
-      name: `${campaign_name} - Anúncio Auto`,
-      adset_id: metaAdSetId,
-      status: "PAUSED",
-      access_token: accessToken,
-      creative: {
-        object_story_spec: {
-          page_id: String(pageId),
-          link_data: linkData,
-        },
+    const adForm = new URLSearchParams();
+    adForm.append("name", `${campaign_name} - Anúncio Auto`);
+    adForm.append("adset_id", metaAdSetId);
+    adForm.append("status", "PAUSED");
+    adForm.append("access_token", accessToken);
+    adForm.append("creative", JSON.stringify({
+      object_story_spec: {
+        page_id: String(pageId),
+        link_data: linkData,
       },
-    };
+    }));
 
     const adRes = await fetch(`${META_API}/${adAccountId}/ads`, {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(adBody),
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: adForm.toString(),
     });
     const adData = await adRes.json();
     if (adData.error) {
