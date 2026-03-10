@@ -303,6 +303,17 @@ export default function CarouselPreview({ visualDNA }: CarouselPreviewProps) {
                                     )}
                                     {generatingAll ? "Gerando..." : "Gerar Todas"}
                                 </Button>
+                                {creativeAssets.length > 0 && (
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => { setLibraryTarget(currentSlide); setShowLibrary(true); }}
+                                        className="gap-2"
+                                    >
+                                        <FolderOpen className="w-3 h-3" />
+                                        Biblioteca
+                                    </Button>
+                                )}
                             </div>
                         </CardContent>
                     </Card>
