@@ -114,6 +114,8 @@ export default function AIChatPanel() {
   const [executingAction, setExecutingAction] = useState(false);
   const [publishSteps, setPublishSteps] = useState<PublishStep[] | null>(null);
   const [uploadedCreatives, setUploadedCreatives] = useState<string[]>([]);
+  const [ttsPlaying, setTtsPlaying] = useState<number | null>(null);
+  const ttsAudioRef = useRef<HTMLAudioElement | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
