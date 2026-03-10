@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { fetchMasterContext } from "../_shared/fetch_master_context.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -56,13 +55,26 @@ async function createPixelAudience(
   return { id: data.id };
 }
 
-// ─── AI copy generation aligned with dossier ───
+// ─── Inline AI copy generation aligned with dossier ───
 async function generateAlignedCopy(
   profileId: string, campaignName: string, objective: string, targetingNotes: string | null
 ): Promise<{ headline: string; primary_text: string } | null> {
   try {
-    const ctx = await fetchMasterContext(profileId);
-    if (ctx.blocked) return null;
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const sb = createClient(supabaseUrl, serviceKey);
+
+    const { data: profile } = await sb
+      .from("client_profiles")
+      .select("name, avatar_dossier, product_context, cpa_meta, ticket_medio")
+      .eq("id", profileId)
+      .single();
+
+    if (!profile || (!profile.avatar_dossier && !profile.product_context)) return null;
+
+    let context = `Cliente: ${profile.name}\nCPA Meta: R$${profile.cpa_meta}\nTicket Médio: R$${profile.ticket_medio}\n`;
+    if (profile.avatar_dossier) context += `\nDOSSIÊ DO AVATAR:\n${profile.avatar_dossier}\n`;
+    if (profile.product_context) context += `\nCONTEXTO DO PRODUTO:\n${profile.product_context}\n`;
 
     const prompt = `Gere UM anúncio para a campanha "${campaignName}" com objetivo ${objective}.
 ${targetingNotes ? `Contexto de segmentação: ${targetingNotes}` : ""}
@@ -75,7 +87,7 @@ REGRAS OBRIGATÓRIAS:
 - Primary Text: máximo 125 palavras, foco em conversão, termine com CTA claro.
 - Tom de voz alinhado ao perfil do cliente.
 
-${ctx.systemPromptBlock}
+${context}
 
 Responda APENAS em JSON: {"headline":"...","primary_text":"..."}`;
 
@@ -88,7 +100,7 @@ Responda APENAS em JSON: {"headline":"...","primary_text":"..."}`;
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
         messages: [
-          { role: "system", content: "Você é um copywriter de resposta direta sênior da MTX. Responda APENAS em JSON válido." },
+          { role: "system", content: "Você é um copywriter de resposta direta sênior. Responda APENAS em JSON válido." },
           { role: "user", content: prompt },
         ],
         temperature: 0.7,
@@ -99,7 +111,6 @@ Responda APENAS em JSON: {"headline":"...","primary_text":"..."}`;
     if (!res.ok) return null;
     const data = await res.json();
     const text = data.choices?.[0]?.message?.content || "";
-    // Extract JSON from response
     const jsonMatch = text.match(/\{[\s\S]*"headline"[\s\S]*"primary_text"[\s\S]*\}/);
     if (!jsonMatch) return null;
     return JSON.parse(jsonMatch[0]);
@@ -177,7 +188,6 @@ serve(async (req) => {
     if (remarketing && pixelId && pixelId.trim() !== "") {
       const days = remarketing_days || 15;
 
-      // Create "AddToCart" audience (include)
       const cartAudience = await createPixelAudience(
         adAccountId, accessToken, pixelId,
         `Remarketing - AddToCart ${days}d - ${campaign_name}`,
@@ -188,7 +198,6 @@ serve(async (req) => {
         steps.push(`✅ Público AddToCart ${days}d: ${cartAudience.id}`);
       }
 
-      // Create "Purchase" audience (exclude)
       const purchaseAudience = await createPixelAudience(
         adAccountId, accessToken, pixelId,
         `Exclusão - Compradores 30d - ${campaign_name}`,
@@ -213,7 +222,6 @@ serve(async (req) => {
       }
     }
 
-    // Fallbacks
     finalHeadline = finalHeadline || campaign_name;
     finalPrimaryText = finalPrimaryText || targeting_notes || "Descubra como transformar seus resultados";
 
