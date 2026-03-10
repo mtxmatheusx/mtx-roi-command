@@ -86,12 +86,17 @@ serve(async (req) => {
     if (draftErr || !draft) return fail("Erro ao criar rascunho");
 
     // ─── Step 1: Campaign ───
+    const campaignForm = new URLSearchParams();
+    campaignForm.append("name", campaign_name);
+    campaignForm.append("objective", obj);
+    campaignForm.append("status", "PAUSED");
+    campaignForm.append("special_ad_categories", "[]");
+    campaignForm.append("access_token", accessToken);
+
     const campaignRes = await fetch(`${META_API}/${adAccountId}/campaigns`, {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: campaign_name, objective: obj, status: "PAUSED",
-        special_ad_categories: [], access_token: accessToken,
-      }),
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: campaignForm.toString(),
     });
     const campaignData = await campaignRes.json();
     if (campaignData.error) {
