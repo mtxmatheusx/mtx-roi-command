@@ -87,6 +87,10 @@ export default function Configuracoes() {
   const [catalogsLoading, setCatalogsLoading] = useState(false);
   const [availableCatalogs, setAvailableCatalogs] = useState<any[]>([]);
 
+  // Edit context state
+  const [editingContext, setEditingContext] = useState(false);
+  const [editContextValue, setEditContextValue] = useState("");
+
   // Fetch knowledge_base entries
   const { data: kbEntries = [], refetch: refetchKb } = useQuery({
     queryKey: ["knowledge_base", activeProfile?.id],
