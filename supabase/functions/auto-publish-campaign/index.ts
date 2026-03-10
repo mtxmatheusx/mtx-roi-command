@@ -173,11 +173,13 @@ serve(async (req) => {
     steps.push(`✅ Conjunto: ${metaAdSetId}`);
 
     // ─── Step 3: Ad ───
+    const adPrimaryText = primary_text || targeting_notes || "Descubra como transformar seus resultados";
+    const resolvedCta = cta_type || cta || "LEARN_MORE";
     const linkData: Record<string, unknown> = {
-      message: targeting_notes || "Descubra como transformar seus resultados",
+      message: adPrimaryText,
       link: linkUrl,
       name: headline || campaign_name,
-      call_to_action: { type: cta_type || "LEARN_MORE", value: { link: linkUrl } },
+      call_to_action: { type: resolvedCta, value: { link: linkUrl } },
     };
     if (creative_url) {
       linkData.picture = creative_url;
