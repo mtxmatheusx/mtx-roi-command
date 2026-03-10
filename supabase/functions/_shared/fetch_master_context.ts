@@ -125,14 +125,24 @@ ${JSON.stringify(profileBlock, null, 2)}
 `;
 
   if (profile.avatar_dossier) {
-    systemPromptBlock += `\n## DOSSIÊ DO AVATAR (VERDADE ABSOLUTA)
+    systemPromptBlock += `\n## DOSSIÊ DO AVATAR (VERDADE ABSOLUTA — PRIORIDADE MÁXIMA)
 ${profile.avatar_dossier}
+
+⚠️ REGRA DE HIERARQUIA: O Dossiê do Avatar é a VERDADE ABSOLUTA. Ele define:
+- QUEM é o consumidor final (o avatar/persona que verá os anúncios)
+- QUAL é a DOR, o DESEJO e as OBJEÇÕES desse consumidor
+- QUAL é o MECANISMO ÚNICO do produto/serviço
+- QUAL é o TOM DE VOZ da marca
+Se houver CONFLITO entre o Dossiê do Avatar e o Contexto do Produto abaixo, o DOSSIÊ PREVALECE SEMPRE.
+As copies devem falar sobre o PRODUTO/SERVIÇO descrito no mecanismo único do dossiê, usando o tom de voz do dossiê, endereçando as dores e desejos do avatar.
 `;
   }
 
   if (profile.product_context) {
-    systemPromptBlock += `\n## CONTEXTO DO PRODUTO
+    systemPromptBlock += `\n## CONTEXTO DO PRODUTO (COMPLEMENTAR — NÃO SOBREPÕE O DOSSIÊ)
 ${profile.product_context}
+
+⚠️ ATENÇÃO: Este contexto é COMPLEMENTAR ao Dossiê do Avatar. Se o dossiê descreve uma marca de moda e o contexto menciona "Instagram" ou "marketing digital", a copy NÃO deve vender "estratégia de Instagram" — deve vender o PRODUTO descrito no dossiê (roupas, serviços, etc) usando insights adicionais deste contexto.
 `;
   }
 
