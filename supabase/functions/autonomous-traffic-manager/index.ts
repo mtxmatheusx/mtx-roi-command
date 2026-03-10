@@ -398,7 +398,7 @@ serve(async (req) => {
           for (const decision of decisions) {
             try {
               if (decision.action === "pause") {
-                const pauseResp = await fetch(`https://graph.facebook.com/v21.0/${decision.campaign_id}`, {
+                const pauseResp = await fetch(`https://graph.facebook.com/v23.0/${decision.campaign_id}`, {
                   method: "POST", headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({ status: "PAUSED", access_token: accessToken }),
                 });
