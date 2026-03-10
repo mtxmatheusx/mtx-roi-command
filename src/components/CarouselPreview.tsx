@@ -58,6 +58,9 @@ export default function CarouselPreview({ visualDNA }: CarouselPreviewProps) {
     const [showCaptions, setShowCaptions] = useState(false);
     const [ugcCharacters, setUgcCharacters] = useState<UGCCharacter[]>([]);
     const [selectedCharacterId, setSelectedCharacterId] = useState<string>("");
+    const [creativeAssets, setCreativeAssets] = useState<CreativeAsset[]>([]);
+    const [showLibrary, setShowLibrary] = useState(false);
+    const [libraryTarget, setLibraryTarget] = useState<number>(0);
     const { toast } = useToast();
     const { activeProfile } = useClientProfiles();
     const { user } = useAuth();
