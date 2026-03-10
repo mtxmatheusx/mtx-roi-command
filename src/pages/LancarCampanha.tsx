@@ -1420,8 +1420,8 @@ export default function LancarCampanha() {
                     { ok: !(objective === "OUTCOME_SALES" || objective === "OUTCOME_LEADS") || !!activeProfile?.pixel_id, label: "Pixel ID (conversão)" },
                     { ok: !!activeProfile?.meta_access_token, label: "Token Meta" },
                     { ok: dailyBudget >= 5, label: "Orçamento ≥ R$5" },
-                    { ok: !!destinationUrl || useCatalog, label: "URL ou Catálogo" },
-                    { ok: selectedAssetUrls.length > 0 || useCatalog, label: "Criativos ou Catálogo" },
+                    { ok: !!destinationUrl || (useCatalog && !!(selectedCatalog || inlineCatalogId || profileCatalogId)), label: "URL ou Catálogo" },
+                    { ok: selectedAssetUrls.length > 0 || (useCatalog && !!(selectedCatalog || inlineCatalogId || profileCatalogId)), label: "Criativos ou Catálogo" },
                   ].map((item, i) => (
                     <div key={i} className="flex items-center gap-2 text-sm">
                       {item.ok ? <CheckCircle2 className="w-4 h-4 text-success shrink-0" /> : <XCircle className="w-4 h-4 text-destructive shrink-0" />}
