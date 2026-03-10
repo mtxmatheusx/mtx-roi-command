@@ -145,27 +145,28 @@ serve(async (req) => {
       }
     }
 
-    // Build targeting — v23.0 REQUIRES advantage_audience on ALL ad sets
+    // Build targeting — v23.0 requires explicit advantage_audience (1 or 0)
+    const useAdvantagePlus = ["OUTCOME_SALES", "OUTCOME_LEADS"].includes(draft.objective);
     const targetingObj: Record<string, unknown> = {
       geo_locations: { countries: ["BR"] },
-      targeting_automation: { advantage_audience: 1 },
+      targeting_automation: { advantage_audience: useAdvantagePlus ? 1 : 0 },
     };
-    const useAdvantagePlus = ["OUTCOME_SALES", "OUTCOME_LEADS"].includes(draft.objective);
 
     if (andromedaTargeting) {
       const ageMin = andromedaTargeting.age_min;
       if (ageMin && ageMin >= 18) {
         targetingObj.age_min = useAdvantagePlus ? Math.min(ageMin, 25) : Math.min(ageMin, 65);
       }
-      if (!useAdvantagePlus) {
+
+      if (useAdvantagePlus) {
+        targetingObj.age_max = 65;
+      } else {
         const ageMax = andromedaTargeting.age_max;
         if (ageMax && ageMax >= 18 && ageMax <= 65) {
           targetingObj.age_max = ageMax;
         }
       }
-      if (useAdvantagePlus) {
-        targetingObj.age_max = 65;
-      }
+
       if (andromedaTargeting.genders?.length && !andromedaTargeting.genders.includes(0)) {
         targetingObj.genders = andromedaTargeting.genders;
       }
@@ -173,7 +174,6 @@ serve(async (req) => {
         targetingObj.flexible_spec = [{ interests: resolvedInterests }];
       }
     } else {
-      // No andromeda targeting — still set age defaults
       targetingObj.age_min = 18;
       targetingObj.age_max = 65;
     }
