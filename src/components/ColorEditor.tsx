@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Button } from "@/components/ui/button";
+import { X } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -19,9 +21,11 @@ interface ColorEditorProps {
   color: string;
   index: number;
   onChange: (index: number, newColor: string) => void;
+  onRemove?: (index: number) => void;
+  canRemove?: boolean;
 }
 
-export default function ColorEditor({ color, index, onChange }: ColorEditorProps) {
+export default function ColorEditor({ color, index, onChange, onRemove, canRemove }: ColorEditorProps) {
   const [hexInput, setHexInput] = useState(color);
   const rgb = hexToRgb(color);
 
@@ -71,6 +75,16 @@ export default function ColorEditor({ color, index, onChange }: ColorEditorProps
           className="text-xs font-mono h-8"
           maxLength={7}
         />
+        {canRemove && onRemove && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full text-xs text-destructive hover:text-destructive hover:bg-destructive/10 gap-1"
+            onClick={() => onRemove(index)}
+          >
+            <X className="w-3 h-3" /> Remover cor
+          </Button>
+        )}
       </PopoverContent>
     </Popover>
   );
