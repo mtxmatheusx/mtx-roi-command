@@ -108,7 +108,7 @@ Generate ONLY the image prompt, nothing else. Make it specific, vivid, and produ
         method: "POST",
         headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "google/gemini-2.5-flash-image",
+          model: "google/gemini-3.1-flash-image-preview",
           messages: [{ role: "user", content: referenceImageUrl ? messageContent : imagePrompt + variation }],
           modalities: ["image", "text"],
         }),
