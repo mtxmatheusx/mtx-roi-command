@@ -315,9 +315,9 @@ serve(async (req) => {
 
         try {
           // Fetch campaign (yesterday-today), campaign today-only, and adset data in parallel
-          const campaignUrl = `https://graph.facebook.com/v21.0/${profile.ad_account_id}/campaigns?fields=id,name,effective_status,daily_budget,insights.time_range({"since":"${yesterday}","until":"${today}"}){spend,actions,action_values,ctr,frequency}&effective_status=["ACTIVE"]&access_token=${accessToken}&limit=100`;
-          const campaignTodayUrl = `https://graph.facebook.com/v21.0/${profile.ad_account_id}/campaigns?fields=id,insights.time_range({"since":"${today}","until":"${today}"}){spend,actions,action_values}&effective_status=["ACTIVE"]&access_token=${accessToken}&limit=100`;
-          const adsetUrl = `https://graph.facebook.com/v21.0/${profile.ad_account_id}/adsets?fields=id,name,daily_budget,effective_status,campaign_id,insights.time_range({"since":"${twoDaysAgo}","until":"${today}"}){spend,actions,action_values,ctr,frequency}&effective_status=["ACTIVE"]&access_token=${accessToken}&limit=100`;
+          const campaignUrl = `https://graph.facebook.com/v23.0/${profile.ad_account_id}/campaigns?fields=id,name,effective_status,daily_budget,insights.time_range({"since":"${yesterday}","until":"${today}"}){spend,actions,action_values,ctr,frequency}&effective_status=["ACTIVE"]&access_token=${accessToken}&limit=100`;
+          const campaignTodayUrl = `https://graph.facebook.com/v23.0/${profile.ad_account_id}/campaigns?fields=id,insights.time_range({"since":"${today}","until":"${today}"}){spend,actions,action_values}&effective_status=["ACTIVE"]&access_token=${accessToken}&limit=100`;
+          const adsetUrl = `https://graph.facebook.com/v23.0/${profile.ad_account_id}/adsets?fields=id,name,daily_budget,effective_status,campaign_id,insights.time_range({"since":"${twoDaysAgo}","until":"${today}"}){spend,actions,action_values,ctr,frequency}&effective_status=["ACTIVE"]&access_token=${accessToken}&limit=100`;
 
           const [campaignResp, campaignTodayResp, adsetResp] = await Promise.all([fetch(campaignUrl), fetch(campaignTodayUrl), fetch(adsetUrl)]);
           const [campaignData, campaignTodayData, adsetData] = await Promise.all([campaignResp.json(), campaignTodayResp.json(), adsetResp.json()]);
