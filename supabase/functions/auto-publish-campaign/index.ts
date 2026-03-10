@@ -80,12 +80,16 @@ async function generateAlignedCopy(
 ${targetingNotes ? `Contexto de segmentação: ${targetingNotes}` : ""}
 
 REGRAS OBRIGATÓRIAS:
+- A copy é um ANÚNCIO para o CONSUMIDOR FINAL (o avatar descrito no dossiê).
+- A marca fala DIRETAMENTE com o consumidor sobre o PRODUTO/SERVIÇO dela.
 - Use EXCLUSIVAMENTE o dossiê do avatar e o contexto do produto abaixo.
 - NÃO invente dados, métricas ou depoimentos fictícios.
-- Use os frameworks StoryBrand (Vilão→Guia→Plano) e Hormozi (Value Equation).
-- Headline: máximo 40 caracteres, gancho forte.
+- Use StoryBrand: o CONSUMIDOR é o herói, a MARCA é o guia.
+- Use Hormozi Value Equation: resultado concreto para o CONSUMIDOR.
+- NUNCA mencione "Instagram", "posts", "algoritmo", "seguidores", "engajamento" — a menos que o produto SEJA sobre marketing digital.
+- Use o TOM DE VOZ descrito no dossiê do avatar.
+- Headline: máximo 40 caracteres, gancho forte que fale da DOR ou DESEJO do consumidor.
 - Primary Text: máximo 125 palavras, foco em conversão, termine com CTA claro.
-- Tom de voz alinhado ao perfil do cliente.
 
 ${context}
 
@@ -100,7 +104,7 @@ Responda APENAS em JSON: {"headline":"...","primary_text":"..."}`;
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
         messages: [
-          { role: "system", content: "Você é um copywriter de resposta direta sênior. Responda APENAS em JSON válido." },
+          { role: "system", content: "Você é um copywriter de resposta direta sênior escrevendo anúncios que falam DIRETAMENTE com o consumidor final. A copy deve soar como a MARCA falando com seu CLIENTE IDEAL, não como um gestor de tráfego. Responda APENAS em JSON válido." },
           { role: "user", content: prompt },
         ],
         temperature: 0.7,
