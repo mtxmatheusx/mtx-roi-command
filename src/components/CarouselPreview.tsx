@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, Sparkles, ChevronLeft, ChevronRight, Share2, Download, Copy, Play, ImageIcon, Wand2, FileText, Users, FolderOpen, Maximize2 } from "lucide-react";
+import { Loader2, Sparkles, ChevronLeft, ChevronRight, Share2, Download, Copy, Play, ImageIcon, Wand2, FileText, Users, FolderOpen, Maximize2, GripVertical, PackageOpen } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useClientProfiles } from "@/hooks/useClientProfiles";
 import { useAuth } from "@/hooks/useAuth";
@@ -12,6 +12,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import ContentPlatformSelector, { Platform, ContentType } from "@/components/ContentPlatformSelector";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { toPng } from "html-to-image";
 
 interface CreativeAsset {
     id: string;
@@ -69,6 +70,10 @@ export default function CarouselPreview({ visualDNA }: CarouselPreviewProps) {
     const [showLibrary, setShowLibrary] = useState(false);
     const [libraryTarget, setLibraryTarget] = useState<number>(0);
     const [expandedPreview, setExpandedPreview] = useState(false);
+    const [exporting, setExporting] = useState(false);
+    const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+    const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+    const exportRefs = useRef<Record<number, HTMLDivElement | null>>({});
     const { toast } = useToast();
     const { activeProfile } = useClientProfiles();
     const { user } = useAuth();
@@ -169,11 +174,177 @@ export default function CarouselPreview({ visualDNA }: CarouselPreviewProps) {
     const nextSlide = () => { if (carousel && currentSlide < carousel.slides.length - 1) setCurrentSlide(currentSlide + 1); };
     const prevSlide = () => { if (currentSlide > 0) setCurrentSlide(currentSlide - 1); };
 
+    // ─── Export all slides as PNG ───
+    const exportAllSlides = useCallback(async () => {
+        if (!carousel) return;
+        setExporting(true);
+        toast({ title: "📦 Exportando...", description: "Preparando slides para download." });
+
+        try {
+            for (let i = 0; i < carousel.slides.length; i++) {
+                const node = exportRefs.current[i];
+                if (!node) continue;
+
+                // Make the export node visible temporarily
+                node.style.position = "fixed";
+                node.style.left = "-9999px";
+                node.style.top = "0";
+                node.style.display = "flex";
+                document.body.appendChild(node);
+
+                // Wait for images to load
+                await new Promise(r => setTimeout(r, 300));
+
+                const dataUrl = await toPng(node, {
+                    width: 1080,
+                    height: 1350,
+                    pixelRatio: 1,
+                    cacheBust: true,
+                });
+
+                document.body.removeChild(node);
+                node.style.display = "none";
+
+                // Trigger download
+                const link = document.createElement("a");
+                link.download = `slide_${i + 1}_${carousel.slides[i].type}.png`;
+                link.href = dataUrl;
+                link.click();
+
+                await new Promise(r => setTimeout(r, 200));
+            }
+            toast({ title: "✅ Exportação Concluída!", description: `${carousel.slides.length} slides prontos para publicação.` });
+        } catch (err) {
+            console.error("Export error:", err);
+            toast({ title: "Erro na exportação", description: (err as Error).message, variant: "destructive" });
+        } finally {
+            setExporting(false);
+        }
+    }, [carousel, slideImages, toast]);
+
+    // ─── Drag and drop handlers ───
+    const handleDragStart = (index: number) => {
+        setDraggedIndex(index);
+    };
+
+    const handleDragOver = (e: React.DragEvent, index: number) => {
+        e.preventDefault();
+        setDragOverIndex(index);
+    };
+
+    const handleDragEnd = () => {
+        if (draggedIndex === null || dragOverIndex === null || draggedIndex === dragOverIndex || !carousel) {
+            setDraggedIndex(null);
+            setDragOverIndex(null);
+            return;
+        }
+
+        const newSlides = [...carousel.slides];
+        const [movedSlide] = newSlides.splice(draggedIndex, 1);
+        newSlides.splice(dragOverIndex, 0, movedSlide);
+
+        // Remap images
+        const newImages: Record<number, string> = {};
+        const oldImages = { ...slideImages };
+        const oldOrder = carousel.slides.map((_, i) => i);
+        const newOrder = [...oldOrder];
+        const [movedIdx] = newOrder.splice(draggedIndex, 1);
+        newOrder.splice(dragOverIndex, 0, movedIdx);
+        newOrder.forEach((oldIdx, newIdx) => {
+            if (oldImages[oldIdx]) newImages[newIdx] = oldImages[oldIdx];
+        });
+
+        setCarousel({ ...carousel, slides: newSlides });
+        setSlideImages(newImages);
+        setCurrentSlide(dragOverIndex);
+        setDraggedIndex(null);
+        setDragOverIndex(null);
+        toast({ title: "🔄 Slides reordenados" });
+    };
+
     const generatedCount = Object.keys(slideImages).length;
     const totalSlides = carousel?.slides.length || 0;
     const currentSlideData = carousel?.slides[currentSlide];
     const currentTypeConfig = currentSlideData ? slideTypeConfig[currentSlideData.type] || slideTypeConfig.value : null;
     const hasImage = !!slideImages[currentSlide];
+
+    // ─── Render export slide (offscreen, used by html-to-image) ───
+    const renderExportSlide = (slide: CarouselSlide, index: number) => {
+        const hasImg = !!slideImages[index];
+        return (
+            <div
+                key={`export-${index}`}
+                ref={(el) => { exportRefs.current[index] = el; }}
+                style={{
+                    width: 1080,
+                    height: 1350,
+                    display: "none",
+                    flexDirection: "column",
+                    justifyContent: "flex-end",
+                    position: "relative",
+                    overflow: "hidden",
+                    fontFamily: visualDNA.typography.includes("Serif") ? "Georgia, serif" : "'DM Sans', sans-serif",
+                }}
+            >
+                {/* Background */}
+                {hasImg ? (
+                    <img
+                        src={slideImages[index]}
+                        crossOrigin="anonymous"
+                        style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
+                        alt=""
+                    />
+                ) : (
+                    <div style={{
+                        position: "absolute", inset: 0,
+                        background: `linear-gradient(145deg, ${visualDNA.palette[0] || "#1a1a2e"}, ${visualDNA.palette[1] || "#16213e"})`,
+                    }} />
+                )}
+                {/* Gradient overlay */}
+                <div style={{
+                    position: "absolute", inset: 0,
+                    background: hasImg
+                        ? "linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.3) 40%, transparent 70%)"
+                        : "linear-gradient(to top, rgba(0,0,0,0.4) 0%, transparent 60%)",
+                }} />
+                {/* Text content */}
+                <div style={{
+                    position: "relative", zIndex: 10,
+                    padding: "60px 56px",
+                    display: "flex", flexDirection: "column", gap: "16px",
+                }}>
+                    <span style={{
+                        display: "inline-block",
+                        fontSize: "14px",
+                        fontWeight: 800,
+                        letterSpacing: "2px",
+                        textTransform: "uppercase",
+                        color: slide.type === "hook" ? "#ef4444" : slide.type === "cta" ? "#f59e0b" : slide.type === "solution" ? "#10b981" : "#6366f1",
+                        marginBottom: "4px",
+                    }}>
+                        {(slideTypeConfig[slide.type] || slideTypeConfig.value).label}
+                    </span>
+                    <h3 style={{
+                        fontSize: "52px",
+                        fontWeight: 800,
+                        color: "#ffffff",
+                        lineHeight: 1.15,
+                        textShadow: "0 2px 12px rgba(0,0,0,0.5)",
+                    }}>
+                        {slide.headline}
+                    </h3>
+                    <p style={{
+                        fontSize: "26px",
+                        fontWeight: 400,
+                        color: "rgba(255,255,255,0.85)",
+                        lineHeight: 1.5,
+                    }}>
+                        {slide.body}
+                    </p>
+                </div>
+            </div>
+        );
+    };
 
     return (
         <div className="space-y-6">
@@ -231,7 +402,7 @@ export default function CarouselPreview({ visualDNA }: CarouselPreviewProps) {
                 <>
                     {/* Image Generation Bar */}
                     <Card className="glass-card">
-                        <CardContent className="py-3 px-4 flex items-center justify-between">
+                        <CardContent className="py-3 px-4 flex items-center justify-between flex-wrap gap-2">
                             <div className="flex items-center gap-2.5">
                                 <Wand2 className="w-4 h-4 text-primary" />
                                 <div>
@@ -239,7 +410,7 @@ export default function CarouselPreview({ visualDNA }: CarouselPreviewProps) {
                                     <p className="text-[11px] text-muted-foreground">{generatedCount}/{totalSlides} imagens geradas</p>
                                 </div>
                             </div>
-                            <div className="flex gap-1.5">
+                            <div className="flex gap-1.5 flex-wrap">
                                 <Button variant="outline" size="sm" onClick={() => generateImageForSlide(currentSlide)}
                                     disabled={generatingImages[currentSlide] || generatingAll} className="gap-1.5 text-xs h-8">
                                     {generatingImages[currentSlide] ? <Loader2 className="w-3 h-3 animate-spin" /> : <ImageIcon className="w-3 h-3" />}
@@ -256,6 +427,16 @@ export default function CarouselPreview({ visualDNA }: CarouselPreviewProps) {
                                         <FolderOpen className="w-3 h-3" /> Biblioteca
                                     </Button>
                                 )}
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="gap-1.5 text-xs h-8"
+                                    onClick={exportAllSlides}
+                                    disabled={exporting || generatedCount === 0}
+                                >
+                                    {exporting ? <Loader2 className="w-3 h-3 animate-spin" /> : <PackageOpen className="w-3 h-3" />}
+                                    {exporting ? "Exportando..." : "Exportar PNGs"}
+                                </Button>
                             </div>
                         </CardContent>
                     </Card>
@@ -277,7 +458,7 @@ export default function CarouselPreview({ visualDNA }: CarouselPreviewProps) {
                                     </div>
                                     <div className="flex items-center gap-1">
                                         {currentTypeConfig && (
-                                            <span className={`inline-flex items-center gap-1 text-[9px] font-semibold uppercase tracking-wider text-muted-foreground`}>
+                                            <span className="inline-flex items-center gap-1 text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">
                                                 <span className={`w-1.5 h-1.5 rounded-full ${currentTypeConfig.dotClass}`} />
                                                 {currentTypeConfig.label}
                                             </span>
@@ -304,9 +485,7 @@ export default function CarouselPreview({ visualDNA }: CarouselPreviewProps) {
                                                         alt={currentSlideData.headline}
                                                         className="w-full h-full object-cover"
                                                     />
-                                                    {/* Subtle bottom gradient for text */}
                                                     <div className="absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
-                                                    {/* Text overlay on image */}
                                                     <div className="absolute inset-x-0 bottom-0 p-5 space-y-2">
                                                         <h3 className="text-lg font-bold text-white leading-tight drop-shadow-sm"
                                                             style={{ fontFamily: visualDNA.typography.includes("Serif") ? "Georgia, serif" : "inherit" }}>
@@ -314,7 +493,6 @@ export default function CarouselPreview({ visualDNA }: CarouselPreviewProps) {
                                                         </h3>
                                                         <p className="text-xs text-white/80 leading-relaxed line-clamp-3">{currentSlideData.body}</p>
                                                     </div>
-                                                    {/* Expand */}
                                                     <button onClick={() => setExpandedPreview(true)}
                                                         className="absolute top-3 right-3 w-7 h-7 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center text-white/70 hover:text-white transition-colors cursor-pointer">
                                                         <Maximize2 className="w-3 h-3" />
@@ -332,7 +510,6 @@ export default function CarouselPreview({ visualDNA }: CarouselPreviewProps) {
                                                         </h3>
                                                         <p className="text-sm text-white/70 leading-relaxed">{currentSlideData.body}</p>
                                                     </div>
-                                                    {/* Generate CTA */}
                                                     {!generatingImages[currentSlide] ? (
                                                         <button onClick={() => generateImageForSlide(currentSlide)}
                                                             className="mt-6 px-4 py-2 rounded-lg border border-white/20 text-white/50 text-[11px] font-medium hover:text-white/80 hover:border-white/40 transition-all cursor-pointer flex items-center gap-2">
@@ -380,27 +557,50 @@ export default function CarouselPreview({ visualDNA }: CarouselPreviewProps) {
                                 </div>
                             </Card>
 
-                            {/* Thumbnail strip */}
+                            {/* Thumbnail strip with drag-and-drop */}
                             <div className="flex gap-1.5 overflow-x-auto pb-1">
                                 {carousel.slides.map((slide, i) => {
                                     const tc = slideTypeConfig[slide.type] || slideTypeConfig.value;
+                                    const isDragging = draggedIndex === i;
+                                    const isDragOver = dragOverIndex === i && draggedIndex !== i;
                                     return (
-                                        <button key={i} onClick={() => setCurrentSlide(i)}
-                                            className={`relative flex-shrink-0 w-12 h-12 rounded-lg overflow-hidden border transition-all cursor-pointer ${
-                                                i === currentSlide ? "border-primary ring-2 ring-primary/20" : "border-border opacity-60 hover:opacity-100"
-                                            }`}>
+                                        <div
+                                            key={`thumb-${i}`}
+                                            draggable
+                                            onDragStart={() => handleDragStart(i)}
+                                            onDragOver={(e) => handleDragOver(e, i)}
+                                            onDragEnd={handleDragEnd}
+                                            onDragLeave={() => setDragOverIndex(null)}
+                                            onClick={() => setCurrentSlide(i)}
+                                            className={`group relative flex-shrink-0 w-14 h-14 rounded-lg overflow-hidden border-2 transition-all cursor-grab active:cursor-grabbing ${
+                                                isDragging ? "opacity-40 scale-90" : ""
+                                            } ${isDragOver ? "border-primary ring-2 ring-primary/30 scale-105" : ""} ${
+                                                !isDragging && !isDragOver
+                                                    ? i === currentSlide
+                                                        ? "border-primary ring-2 ring-primary/20"
+                                                        : "border-border opacity-60 hover:opacity-100"
+                                                    : ""
+                                            }`}
+                                        >
                                             {slideImages[i] ? (
-                                                <img src={slideImages[i]} className="w-full h-full object-cover" alt="" />
+                                                <img src={slideImages[i]} className="w-full h-full object-cover pointer-events-none" alt="" />
                                             ) : (
                                                 <div className="w-full h-full flex items-center justify-center text-[9px] font-bold text-muted-foreground bg-muted">
                                                     {i + 1}
                                                 </div>
                                             )}
                                             <div className={`absolute bottom-0 inset-x-0 h-0.5 ${tc.dotClass}`} />
-                                        </button>
+                                            {/* Drag grip indicator */}
+                                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                                                <GripVertical className="w-3 h-3 text-white/0 group-hover:text-white/80 transition-colors" />
+                                            </div>
+                                        </div>
                                     );
                                 })}
                             </div>
+                            <p className="text-[10px] text-muted-foreground text-center -mt-2">
+                                Arraste os slides para reordenar
+                            </p>
                         </div>
 
                         {/* Right: Roteiro & Prompts */}
@@ -458,11 +658,21 @@ export default function CarouselPreview({ visualDNA }: CarouselPreviewProps) {
                                     )}
 
                                     <div className="flex gap-2">
-                                        <Button variant="outline" className="flex-1 gap-1.5 text-xs h-8">
-                                            <Share2 className="w-3 h-3" /> Exportar
+                                        <Button variant="outline" className="flex-1 gap-1.5 text-xs h-8"
+                                            onClick={exportAllSlides} disabled={exporting || generatedCount === 0}>
+                                            {exporting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Share2 className="w-3 h-3" />}
+                                            {exporting ? "Exportando..." : "Exportar Todos"}
                                         </Button>
-                                        <Button variant="outline" className="flex-1 gap-1.5 text-xs h-8">
-                                            <Download className="w-3 h-3" /> Baixar Assets
+                                        <Button variant="outline" className="flex-1 gap-1.5 text-xs h-8"
+                                            onClick={() => {
+                                                if (!slideImages[currentSlide]) return;
+                                                const link = document.createElement("a");
+                                                link.download = `slide_${currentSlide + 1}.png`;
+                                                link.href = slideImages[currentSlide];
+                                                link.click();
+                                            }}
+                                            disabled={!hasImage}>
+                                            <Download className="w-3 h-3" /> Baixar Slide
                                         </Button>
                                     </div>
                                 </CardContent>
@@ -524,6 +734,9 @@ export default function CarouselPreview({ visualDNA }: CarouselPreviewProps) {
                     </CardContent>
                 </Card>
             )}
+
+            {/* Hidden export nodes */}
+            {carousel && carousel.slides.map((slide, i) => renderExportSlide(slide, i))}
 
             {/* Library Dialog */}
             <Dialog open={showLibrary} onOpenChange={setShowLibrary}>
