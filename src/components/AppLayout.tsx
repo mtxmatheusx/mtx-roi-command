@@ -27,7 +27,7 @@ function AppLayoutInner({ children }: { children: ReactNode }) {
       <div
         className={cn(
           "transition-all duration-200 min-w-0",
-          isMobile ? "ml-0" : collapsed ? "ml-[52px]" : "ml-60"
+          isMobile ? "ml-0" : collapsed ? "ml-[56px]" : "ml-60"
         )}
       >
         <header className="flex items-center justify-between px-4 sm:px-8 py-3 border-b border-border bg-card">
