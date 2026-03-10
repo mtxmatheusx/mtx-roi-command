@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, Sparkles, ChevronLeft, ChevronRight, Share2, Download, Copy, Play, ImageIcon, Wand2, FileText, Users, FolderOpen, Maximize2, GripVertical, PackageOpen } from "lucide-react";
+import { Loader2, Sparkles, ChevronLeft, ChevronRight, Share2, Download, Copy, Play, ImageIcon, Wand2, FileText, Users, FolderOpen, Maximize2, GripVertical, PackageOpen, Upload, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useClientProfiles } from "@/hooks/useClientProfiles";
 import { useAuth } from "@/hooks/useAuth";
@@ -73,7 +73,10 @@ export default function CarouselPreview({ visualDNA }: CarouselPreviewProps) {
     const [exporting, setExporting] = useState(false);
     const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
     const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+    const [slideReferenceImages, setSlideReferenceImages] = useState<Record<number, string>>({});
+    const [uploadingRef, setUploadingRef] = useState(false);
     const exportRefs = useRef<Record<number, HTMLDivElement | null>>({});
+    const slideRefInputRef = useRef<HTMLInputElement>(null);
     const { toast } = useToast();
     const { activeProfile } = useClientProfiles();
     const { user } = useAuth();
@@ -111,6 +114,12 @@ export default function CarouselPreview({ visualDNA }: CarouselPreviewProps) {
         toast({ title: "✅ Imagem aplicada", description: `Imagem da biblioteca aplicada ao slide ${slideIndex + 1}.` });
     };
 
+    const useLibraryAsReference = (slideIndex: number, url: string) => {
+        setSlideReferenceImages(prev => ({ ...prev, [slideIndex]: url }));
+        setShowLibrary(false);
+        toast({ title: "📎 Referência aplicada", description: `Imagem de referência definida para o slide ${slideIndex + 1}.` });
+    };
+
     const handleGenerate = async () => {
         if (!theme) return;
         setLoading(true);
@@ -133,6 +142,42 @@ export default function CarouselPreview({ visualDNA }: CarouselPreviewProps) {
         }
     };
 
+    // ─── Per-slide reference image upload ───
+    const handleSlideRefUpload = useCallback(async (file: File, slideIndex: number) => {
+        if (!activeProfile?.id || !user?.id) return;
+        const validTypes = ["image/jpeg", "image/png", "image/webp"];
+        if (!validTypes.includes(file.type)) {
+            toast({ title: "Formato inválido", description: "Use JPG, PNG ou WEBP.", variant: "destructive" });
+            return;
+        }
+        if (file.size > 10 * 1024 * 1024) {
+            toast({ title: "Arquivo muito grande", description: "Máximo 10MB.", variant: "destructive" });
+            return;
+        }
+        setUploadingRef(true);
+        try {
+            const ext = file.name.split(".").pop() || "png";
+            const path = `slide-refs/${activeProfile.id}/${Date.now()}_slide${slideIndex}.${ext}`;
+            const { error } = await supabase.storage.from("creative-assets").upload(path, file, { contentType: file.type, upsert: true });
+            if (error) throw error;
+            const { data: { publicUrl } } = supabase.storage.from("creative-assets").getPublicUrl(path);
+            setSlideReferenceImages(prev => ({ ...prev, [slideIndex]: publicUrl }));
+            toast({ title: "📎 Referência adicionada", description: `Imagem de referência aplicada ao slide ${slideIndex + 1}.` });
+        } catch (err) {
+            toast({ title: "Erro no upload", description: (err as Error).message, variant: "destructive" });
+        } finally {
+            setUploadingRef(false);
+        }
+    }, [activeProfile, user, toast]);
+
+    const removeSlideRef = (slideIndex: number) => {
+        setSlideReferenceImages(prev => {
+            const copy = { ...prev };
+            delete copy[slideIndex];
+            return copy;
+        });
+    };
+
     const generateImageForSlide = async (slideIndex: number) => {
         if (!carousel) return;
         const slide = carousel.slides[slideIndex];
@@ -142,10 +187,15 @@ export default function CarouselPreview({ visualDNA }: CarouselPreviewProps) {
                 ? ugcCharacters.find(c => c.id === selectedCharacterId) : null;
             let fullPrompt = `${slide.image_prompt}. ${visualDNA.image_prompt_style}`;
             if (selectedChar) fullPrompt += `. The person in the image: ${selectedChar.fixed_description}`;
+
+            // Use per-slide reference first, then UGC character reference
+            const refImage = slideReferenceImages[slideIndex]
+                || (selectedChar?.image_references?.[0] || undefined);
+
             const { data, error } = await supabase.functions.invoke("generate-carousel-image", {
                 body: {
                     prompt: fullPrompt, visualDNA,
-                    ...(selectedChar?.image_references?.[0] ? { referenceImageUrl: selectedChar.image_references[0] } : {}),
+                    ...(refImage ? { referenceImageUrl: refImage } : {}),
                 },
             });
             if (error) throw error;
@@ -648,6 +698,53 @@ export default function CarouselPreview({ visualDNA }: CarouselPreviewProps) {
                                         </div>
                                     </div>
 
+                                    {/* Per-slide reference image upload */}
+                                    <div className="p-3.5 rounded-lg bg-secondary/50 border border-border space-y-2">
+                                        <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
+                                            <Upload className="w-3 h-3" /> Imagem de Referência (Slide {currentSlide + 1})
+                                        </span>
+                                        <p className="text-[10px] text-muted-foreground">
+                                            Envie uma foto do produto para que a IA gere a imagem incorporando esses detalhes.
+                                        </p>
+                                        {slideReferenceImages[currentSlide] ? (
+                                            <div className="relative inline-block">
+                                                <img src={slideReferenceImages[currentSlide]} alt="Referência" className="h-20 rounded-lg border border-border object-cover" />
+                                                <button
+                                                    onClick={() => removeSlideRef(currentSlide)}
+                                                    className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-0.5"
+                                                >
+                                                    <X className="w-3 h-3" />
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <div className="flex gap-2">
+                                                <Button variant="outline" size="sm" className="gap-1.5 text-xs h-8"
+                                                    disabled={uploadingRef}
+                                                    onClick={() => slideRefInputRef.current?.click()}>
+                                                    {uploadingRef ? <Loader2 className="w-3 h-3 animate-spin" /> : <Upload className="w-3 h-3" />}
+                                                    Enviar Referência
+                                                </Button>
+                                                {creativeAssets.length > 0 && (
+                                                    <Button variant="outline" size="sm" className="gap-1.5 text-xs h-8"
+                                                        onClick={() => { setLibraryTarget(currentSlide); setShowLibrary(true); }}>
+                                                        <FolderOpen className="w-3 h-3" /> Da Biblioteca
+                                                    </Button>
+                                                )}
+                                            </div>
+                                        )}
+                                        <input
+                                            ref={slideRefInputRef}
+                                            type="file"
+                                            accept="image/jpeg,image/png,image/webp"
+                                            className="hidden"
+                                            onChange={(e) => {
+                                                const file = e.target.files?.[0];
+                                                if (file) handleSlideRefUpload(file, currentSlide);
+                                                e.target.value = "";
+                                            }}
+                                        />
+                                    </div>
+
                                     {/* Generated preview */}
                                     {hasImage && (
                                         <div className="space-y-1.5">
@@ -749,13 +846,19 @@ export default function CarouselPreview({ visualDNA }: CarouselPreviewProps) {
                     </DialogHeader>
                     <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mt-2">
                         {creativeAssets.map((asset) => (
-                            <button key={asset.id} onClick={() => useLibraryImage(libraryTarget, asset.file_url)}
-                                className="group relative aspect-square rounded-lg overflow-hidden border border-border hover:border-primary transition-colors cursor-pointer">
+                            <div key={asset.id} className="group relative aspect-square rounded-lg overflow-hidden border border-border hover:border-primary transition-colors">
                                 <img src={asset.file_url} alt={asset.file_name} className="w-full h-full object-cover" />
-                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
-                                    <span className="text-white text-[10px] font-semibold opacity-0 group-hover:opacity-100 transition-opacity">Usar</span>
+                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-colors flex flex-col items-center justify-center gap-1.5">
+                                    <button onClick={() => useLibraryImage(libraryTarget, asset.file_url)}
+                                        className="text-white text-[10px] font-semibold opacity-0 group-hover:opacity-100 transition-opacity bg-primary/80 px-2.5 py-1 rounded cursor-pointer">
+                                        Usar como Imagem
+                                    </button>
+                                    <button onClick={() => useLibraryAsReference(libraryTarget, asset.file_url)}
+                                        className="text-white text-[10px] font-semibold opacity-0 group-hover:opacity-100 transition-opacity bg-secondary/80 px-2.5 py-1 rounded cursor-pointer">
+                                        📎 Usar como Referência
+                                    </button>
                                 </div>
-                            </button>
+                            </div>
                         ))}
                     </div>
                     {creativeAssets.length === 0 && (
