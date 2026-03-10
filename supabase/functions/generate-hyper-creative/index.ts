@@ -45,7 +45,7 @@ serve(async (req) => {
         ? `Focus on FABRIC TEXTURE and DRAMATIC STUDIO LIGHTING. Show the product being worn or displayed with cinematic depth of field. Emphasize material quality, stitching details, and premium feel.`
         : `Focus on an AUTHORITY FIGURE (Hormozi/Brunson style) - confident pose, direct eye contact, pointing at camera or gesturing toward pain/solution. The person should embody success and expertise.`;
 
-      const promptEngPrompt = `You are an elite Art Director for performance marketing creatives. Based on the brand context below, generate a SINGLE detailed image generation prompt in English.
+      const promptEngPrompt = `You are an elite Art Director and retoucher for performance marketing creatives. Based on the brand context below, generate a SINGLE detailed image generation prompt in English.
 
 BRAND CONTEXT:
 - Name: ${profile.name}
@@ -56,12 +56,20 @@ BRAND CONTEXT:
 MANDATORY ART DIRECTION RULES (inject ALL of these):
 1. "Aspect ratio: 4:5 portrait (1080x1350 pixels)."
 2. "Background: Dark textured background with minimalist elements and subtle red or soft neon accents."
-3. "Style: Hyper-realistic photography with extreme detail and cinematic lighting."
+3. "Shot on Sony A7R V with 85mm f/1.4 GM lens at ISO 200. Camera RAW processed."
 4. ${artDirectionRules}
 5. "Color palette: Deep blacks, warm highlights, strategic pops of brand color."
 6. "Mood: Premium, aspirational, high-converting ad creative."
 
-Generate ONLY the image prompt, nothing else. Make it specific, vivid, and production-ready. Maximum 200 words.`;
+HYPER-REALISM DIRECTIVES (mandatory in every prompt):
+- Visible skin texture with pores, micro-imperfections and subsurface scattering. NO plastic or airbrushed skin.
+- Authentic material rendering: fabric weave visible, metal with realistic reflections and micro-scratches, surfaces with natural wear.
+- Natural volumetric lighting with soft fill light, realistic shadow falloff and ambient occlusion.
+- Subtle chromatic aberration and lens vignette on edges. Shallow depth of field with natural bokeh.
+- Film-like color grading: muted organic tones, lifted shadows, compressed highlights. NO over-saturation.
+- Environmental micro-details: dust particles in light beams, subtle atmospheric haze, realistic reflections.
+
+Generate ONLY the image prompt, nothing else. Make it specific, vivid, and production-ready. Maximum 250 words.`;
 
       const promptResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
@@ -100,7 +108,7 @@ Generate ONLY the image prompt, nothing else. Make it specific, vivid, and produ
         method: "POST",
         headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "google/gemini-2.5-flash-image",
+          model: "google/gemini-3.1-flash-image-preview",
           messages: [{ role: "user", content: referenceImageUrl ? messageContent : imagePrompt + variation }],
           modalities: ["image", "text"],
         }),
