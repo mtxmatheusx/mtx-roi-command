@@ -1,5 +1,9 @@
 import { NavLink as RouterNavLink } from "react-router-dom";
-import { BarChart3, Zap, Target, ImageIcon, Settings, LogOut, Brain, Rocket, Shield, Building2, Users, Beaker, Wand2, Bot, MessageSquare, PanelLeftClose, PanelLeft, X } from "lucide-react";
+import {
+  BarChart3, Zap, Target, ImageIcon, Settings, LogOut, Brain, Rocket,
+  Shield, Building2, Users, Beaker, Wand2, Bot, MessageSquare,
+  PanelLeftClose, PanelLeft, X
+} from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useTranslation } from "react-i18next";
 import ProfileSelector from "@/components/ProfileSelector";
@@ -8,28 +12,47 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { useSidebarState } from "@/hooks/useSidebarState";
 import { useIsMobile } from "@/hooks/use-mobile";
 
+interface NavGroup {
+  label: string;
+  items: { to: string; label: string; icon: React.ElementType; end?: boolean }[];
+}
+
 export default function AppSidebar() {
   const { signOut } = useAuth();
   const { t } = useTranslation();
   const { collapsed, toggle, mobileOpen, setMobileOpen } = useSidebarState();
   const isMobile = useIsMobile();
 
-  const navItems = [
-    { to: "/", label: t("nav.dashboard"), icon: BarChart3 },
-    { to: "/campanhas", label: t("nav.campaigns"), icon: Target },
-    { to: "/laboratorio-estrategico", label: "Laboratório Estratégico", icon: Beaker },
-    { to: "/diagnostico", label: t("nav.diagnostic"), icon: Brain },
-    { to: "/lancar-campanha", label: "Lançar & Publicar", icon: Rocket },
-    { to: "/simulador", label: t("nav.simulator"), icon: Zap },
-    { to: "/criativos", label: t("nav.creatives"), icon: ImageIcon },
-    { to: "/auditoria-meta", label: t("nav.auditMeta"), icon: Shield },
-    { to: "/laboratorio-visual", label: "Laboratório Visual", icon: Wand2 },
-    { to: "/personagens-ugc", label: "Personagens UGC", icon: Users },
-    { to: "/agente-autonomo", label: "Agente Autônomo", icon: Bot },
-    { to: "/feedback-copy", label: "Feedbacks de Copy", icon: MessageSquare },
+  const navGroups: NavGroup[] = [
+    {
+      label: "Analytics",
+      items: [
+        { to: "/", label: t("nav.dashboard"), icon: BarChart3, end: true },
+        { to: "/campanhas", label: t("nav.campaigns"), icon: Target },
+        { to: "/diagnostico", label: t("nav.diagnostic"), icon: Brain },
+      ],
+    },
+    {
+      label: "Criação",
+      items: [
+        { to: "/lancar-campanha", label: "Lançar & Publicar", icon: Rocket },
+        { to: "/laboratorio-estrategico", label: "Laboratório Estratégico", icon: Beaker },
+        { to: "/criativos", label: t("nav.creatives"), icon: ImageIcon },
+        { to: "/laboratorio-visual", label: "Laboratório Visual", icon: Wand2 },
+        { to: "/personagens-ugc", label: "Personagens UGC", icon: Users },
+      ],
+    },
+    {
+      label: "Ferramentas",
+      items: [
+        { to: "/simulador", label: t("nav.simulator"), icon: Zap },
+        { to: "/auditoria-meta", label: t("nav.auditMeta"), icon: Shield },
+        { to: "/agente-autonomo", label: "Agente Autônomo", icon: Bot },
+        { to: "/feedback-copy", label: "Feedbacks de Copy", icon: MessageSquare },
+      ],
+    },
   ];
 
-  // On mobile: show as drawer overlay; on desktop: fixed sidebar
   const isVisible = isMobile ? mobileOpen : true;
   const showLabels = isMobile ? true : !collapsed;
 
@@ -43,18 +66,32 @@ export default function AppSidebar() {
         to={to}
         end={end}
         onClick={handleNavClick}
+        aria-label={label}
         className={({ isActive }) =>
           cn(
-            "flex items-center gap-2.5 rounded-md text-sm font-medium transition-colors",
+            "group relative flex items-center gap-2.5 rounded-lg text-sm font-medium transition-all duration-150",
             !showLabels ? "justify-center px-2 py-2.5" : "px-3 py-2",
             isActive
-              ? "bg-primary/10 text-primary"
-              : "text-muted-foreground hover:text-foreground hover:bg-accent"
+              ? "bg-primary/10 text-primary shadow-sm"
+              : "text-muted-foreground hover:text-foreground hover:bg-accent/80"
           )
         }
       >
-        <Icon className="w-4 h-4 shrink-0" />
-        {showLabels && <span className="truncate">{label}</span>}
+        {({ isActive }: { isActive: boolean }) => (
+          <>
+            {/* Active indicator bar */}
+            {isActive && (
+              <span
+                className={cn(
+                  "absolute left-0 top-1/2 -translate-y-1/2 w-[3px] rounded-r-full bg-primary transition-all",
+                  !showLabels ? "h-5" : "h-6"
+                )}
+              />
+            )}
+            <Icon className={cn("w-4 h-4 shrink-0 transition-colors", isActive && "text-primary")} />
+            {showLabels && <span className="truncate">{label}</span>}
+          </>
+        )}
       </RouterNavLink>
     );
 
@@ -62,7 +99,9 @@ export default function AppSidebar() {
       return (
         <Tooltip delayDuration={0}>
           <TooltipTrigger asChild>{link}</TooltipTrigger>
-          <TooltipContent side="right" sideOffset={8}>{label}</TooltipContent>
+          <TooltipContent side="right" sideOffset={10} className="font-medium">
+            {label}
+          </TooltipContent>
         </Tooltip>
       );
     }
@@ -73,21 +112,26 @@ export default function AppSidebar() {
 
   return (
     <aside
+      role="navigation"
+      aria-label="Menu principal"
       className={cn(
         "fixed left-0 top-0 h-screen bg-card border-r border-border flex flex-col transition-all duration-200",
-        isMobile ? "w-64 z-50 shadow-2xl" : collapsed ? "w-[52px] z-50" : "w-60 z-50"
+        isMobile ? "w-64 z-50 shadow-2xl" : collapsed ? "w-[56px] z-50" : "w-60 z-50"
       )}
     >
       {/* Logo */}
-      <div className={cn("border-b border-border flex items-center", !showLabels ? "px-2 py-4 justify-center" : "px-5 py-5 justify-between")}>
+      <div className={cn(
+        "border-b border-border flex items-center shrink-0",
+        !showLabels ? "px-2 py-4 justify-center" : "px-5 py-5 justify-between"
+      )}>
         {!showLabels ? (
-          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
+          <div className="w-8 h-8 rounded-xl bg-primary flex items-center justify-center shadow-sm">
             <span className="text-primary-foreground font-bold text-sm">M</span>
           </div>
         ) : (
           <>
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shrink-0">
+              <div className="w-8 h-8 rounded-xl bg-primary flex items-center justify-center shrink-0 shadow-sm">
                 <span className="text-primary-foreground font-bold text-sm">M</span>
               </div>
               <div>
@@ -96,7 +140,11 @@ export default function AppSidebar() {
               </div>
             </div>
             {isMobile && (
-              <button onClick={() => setMobileOpen(false)} className="p-1 rounded-md hover:bg-accent text-muted-foreground">
+              <button
+                onClick={() => setMobileOpen(false)}
+                className="p-1 rounded-md hover:bg-accent text-muted-foreground"
+                aria-label="Fechar menu"
+              >
                 <X className="w-5 h-5" />
               </button>
             )}
@@ -105,21 +153,42 @@ export default function AppSidebar() {
       </div>
 
       {/* Agency Link */}
-      <div className={cn("pt-3 pb-1", !showLabels ? "px-1" : "px-3")}>
+      <div className={cn("pt-3 pb-1 shrink-0", !showLabels ? "px-1.5" : "px-3")}>
         <NavItem to="/agencia" label={t("nav.agencyView")} icon={Building2} />
       </div>
 
       {showLabels && <ProfileSelector />}
 
-      {/* Nav */}
-      <nav className={cn("flex-1 py-2 space-y-0.5 overflow-y-auto", !showLabels ? "px-1" : "px-3")}>
-        {navItems.map((item) => (
-          <NavItem key={item.to} to={item.to} label={item.label} icon={item.icon} end={item.to === "/"} />
+      {/* Grouped Nav */}
+      <nav className={cn("flex-1 py-1 overflow-y-auto", !showLabels ? "px-1.5" : "px-3")} aria-label="Navegação principal">
+        {navGroups.map((group, gi) => (
+          <div key={group.label} className={cn(gi > 0 && "mt-1")}>
+            {/* Group label */}
+            {showLabels ? (
+              <p className="px-3 pt-3 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+                {group.label}
+              </p>
+            ) : (
+              gi > 0 && (
+                <div className="my-2 mx-2">
+                  <div className="h-px bg-border" />
+                </div>
+              )
+            )}
+            <div className="space-y-0.5">
+              {group.items.map((item) => (
+                <NavItem key={item.to} to={item.to} label={item.label} icon={item.icon} end={item.end} />
+              ))}
+            </div>
+          </div>
         ))}
       </nav>
 
       {/* Footer */}
-      <div className={cn("border-t border-border space-y-0.5", !showLabels ? "px-1 py-2" : "px-3 py-3")}>
+      <div className={cn(
+        "border-t border-border space-y-0.5 shrink-0",
+        !showLabels ? "px-1.5 py-2" : "px-3 py-3"
+      )}>
         <NavItem to="/configuracoes" label={t("nav.settings")} icon={Settings} />
 
         {!showLabels ? (
@@ -127,17 +196,19 @@ export default function AppSidebar() {
             <TooltipTrigger asChild>
               <button
                 onClick={signOut}
-                className="flex items-center justify-center w-full px-2 py-2.5 rounded-md text-sm font-medium transition-colors text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                aria-label={t("nav.logout")}
+                className="flex items-center justify-center w-full px-2 py-2.5 rounded-lg text-sm font-medium transition-colors text-muted-foreground hover:text-destructive hover:bg-destructive/10"
               >
                 <LogOut className="w-4 h-4" />
               </button>
             </TooltipTrigger>
-            <TooltipContent side="right" sideOffset={8}>{t("nav.logout")}</TooltipContent>
+            <TooltipContent side="right" sideOffset={10} className="font-medium">{t("nav.logout")}</TooltipContent>
           </Tooltip>
         ) : (
           <button
             onClick={signOut}
-            className="flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium transition-colors w-full text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+            aria-label={t("nav.logout")}
+            className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors w-full text-muted-foreground hover:text-destructive hover:bg-destructive/10"
           >
             <LogOut className="w-4 h-4" />
             {t("nav.logout")}
@@ -151,17 +222,19 @@ export default function AppSidebar() {
               <TooltipTrigger asChild>
                 <button
                   onClick={toggle}
-                  className="flex items-center justify-center w-full px-2 py-2.5 rounded-md text-sm transition-colors text-muted-foreground hover:text-foreground hover:bg-accent"
+                  aria-label="Expandir menu"
+                  className="flex items-center justify-center w-full px-2 py-2.5 rounded-lg text-sm transition-colors text-muted-foreground hover:text-foreground hover:bg-accent"
                 >
                   <PanelLeft className="w-4 h-4" />
                 </button>
               </TooltipTrigger>
-              <TooltipContent side="right" sideOffset={8}>Expandir menu</TooltipContent>
+              <TooltipContent side="right" sideOffset={10} className="font-medium">Expandir menu</TooltipContent>
             </Tooltip>
           ) : (
             <button
               onClick={toggle}
-              className="flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium transition-colors w-full text-muted-foreground hover:text-foreground hover:bg-accent"
+              aria-label="Recolher menu"
+              className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors w-full text-muted-foreground hover:text-foreground hover:bg-accent"
             >
               <PanelLeftClose className="w-4 h-4" />
               Recolher
