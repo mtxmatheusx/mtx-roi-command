@@ -109,13 +109,15 @@ export default function LaboratorioVisual() {
                                             <CardContent className="p-4 space-y-4">
                                                 <div>
                                                     <p className="text-[10px] uppercase font-bold text-muted-foreground mb-2">Paleta de Cores</p>
-                                                    <div className="flex gap-2">
+                                                    <div className="flex gap-2 flex-wrap">
                                                         {visualDNA.palette.map((color, i) => (
                                                             <ColorEditor
-                                                                key={i}
+                                                                key={`${i}-${color}`}
                                                                 color={color}
                                                                 index={i}
                                                                 onChange={handleColorChange}
+                                                                onRemove={handleColorRemove}
+                                                                canRemove={visualDNA.palette.length > 1}
                                                             />
                                                         ))}
                                                     </div>
