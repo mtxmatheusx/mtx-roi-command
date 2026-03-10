@@ -73,7 +73,10 @@ export default function CarouselPreview({ visualDNA }: CarouselPreviewProps) {
     const [exporting, setExporting] = useState(false);
     const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
     const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+    const [slideReferenceImages, setSlideReferenceImages] = useState<Record<number, string>>({});
+    const [uploadingRef, setUploadingRef] = useState(false);
     const exportRefs = useRef<Record<number, HTMLDivElement | null>>({});
+    const slideRefInputRef = useRef<HTMLInputElement>(null);
     const { toast } = useToast();
     const { activeProfile } = useClientProfiles();
     const { user } = useAuth();
