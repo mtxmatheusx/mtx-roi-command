@@ -15,11 +15,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { metaApi } from "@/lib/metaApiClient";
 import DashboardTab from "@/components/dashboard/DashboardTab";
-import CreateCampaignTab from "@/components/dashboard/CreateCampaignTab";
-import CreateAudienceTab from "@/components/dashboard/CreateAudienceTab";
-import CreateAdTab from "@/components/dashboard/CreateAdTab";
 import CampaignManagerTab from "@/components/dashboard/CampaignManagerTab";
-import { DollarSign, TrendingUp, Target, BarChart3, Loader2, AlertTriangle, RefreshCw, Eye, MousePointerClick, ShoppingBag, ShieldCheck, OctagonAlert, Activity, Plus, Users, Zap, Briefcase } from "lucide-react";
+import { DollarSign, TrendingUp, Target, BarChart3, Loader2, AlertTriangle, RefreshCw, Eye, MousePointerClick, ShoppingBag, ShieldCheck, OctagonAlert, Activity, Briefcase } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface LogEntry {
@@ -151,9 +148,6 @@ export default function Dashboard() {
         <TabsList className="bg-card border border-border flex-wrap h-auto gap-1 p-1">
           <TabsTrigger value="dashboard" className="gap-2 text-xs sm:text-sm"><BarChart3 className="w-4 h-4" /><span className="hidden sm:inline">Dashboard</span></TabsTrigger>
           <TabsTrigger value="campaign-manager" className="gap-2 text-xs sm:text-sm"><Briefcase className="w-4 h-4" /><span className="hidden sm:inline">Gestão</span></TabsTrigger>
-          <TabsTrigger value="create-campaign" className="gap-2 text-xs sm:text-sm"><Plus className="w-4 h-4" /><span className="hidden sm:inline">Campanha</span></TabsTrigger>
-          <TabsTrigger value="audiences" className="gap-2 text-xs sm:text-sm"><Users className="w-4 h-4" /><span className="hidden sm:inline">Públicos</span></TabsTrigger>
-          <TabsTrigger value="ads" className="gap-2 text-xs sm:text-sm"><Zap className="w-4 h-4" /><span className="hidden sm:inline">Anúncios</span></TabsTrigger>
         </TabsList>
 
         <TabsContent value="dashboard">
@@ -194,18 +188,6 @@ export default function Dashboard() {
 
         <TabsContent value="campaign-manager">
           <CampaignManagerTab campaigns={campaigns} isLoading={isLoading} />
-        </TabsContent>
-
-        <TabsContent value="create-campaign">
-          <CreateCampaignTab apiBaseUrl={apiBaseUrl} metaAccessToken={metaAccessToken} adAccountId={adAccountId} />
-        </TabsContent>
-
-        <TabsContent value="audiences">
-          <CreateAudienceTab apiBaseUrl={apiBaseUrl} metaAccessToken={metaAccessToken} adAccountId={adAccountId} />
-        </TabsContent>
-
-        <TabsContent value="ads">
-          <CreateAdTab apiBaseUrl={apiBaseUrl} metaAccessToken={metaAccessToken} adAccountId={adAccountId} />
         </TabsContent>
       </Tabs>
     </AppLayout>
