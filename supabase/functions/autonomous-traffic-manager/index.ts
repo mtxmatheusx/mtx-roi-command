@@ -451,7 +451,7 @@ serve(async (req) => {
                   if (teto > 0 && newBudget > teto) {
                     profileResult.actions.push({ action: "scale", campaign_id: campaignId, reason: "Teto atingido", status: "ABORTED_CEILING" });
                   } else {
-                    const scaleResp = await fetch(`https://graph.facebook.com/v21.0/${campaignId}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ daily_budget: Math.round(newBudget * 100), access_token: accessToken }) });
+                    const scaleResp = await fetch(`https://graph.facebook.com/v23.0/${campaignId}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ daily_budget: Math.round(newBudget * 100), access_token: accessToken }) });
                     const scaleData = await scaleResp.json();
                     await sb.from("emergency_logs").insert({ profile_id: profile.id, user_id: profile.user_id, action_type: "agent_scale", details: { campaign_id: campaignId, campaign_name: campaign?.name, old_budget: campaignBudget, new_budget: newBudget, level: "campaign", reason: decision.reason, ai_driven: !!LOVABLE_API_KEY, success: scaleData.success || false } });
                     profileResult.actions.push({ action: "scale", campaign_id: campaignId, old_budget: campaignBudget, new_budget: newBudget, reason: decision.reason, status: scaleData.success ? "EXECUTED" : "FAILED" });
