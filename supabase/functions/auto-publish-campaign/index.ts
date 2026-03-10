@@ -185,22 +185,22 @@ serve(async (req) => {
       linkData.picture = creative_url;
     }
 
-    const adBody = {
-      name: `${campaign_name} - Anúncio Auto`,
-      adset_id: metaAdSetId,
-      status: "PAUSED",
-      access_token: accessToken,
-      creative: {
-        object_story_spec: {
-          page_id: String(pageId),
-          link_data: linkData,
-        },
+    const adForm = new URLSearchParams();
+    adForm.append("name", `${campaign_name} - Anúncio Auto`);
+    adForm.append("adset_id", metaAdSetId);
+    adForm.append("status", "PAUSED");
+    adForm.append("access_token", accessToken);
+    adForm.append("creative", JSON.stringify({
+      object_story_spec: {
+        page_id: String(pageId),
+        link_data: linkData,
       },
-    };
+    }));
 
     const adRes = await fetch(`${META_API}/${adAccountId}/ads`, {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(adBody),
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: adForm.toString(),
     });
     const adData = await adRes.json();
     if (adData.error) {
