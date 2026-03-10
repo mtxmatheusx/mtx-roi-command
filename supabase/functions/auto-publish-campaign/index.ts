@@ -316,7 +316,7 @@ serve(async (req) => {
       await rollback();
       const msg = metaError(adSetData);
       await supabase.from("campaign_drafts").update({ status: "failed", error_message: `${msg} | Rollback.` }).eq("id", draft.id);
-      return fail(msg, { step: "adset", rollback: true });
+      return fail(msg, { step: "adset", rollback: true, targeting_debug: { targeting: targetingObj, objective: obj, advantage_audience: useAdvantagePlus ? 1 : 0, optimization_goal: optimizationGoal } });
     }
     const metaAdSetId = adSetData.id;
     steps.push(`✅ Conjunto: ${metaAdSetId}`);
