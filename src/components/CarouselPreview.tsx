@@ -45,11 +45,11 @@ type CarouselData = {
     captions?: Record<string, string>;
 };
 
-const slideTypeConfig: Record<string, { label: string; color: string }> = {
-    hook: { label: "HOOK", color: "bg-red-500/90" },
-    value: { label: "VALOR", color: "bg-blue-500/90" },
-    solution: { label: "SOLUÇÃO", color: "bg-emerald-500/90" },
-    cta: { label: "CTA", color: "bg-amber-500/90" },
+const slideTypeConfig: Record<string, { label: string; dotClass: string }> = {
+    hook: { label: "HOOK", dotClass: "bg-destructive" },
+    value: { label: "VALOR", dotClass: "bg-primary" },
+    solution: { label: "SOLUÇÃO", dotClass: "bg-success" },
+    cta: { label: "CTA", dotClass: "bg-warning" },
 };
 
 export default function CarouselPreview({ visualDNA }: CarouselPreviewProps) {
@@ -73,7 +73,6 @@ export default function CarouselPreview({ visualDNA }: CarouselPreviewProps) {
     const { activeProfile } = useClientProfiles();
     const { user } = useAuth();
 
-    // Load UGC characters
     useEffect(() => {
         if (!user?.id || !activeProfile?.id) return;
         const load = async () => {
@@ -87,7 +86,6 @@ export default function CarouselPreview({ visualDNA }: CarouselPreviewProps) {
         load();
     }, [user?.id, activeProfile?.id]);
 
-    // Load creative assets from library
     useEffect(() => {
         if (!user?.id || !activeProfile?.id) return;
         const load = async () => {
@@ -114,27 +112,17 @@ export default function CarouselPreview({ visualDNA }: CarouselPreviewProps) {
         setCarousel(null);
         setSlideImages({});
         setGeneratingImages({});
-
         try {
             const { data, error } = await supabase.functions.invoke("generate-carousel", {
                 body: { visualDNA, theme, platforms, contentType, profileId: activeProfile?.id },
             });
-
             if (error) throw error;
             if (data.error) throw new Error(data.error);
-
             setCarousel(data.data as CarouselData);
             setCurrentSlide(0);
-            toast({
-                title: "✨ Carrossel Gerado!",
-                description: "Clique em 'Gerar Imagens' para criar visuais com IA.",
-            });
+            toast({ title: "✨ Carrossel Gerado!", description: "Clique em 'Gerar Imagens' para criar visuais com IA." });
         } catch (err) {
-            toast({
-                title: "Erro na geração",
-                description: (err as Error).message,
-                variant: "destructive",
-            });
+            toast({ title: "Erro na geração", description: (err as Error).message, variant: "destructive" });
         } finally {
             setLoading(false);
         }
@@ -143,37 +131,23 @@ export default function CarouselPreview({ visualDNA }: CarouselPreviewProps) {
     const generateImageForSlide = async (slideIndex: number) => {
         if (!carousel) return;
         const slide = carousel.slides[slideIndex];
-
         setGeneratingImages((prev) => ({ ...prev, [slideIndex]: true }));
-
         try {
             const selectedChar = selectedCharacterId && selectedCharacterId !== "none"
-                ? ugcCharacters.find(c => c.id === selectedCharacterId)
-                : null;
-            
+                ? ugcCharacters.find(c => c.id === selectedCharacterId) : null;
             let fullPrompt = `${slide.image_prompt}. ${visualDNA.image_prompt_style}`;
-            if (selectedChar) {
-                fullPrompt += `. The person in the image: ${selectedChar.fixed_description}`;
-            }
-
+            if (selectedChar) fullPrompt += `. The person in the image: ${selectedChar.fixed_description}`;
             const { data, error } = await supabase.functions.invoke("generate-carousel-image", {
                 body: {
-                    prompt: fullPrompt,
-                    visualDNA,
+                    prompt: fullPrompt, visualDNA,
                     ...(selectedChar?.image_references?.[0] ? { referenceImageUrl: selectedChar.image_references[0] } : {}),
                 },
             });
-
             if (error) throw error;
             if (data.error) throw new Error(data.error);
-
             setSlideImages((prev) => ({ ...prev, [slideIndex]: data.image_url }));
         } catch (err) {
-            toast({
-                title: `Erro no slide ${slideIndex + 1}`,
-                description: (err as Error).message,
-                variant: "destructive",
-            });
+            toast({ title: `Erro no slide ${slideIndex + 1}`, description: (err as Error).message, variant: "destructive" });
         } finally {
             setGeneratingImages((prev) => ({ ...prev, [slideIndex]: false }));
         }
@@ -182,34 +156,18 @@ export default function CarouselPreview({ visualDNA }: CarouselPreviewProps) {
     const generateAllImages = async () => {
         if (!carousel) return;
         setGeneratingAll(true);
-
         for (let i = 0; i < carousel.slides.length; i++) {
             if (!slideImages[i]) {
                 await generateImageForSlide(i);
-                if (i < carousel.slides.length - 1) {
-                    await new Promise((r) => setTimeout(r, 1500));
-                }
+                if (i < carousel.slides.length - 1) await new Promise((r) => setTimeout(r, 1500));
             }
         }
-
         setGeneratingAll(false);
-        toast({
-            title: "🎨 Imagens Geradas!",
-            description: "Todas as imagens do carrossel foram criadas com IA.",
-        });
+        toast({ title: "🎨 Imagens Geradas!", description: "Todas as imagens do carrossel foram criadas com IA." });
     };
 
-    const nextSlide = () => {
-        if (carousel && currentSlide < carousel.slides.length - 1) {
-            setCurrentSlide(currentSlide + 1);
-        }
-    };
-
-    const prevSlide = () => {
-        if (currentSlide > 0) {
-            setCurrentSlide(currentSlide - 1);
-        }
-    };
+    const nextSlide = () => { if (carousel && currentSlide < carousel.slides.length - 1) setCurrentSlide(currentSlide + 1); };
+    const prevSlide = () => { if (currentSlide > 0) setCurrentSlide(currentSlide - 1); };
 
     const generatedCount = Object.keys(slideImages).length;
     const totalSlides = carousel?.slides.length || 0;
@@ -219,21 +177,18 @@ export default function CarouselPreview({ visualDNA }: CarouselPreviewProps) {
 
     return (
         <div className="space-y-6">
-            {/* Creator Header */}
-            <Card className="glass-card border-primary/10 overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 pointer-events-none" />
-                <CardHeader className="pb-4 relative">
-                    <CardTitle className="text-lg flex items-center gap-2.5">
-                        <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center">
-                            <Sparkles className="w-5 h-5 text-primary" />
-                        </div>
+            {/* Creator Card */}
+            <Card className="glass-card">
+                <CardHeader className="pb-4">
+                    <CardTitle className="text-base flex items-center gap-2">
+                        <Sparkles className="w-4 h-4 text-primary" />
                         Criador de Conteúdo Estratégico
                     </CardTitle>
-                    <CardDescription>
+                    <CardDescription className="text-xs">
                         Escolha plataformas, tipo de conteúdo e a IA criará alinhado ao seu DNA Visual.
                     </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4 relative">
+                <CardContent className="space-y-4">
                     <ContentPlatformSelector
                         platforms={platforms}
                         onPlatformsChange={setPlatforms}
@@ -250,9 +205,7 @@ export default function CarouselPreview({ visualDNA }: CarouselPreviewProps) {
                                 <SelectContent>
                                     <SelectItem value="none">Nenhum personagem</SelectItem>
                                     {ugcCharacters.map((c) => (
-                                        <SelectItem key={c.id} value={c.id}>
-                                            {c.name}
-                                        </SelectItem>
+                                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                                     ))}
                                 </SelectContent>
                             </Select>
@@ -266,7 +219,7 @@ export default function CarouselPreview({ visualDNA }: CarouselPreviewProps) {
                             className="flex-1"
                             onKeyDown={(e) => e.key === "Enter" && handleGenerate()}
                         />
-                        <Button onClick={handleGenerate} disabled={loading || !theme} className="gap-2 shadow-md">
+                        <Button onClick={handleGenerate} disabled={loading || !theme} className="gap-2">
                             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
                             {loading ? "Gerando..." : "Gerar"}
                         </Button>
@@ -276,377 +229,277 @@ export default function CarouselPreview({ visualDNA }: CarouselPreviewProps) {
 
             {carousel && currentSlideData && (
                 <>
-                    {/* Image Generation Controls */}
-                    <div className="flex items-center justify-between p-4 rounded-2xl bg-secondary/30 border border-border/50">
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                                <Wand2 className="w-5 h-5 text-primary" />
+                    {/* Image Generation Bar */}
+                    <Card className="glass-card">
+                        <CardContent className="py-3 px-4 flex items-center justify-between">
+                            <div className="flex items-center gap-2.5">
+                                <Wand2 className="w-4 h-4 text-primary" />
+                                <div>
+                                    <p className="text-sm font-medium">Gerador de Imagens IA</p>
+                                    <p className="text-[11px] text-muted-foreground">{generatedCount}/{totalSlides} imagens geradas</p>
+                                </div>
                             </div>
-                            <div>
-                                <p className="text-sm font-semibold">Gerador de Imagens IA</p>
-                                <p className="text-xs text-muted-foreground">
-                                    {generatedCount}/{totalSlides} imagens geradas
-                                </p>
-                            </div>
-                        </div>
-                        <div className="flex gap-2">
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => generateImageForSlide(currentSlide)}
-                                disabled={generatingImages[currentSlide] || generatingAll}
-                                className="gap-2 rounded-xl"
-                            >
-                                {generatingImages[currentSlide] ? (
-                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                ) : (
-                                    <ImageIcon className="w-3.5 h-3.5" />
-                                )}
-                                Slide Atual
-                            </Button>
-                            <Button
-                                size="sm"
-                                onClick={generateAllImages}
-                                disabled={generatingAll || generatedCount === totalSlides}
-                                className="gap-2 rounded-xl shadow-md"
-                            >
-                                {generatingAll ? (
-                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                ) : (
-                                    <Wand2 className="w-3.5 h-3.5" />
-                                )}
-                                {generatingAll ? "Gerando..." : "Gerar Todas"}
-                            </Button>
-                            {creativeAssets.length > 0 && (
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => { setLibraryTarget(currentSlide); setShowLibrary(true); }}
-                                    className="gap-2 rounded-xl"
-                                >
-                                    <FolderOpen className="w-3.5 h-3.5" />
-                                    Biblioteca
+                            <div className="flex gap-1.5">
+                                <Button variant="outline" size="sm" onClick={() => generateImageForSlide(currentSlide)}
+                                    disabled={generatingImages[currentSlide] || generatingAll} className="gap-1.5 text-xs h-8">
+                                    {generatingImages[currentSlide] ? <Loader2 className="w-3 h-3 animate-spin" /> : <ImageIcon className="w-3 h-3" />}
+                                    Slide Atual
                                 </Button>
-                            )}
-                        </div>
-                    </div>
+                                <Button size="sm" onClick={generateAllImages}
+                                    disabled={generatingAll || generatedCount === totalSlides} className="gap-1.5 text-xs h-8">
+                                    {generatingAll ? <Loader2 className="w-3 h-3 animate-spin" /> : <Wand2 className="w-3 h-3" />}
+                                    {generatingAll ? "Gerando..." : "Gerar Todas"}
+                                </Button>
+                                {creativeAssets.length > 0 && (
+                                    <Button variant="outline" size="sm" className="gap-1.5 text-xs h-8"
+                                        onClick={() => { setLibraryTarget(currentSlide); setShowLibrary(true); }}>
+                                        <FolderOpen className="w-3 h-3" /> Biblioteca
+                                    </Button>
+                                )}
+                            </div>
+                        </CardContent>
+                    </Card>
 
-                    <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 items-start">
-                        {/* Premium Mobile Preview */}
-                        <div className="lg:col-span-3 flex flex-col items-center">
-                            <div className="relative w-full max-w-[380px]">
-                                {/* Phone Frame */}
-                                <div className="relative bg-foreground/5 rounded-[3rem] p-[10px] shadow-[0_25px_60px_-12px_rgba(0,0,0,0.25)] ring-1 ring-border/30">
-                                    {/* Inner Screen */}
-                                    <div className="relative rounded-[2.2rem] overflow-hidden aspect-[9/16] bg-black">
-                                        {/* Notch */}
-                                        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-28 h-7 bg-black rounded-b-2xl z-30" />
-                                        
-                                        <AnimatePresence mode="wait">
-                                            <motion.div
-                                                key={currentSlide}
-                                                initial={{ opacity: 0, scale: 1.02 }}
-                                                animate={{ opacity: 1, scale: 1 }}
-                                                exit={{ opacity: 0, scale: 0.98 }}
-                                                transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-                                                className="w-full h-full relative"
-                                            >
-                                                {/* Full Background Image */}
-                                                {hasImage && (
-                                                    <img
-                                                        src={slideImages[currentSlide]}
-                                                        alt={currentSlideData.headline}
-                                                        className="absolute inset-0 w-full h-full object-cover"
-                                                    />
-                                                )}
-
-                                                {/* Gradient Overlay for text readability */}
-                                                <div 
-                                                    className="absolute inset-0 z-10"
-                                                    style={{
-                                                        background: hasImage
-                                                            ? "linear-gradient(180deg, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.02) 30%, rgba(0,0,0,0.6) 70%, rgba(0,0,0,0.85) 100%)"
-                                                            : `linear-gradient(160deg, ${visualDNA.palette[0] || "#1a1a2e"} 0%, ${visualDNA.palette[1] || "#16213e"} 50%, ${visualDNA.palette[2] || "#0f3460"} 100%)`,
-                                                    }}
-                                                />
-
-                                                {/* No-image decorative elements */}
-                                                {!hasImage && (
-                                                    <>
-                                                        <div className="absolute top-1/4 right-0 w-64 h-64 rounded-full blur-[80px] z-[5]" style={{ backgroundColor: `${visualDNA.palette[1] || "#e94560"}30` }} />
-                                                        <div className="absolute bottom-0 left-0 w-48 h-48 rounded-full blur-[60px] z-[5]" style={{ backgroundColor: `${visualDNA.palette[2] || "#533483"}20` }} />
-                                                    </>
-                                                )}
-
-                                                {/* Content Layer */}
-                                                <div className="relative z-20 w-full h-full flex flex-col justify-between p-6 pt-12">
-                                                    {/* Top: Badge + Headline */}
-                                                    <div className="space-y-4">
-                                                        <div className="flex items-center gap-2">
-                                                            {currentTypeConfig && (
-                                                                <span className={`text-[9px] font-bold uppercase tracking-[0.2em] px-2.5 py-1 rounded-full text-white ${currentTypeConfig.color} backdrop-blur-sm`}>
-                                                                    {currentTypeConfig.label}
-                                                                </span>
-                                                            )}
-                                                            <span className="text-[10px] text-white/50 font-medium">
-                                                                {currentSlide + 1}/{carousel.slides.length}
-                                                            </span>
-                                                        </div>
-                                                        <h2
-                                                            className="text-[1.65rem] font-black leading-[1.15] text-white drop-shadow-lg"
-                                                            style={{
-                                                                fontFamily: visualDNA.typography.includes("Serif") ? "'Playfair Display', serif" : "'DM Sans', sans-serif",
-                                                            }}
-                                                        >
-                                                            {currentSlideData.headline}
-                                                        </h2>
-                                                    </div>
-
-                                                    {/* Bottom: Body + Navigation */}
-                                                    <div className="space-y-5">
-                                                        <p className="text-[13px] text-white/85 leading-relaxed font-medium tracking-wide">
-                                                            {currentSlideData.body}
-                                                        </p>
-
-                                                        {/* Image generation placeholder */}
-                                                        {!hasImage && !generatingImages[currentSlide] && (
-                                                            <button
-                                                                onClick={() => generateImageForSlide(currentSlide)}
-                                                                className="w-full py-4 rounded-2xl border border-dashed border-white/20 flex flex-col items-center gap-2 text-white/30 hover:text-white/60 hover:border-white/40 transition-all duration-300 cursor-pointer backdrop-blur-sm bg-white/5"
-                                                            >
-                                                                <ImageIcon className="w-6 h-6" />
-                                                                <span className="text-[10px] font-medium tracking-wide">GERAR IMAGEM COM IA</span>
-                                                            </button>
-                                                        )}
-
-                                                        {generatingImages[currentSlide] && (
-                                                            <div className="w-full py-5 rounded-2xl border border-white/10 flex items-center justify-center gap-3 backdrop-blur-sm bg-white/5">
-                                                                <Loader2 className="w-5 h-5 animate-spin text-white/40" />
-                                                                <span className="text-[11px] text-white/40 font-medium">Gerando imagem...</span>
-                                                            </div>
-                                                        )}
-
-                                                        {/* Bottom bar */}
-                                                        <div className="flex justify-between items-center pt-1">
-                                                            <span className="text-[10px] font-bold text-white/40 tracking-wider">@{activeProfile?.name?.toLowerCase().replace(/\s/g, '') || "perfil"}</span>
-                                                            <div className="flex gap-[5px]">
-                                                                {carousel.slides.map((_, i) => (
-                                                                    <button
-                                                                        key={i}
-                                                                        onClick={() => setCurrentSlide(i)}
-                                                                        className={`rounded-full transition-all duration-300 cursor-pointer ${
-                                                                            i === currentSlide 
-                                                                                ? "w-5 h-[5px] bg-white" 
-                                                                                : slideImages[i] 
-                                                                                    ? "w-[5px] h-[5px] bg-white/50" 
-                                                                                    : "w-[5px] h-[5px] bg-white/20"
-                                                                        }`}
-                                                                    />
-                                                                ))}
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </motion.div>
-                                        </AnimatePresence>
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+                        {/* Left: Post Preview */}
+                        <div className="space-y-4">
+                            {/* Instagram-style post card */}
+                            <Card className="glass-card overflow-hidden">
+                                {/* Post header */}
+                                <div className="flex items-center gap-2.5 px-4 py-3 border-b border-border">
+                                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold text-primary-foreground"
+                                        style={{ backgroundColor: visualDNA.palette[0] || "hsl(var(--primary))" }}>
+                                        {(activeProfile?.name?.[0] || "P").toUpperCase()}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-xs font-semibold text-foreground truncate">{activeProfile?.name || "Perfil"}</p>
+                                        <p className="text-[10px] text-muted-foreground">Patrocinado</p>
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                        {currentTypeConfig && (
+                                            <span className={`inline-flex items-center gap-1 text-[9px] font-semibold uppercase tracking-wider text-muted-foreground`}>
+                                                <span className={`w-1.5 h-1.5 rounded-full ${currentTypeConfig.dotClass}`} />
+                                                {currentTypeConfig.label}
+                                            </span>
+                                        )}
+                                        <span className="text-[10px] text-muted-foreground ml-1">{currentSlide + 1}/{carousel.slides.length}</span>
                                     </div>
                                 </div>
 
-                                {/* Expand button */}
-                                {hasImage && (
-                                    <button 
-                                        onClick={() => setExpandedPreview(true)}
-                                        className="absolute top-5 right-5 z-30 w-8 h-8 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center text-white/70 hover:text-white hover:bg-black/60 transition-all cursor-pointer"
-                                    >
-                                        <Maximize2 className="w-3.5 h-3.5" />
-                                    </button>
-                                )}
-                            </div>
-
-                            {/* Navigation */}
-                            <div className="flex items-center gap-6 mt-8">
-                                <Button
-                                    variant="outline"
-                                    size="icon"
-                                    className="rounded-full h-11 w-11 border-border/50 shadow-sm hover:shadow-md transition-shadow"
-                                    onClick={prevSlide}
-                                    disabled={currentSlide === 0}
-                                >
-                                    <ChevronLeft className="w-5 h-5" />
-                                </Button>
-                                <span className="text-xs font-semibold text-muted-foreground tabular-nums">
-                                    {currentSlide + 1} / {carousel.slides.length}
-                                </span>
-                                <Button
-                                    variant="outline"
-                                    size="icon"
-                                    className="rounded-full h-11 w-11 border-border/50 shadow-sm hover:shadow-md transition-shadow"
-                                    onClick={nextSlide}
-                                    disabled={currentSlide === carousel.slides.length - 1}
-                                >
-                                    <ChevronRight className="w-5 h-5" />
-                                </Button>
-                            </div>
-
-                            {/* Slide Thumbnails Strip */}
-                            <div className="flex gap-2 mt-5 overflow-x-auto pb-2 max-w-[380px]">
-                                {carousel.slides.map((slide, i) => {
-                                    const typeConf = slideTypeConfig[slide.type] || slideTypeConfig.value;
-                                    return (
-                                        <button
-                                            key={i}
-                                            onClick={() => setCurrentSlide(i)}
-                                            className={`relative flex-shrink-0 w-14 h-14 rounded-xl overflow-hidden border-2 transition-all duration-200 cursor-pointer ${
-                                                i === currentSlide 
-                                                    ? "border-primary shadow-lg scale-105" 
-                                                    : "border-border/30 opacity-60 hover:opacity-100"
-                                            }`}
+                                {/* Post image area — 4:5 ratio */}
+                                <div className="relative aspect-[4/5] bg-muted">
+                                    <AnimatePresence mode="wait">
+                                        <motion.div
+                                            key={currentSlide}
+                                            initial={{ opacity: 0 }}
+                                            animate={{ opacity: 1 }}
+                                            exit={{ opacity: 0 }}
+                                            transition={{ duration: 0.25 }}
+                                            className="absolute inset-0"
                                         >
+                                            {hasImage ? (
+                                                <>
+                                                    <img
+                                                        src={slideImages[currentSlide]}
+                                                        alt={currentSlideData.headline}
+                                                        className="w-full h-full object-cover"
+                                                    />
+                                                    {/* Subtle bottom gradient for text */}
+                                                    <div className="absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
+                                                    {/* Text overlay on image */}
+                                                    <div className="absolute inset-x-0 bottom-0 p-5 space-y-2">
+                                                        <h3 className="text-lg font-bold text-white leading-tight drop-shadow-sm"
+                                                            style={{ fontFamily: visualDNA.typography.includes("Serif") ? "Georgia, serif" : "inherit" }}>
+                                                            {currentSlideData.headline}
+                                                        </h3>
+                                                        <p className="text-xs text-white/80 leading-relaxed line-clamp-3">{currentSlideData.body}</p>
+                                                    </div>
+                                                    {/* Expand */}
+                                                    <button onClick={() => setExpandedPreview(true)}
+                                                        className="absolute top-3 right-3 w-7 h-7 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center text-white/70 hover:text-white transition-colors cursor-pointer">
+                                                        <Maximize2 className="w-3 h-3" />
+                                                    </button>
+                                                </>
+                                            ) : (
+                                                <div className="w-full h-full flex flex-col items-center justify-center p-8 text-center"
+                                                    style={{
+                                                        background: `linear-gradient(145deg, ${visualDNA.palette[0] || "#1a1a2e"}, ${visualDNA.palette[1] || "#16213e"})`,
+                                                    }}>
+                                                    <div className="max-w-[280px] space-y-4">
+                                                        <h3 className="text-xl font-bold text-white leading-tight"
+                                                            style={{ fontFamily: visualDNA.typography.includes("Serif") ? "Georgia, serif" : "inherit" }}>
+                                                            {currentSlideData.headline}
+                                                        </h3>
+                                                        <p className="text-sm text-white/70 leading-relaxed">{currentSlideData.body}</p>
+                                                    </div>
+                                                    {/* Generate CTA */}
+                                                    {!generatingImages[currentSlide] ? (
+                                                        <button onClick={() => generateImageForSlide(currentSlide)}
+                                                            className="mt-6 px-4 py-2 rounded-lg border border-white/20 text-white/50 text-[11px] font-medium hover:text-white/80 hover:border-white/40 transition-all cursor-pointer flex items-center gap-2">
+                                                            <ImageIcon className="w-3.5 h-3.5" /> Gerar imagem IA
+                                                        </button>
+                                                    ) : (
+                                                        <div className="mt-6 flex items-center gap-2 text-white/40 text-[11px]">
+                                                            <Loader2 className="w-4 h-4 animate-spin" /> Gerando...
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </motion.div>
+                                    </AnimatePresence>
+
+                                    {/* Navigation arrows inside */}
+                                    {currentSlide > 0 && (
+                                        <button onClick={prevSlide}
+                                            className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/90 shadow-md flex items-center justify-center text-foreground hover:bg-white transition-colors cursor-pointer z-20">
+                                            <ChevronLeft className="w-4 h-4" />
+                                        </button>
+                                    )}
+                                    {currentSlide < carousel.slides.length - 1 && (
+                                        <button onClick={nextSlide}
+                                            className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/90 shadow-md flex items-center justify-center text-foreground hover:bg-white transition-colors cursor-pointer z-20">
+                                            <ChevronRight className="w-4 h-4" />
+                                        </button>
+                                    )}
+                                </div>
+
+                                {/* Dots + actions bar */}
+                                <div className="px-4 py-3 border-t border-border">
+                                    <div className="flex items-center justify-center gap-1">
+                                        {carousel.slides.map((_, i) => (
+                                            <button key={i} onClick={() => setCurrentSlide(i)}
+                                                className={`rounded-full transition-all duration-200 cursor-pointer ${
+                                                    i === currentSlide
+                                                        ? "w-5 h-1.5 bg-primary"
+                                                        : slideImages[i]
+                                                            ? "w-1.5 h-1.5 bg-primary/40"
+                                                            : "w-1.5 h-1.5 bg-border"
+                                                }`} />
+                                        ))}
+                                    </div>
+                                </div>
+                            </Card>
+
+                            {/* Thumbnail strip */}
+                            <div className="flex gap-1.5 overflow-x-auto pb-1">
+                                {carousel.slides.map((slide, i) => {
+                                    const tc = slideTypeConfig[slide.type] || slideTypeConfig.value;
+                                    return (
+                                        <button key={i} onClick={() => setCurrentSlide(i)}
+                                            className={`relative flex-shrink-0 w-12 h-12 rounded-lg overflow-hidden border transition-all cursor-pointer ${
+                                                i === currentSlide ? "border-primary ring-2 ring-primary/20" : "border-border opacity-60 hover:opacity-100"
+                                            }`}>
                                             {slideImages[i] ? (
                                                 <img src={slideImages[i]} className="w-full h-full object-cover" alt="" />
                                             ) : (
-                                                <div 
-                                                    className="w-full h-full flex items-center justify-center text-[8px] font-bold text-white/70"
-                                                    style={{ backgroundColor: visualDNA.palette[0] || "#1a1a2e" }}
-                                                >
+                                                <div className="w-full h-full flex items-center justify-center text-[9px] font-bold text-muted-foreground bg-muted">
                                                     {i + 1}
                                                 </div>
                                             )}
-                                            <div className={`absolute bottom-0 left-0 right-0 h-1 ${typeConf.color}`} />
+                                            <div className={`absolute bottom-0 inset-x-0 h-0.5 ${tc.dotClass}`} />
                                         </button>
                                     );
                                 })}
                             </div>
                         </div>
 
-                        {/* Right Panel: Roteiro & Prompts */}
-                        <div className="lg:col-span-2 space-y-5">
-                            <Card className="border-border/50 shadow-sm">
-                                <CardHeader className="pb-3">
-                                    <CardTitle className="text-sm font-semibold">Roteiro & Prompts</CardTitle>
+                        {/* Right: Roteiro & Prompts */}
+                        <div className="space-y-4">
+                            <Card className="glass-card">
+                                <CardHeader className="pb-2">
+                                    <CardTitle className="text-sm">Roteiro & Prompts</CardTitle>
                                 </CardHeader>
-                                <CardContent className="space-y-5">
-                                    {/* Copy Section */}
-                                    <div className="p-4 rounded-xl bg-secondary/40 border border-border/30 space-y-3">
+                                <CardContent className="space-y-4">
+                                    {/* Copy */}
+                                    <div className="p-3.5 rounded-lg bg-secondary/50 border border-border space-y-2.5">
                                         <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-2">
-                                                {currentTypeConfig && (
-                                                    <span className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded-md text-white ${currentTypeConfig.color}`}>
-                                                        {currentTypeConfig.label}
-                                                    </span>
-                                                )}
-                                                <span className="text-xs font-bold text-primary">COPY SLIDE {currentSlide + 1}</span>
-                                            </div>
-                                            <Button 
-                                                variant="ghost" 
-                                                size="icon" 
-                                                className="h-7 w-7 rounded-lg"
+                                            <span className="text-[11px] font-semibold uppercase tracking-wide text-primary flex items-center gap-1.5">
+                                                {currentTypeConfig && <span className={`w-1.5 h-1.5 rounded-full ${currentTypeConfig.dotClass}`} />}
+                                                Copy do Slide {currentSlide + 1}
+                                            </span>
+                                            <Button variant="ghost" size="icon" className="h-6 w-6"
                                                 onClick={() => {
                                                     navigator.clipboard.writeText(`${currentSlideData.headline}\n\n${currentSlideData.body}`);
-                                                    toast({ title: "Copiado!", description: "Copy do slide copiada." });
-                                                }}
-                                            >
-                                                <Copy className="w-3.5 h-3.5" />
+                                                    toast({ title: "Copiado!" });
+                                                }}>
+                                                <Copy className="w-3 h-3" />
                                             </Button>
                                         </div>
-                                        <p className="text-sm font-semibold leading-snug">{currentSlideData.headline}</p>
+                                        <p className="text-sm font-semibold text-foreground leading-snug">{currentSlideData.headline}</p>
                                         <p className="text-sm text-muted-foreground leading-relaxed">{currentSlideData.body}</p>
                                     </div>
 
-                                    {/* Image Prompt */}
-                                    <div className="p-4 rounded-xl bg-primary/5 border border-primary/10 space-y-3">
+                                    {/* Prompt */}
+                                    <div className="p-3.5 rounded-lg bg-primary/5 border border-primary/10 space-y-2.5">
                                         <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-2">
-                                                <Play className="w-3.5 h-3.5 text-primary" />
-                                                <span className="text-xs font-bold uppercase">Prompt para Imagem IA</span>
-                                            </div>
-                                            <Button 
-                                                variant="ghost" 
-                                                size="icon" 
-                                                className="h-7 w-7 rounded-lg"
+                                            <span className="text-[11px] font-semibold uppercase tracking-wide flex items-center gap-1.5">
+                                                <Play className="w-3 h-3 text-primary" /> Prompt para Imagem IA
+                                            </span>
+                                            <Button variant="ghost" size="icon" className="h-6 w-6"
                                                 onClick={() => {
                                                     navigator.clipboard.writeText(`${currentSlideData.image_prompt}. ${visualDNA.image_prompt_style}. Professional photography, 4k.`);
-                                                    toast({ title: "Copiado!", description: "Prompt copiado." });
-                                                }}
-                                            >
-                                                <Download className="w-3.5 h-3.5" />
+                                                    toast({ title: "Copiado!" });
+                                                }}>
+                                                <Download className="w-3 h-3" />
                                             </Button>
                                         </div>
-                                        <div className="bg-background/80 p-3 rounded-lg border border-border/30 text-[11px] font-mono leading-relaxed text-muted-foreground">
+                                        <div className="bg-background p-2.5 rounded border border-border text-[11px] font-mono leading-relaxed text-muted-foreground">
                                             {currentSlideData.image_prompt}. {visualDNA.image_prompt_style}. Professional photography, 4k.
                                         </div>
                                     </div>
 
-                                    {/* Generated image preview */}
+                                    {/* Generated preview */}
                                     {hasImage && (
-                                        <div className="space-y-2">
-                                            <p className="text-xs font-bold uppercase text-muted-foreground">Imagem Gerada</p>
-                                            <img
-                                                src={slideImages[currentSlide]}
-                                                alt={`Slide ${currentSlide + 1}`}
-                                                className="w-full rounded-xl border border-border/30 shadow-sm"
-                                            />
+                                        <div className="space-y-1.5">
+                                            <p className="text-[11px] font-semibold uppercase text-muted-foreground tracking-wide">Imagem Gerada</p>
+                                            <img src={slideImages[currentSlide]} alt={`Slide ${currentSlide + 1}`}
+                                                className="w-full rounded-lg border border-border" />
                                         </div>
                                     )}
 
-                                    {/* Actions */}
                                     <div className="flex gap-2">
-                                        <Button variant="outline" className="flex-1 gap-2 text-xs h-9 rounded-xl">
-                                            <Share2 className="w-3.5 h-3.5" /> Exportar
+                                        <Button variant="outline" className="flex-1 gap-1.5 text-xs h-8">
+                                            <Share2 className="w-3 h-3" /> Exportar
                                         </Button>
-                                        <Button variant="outline" className="flex-1 gap-2 text-xs h-9 rounded-xl">
-                                            <Download className="w-3.5 h-3.5" /> Baixar Assets
+                                        <Button variant="outline" className="flex-1 gap-1.5 text-xs h-8">
+                                            <Download className="w-3 h-3" /> Baixar Assets
                                         </Button>
                                     </div>
                                 </CardContent>
                             </Card>
 
-                            {/* Captions Section */}
+                            {/* Captions */}
                             {carousel.captions && Object.keys(carousel.captions).length > 0 && (
-                                <Card className="border-border/50 shadow-sm">
-                                    <CardHeader className="pb-3">
+                                <Card className="glass-card">
+                                    <CardHeader className="pb-2">
                                         <div className="flex items-center justify-between">
                                             <CardTitle className="text-sm flex items-center gap-2">
                                                 <FileText className="w-4 h-4 text-primary" />
                                                 Legendas Prontas
                                             </CardTitle>
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={() => setShowCaptions(!showCaptions)}
-                                                className="text-xs rounded-lg"
-                                            >
+                                            <Button variant="ghost" size="sm" onClick={() => setShowCaptions(!showCaptions)} className="text-xs h-7">
                                                 {showCaptions ? "Ocultar" : "Mostrar"}
                                             </Button>
                                         </div>
-                                        <CardDescription className="text-xs">
-                                            Legendas personalizadas com base no Dossiê
-                                        </CardDescription>
+                                        <CardDescription className="text-[11px]">Personalizadas com base no Dossiê do perfil</CardDescription>
                                     </CardHeader>
                                     {showCaptions && (
-                                        <CardContent className="space-y-4">
+                                        <CardContent className="space-y-3">
                                             {Object.entries(carousel.captions).map(([platform, caption]) => (
-                                                <div key={platform} className="space-y-2">
+                                                <div key={platform} className="space-y-1.5">
                                                     <div className="flex items-center justify-between">
-                                                        <span className="text-xs font-bold uppercase text-primary">
+                                                        <span className="text-[11px] font-semibold uppercase text-primary">
                                                             {platform === "instagram" ? "📸 Instagram" :
                                                              platform === "tiktok" ? "🎵 TikTok" :
                                                              platform === "linkedin" ? "💼 LinkedIn" :
                                                              platform === "blog" ? "📝 Blog" : platform}
                                                         </span>
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            className="h-7 w-7 rounded-lg"
-                                                            onClick={() => {
-                                                                navigator.clipboard.writeText(caption);
-                                                                toast({ title: "Copiado!", description: `Legenda ${platform} copiada.` });
-                                                            }}
-                                                        >
-                                                            <Copy className="w-3.5 h-3.5" />
+                                                        <Button variant="ghost" size="icon" className="h-6 w-6"
+                                                            onClick={() => { navigator.clipboard.writeText(caption); toast({ title: "Copiado!", description: `Legenda ${platform} copiada.` }); }}>
+                                                            <Copy className="w-3 h-3" />
                                                         </Button>
                                                     </div>
-                                                    <div className="p-3 rounded-xl bg-secondary/40 border border-border/30 text-sm whitespace-pre-wrap leading-relaxed">
+                                                    <div className="p-2.5 rounded-lg bg-secondary/50 border border-border text-xs whitespace-pre-wrap leading-relaxed">
                                                         {caption}
                                                     </div>
                                                 </div>
@@ -661,64 +514,48 @@ export default function CarouselPreview({ visualDNA }: CarouselPreviewProps) {
             )}
 
             {loading && (
-                <Card className="border-dashed py-20">
-                    <CardContent className="flex flex-col items-center justify-center gap-4">
-                        <div className="relative">
-                            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-                                <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                            </div>
-                            <div className="absolute inset-0 rounded-full bg-primary/5 animate-ping" />
-                        </div>
-                        <div className="text-center space-y-1">
-                            <p className="font-semibold">Criando Estratégia...</p>
-                            <p className="text-xs text-muted-foreground italic">"O segredo do carrossel é o gancho no primeiro slide..."</p>
+                <Card className="glass-card py-16">
+                    <CardContent className="flex flex-col items-center justify-center gap-3">
+                        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                        <div className="text-center">
+                            <p className="text-sm font-semibold">Criando Estratégia...</p>
+                            <p className="text-xs text-muted-foreground italic mt-1">"O segredo do carrossel é o gancho no primeiro slide..."</p>
                         </div>
                     </CardContent>
                 </Card>
             )}
 
-            {/* Creative Library Picker Dialog */}
+            {/* Library Dialog */}
             <Dialog open={showLibrary} onOpenChange={setShowLibrary}>
                 <DialogContent className="max-w-2xl max-h-[70vh] overflow-y-auto">
                     <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2">
-                            <FolderOpen className="w-5 h-5 text-primary" />
+                        <DialogTitle className="flex items-center gap-2 text-sm">
+                            <FolderOpen className="w-4 h-4 text-primary" />
                             Biblioteca de Criativos — Slide {libraryTarget + 1}
                         </DialogTitle>
                     </DialogHeader>
-                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 mt-2">
+                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mt-2">
                         {creativeAssets.map((asset) => (
-                            <button
-                                key={asset.id}
-                                onClick={() => useLibraryImage(libraryTarget, asset.file_url)}
-                                className="group relative aspect-square rounded-xl overflow-hidden border-2 border-transparent hover:border-primary transition-all duration-200 cursor-pointer shadow-sm hover:shadow-md"
-                            >
-                                <img
-                                    src={asset.file_url}
-                                    alt={asset.file_name}
-                                    className="w-full h-full object-cover"
-                                />
+                            <button key={asset.id} onClick={() => useLibraryImage(libraryTarget, asset.file_url)}
+                                className="group relative aspect-square rounded-lg overflow-hidden border border-border hover:border-primary transition-colors cursor-pointer">
+                                <img src={asset.file_url} alt={asset.file_name} className="w-full h-full object-cover" />
                                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
-                                    <span className="text-white text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity">Usar</span>
+                                    <span className="text-white text-[10px] font-semibold opacity-0 group-hover:opacity-100 transition-opacity">Usar</span>
                                 </div>
                             </button>
                         ))}
                     </div>
                     {creativeAssets.length === 0 && (
-                        <p className="text-center text-sm text-muted-foreground py-8">Nenhum criativo na biblioteca.</p>
+                        <p className="text-center text-xs text-muted-foreground py-8">Nenhum criativo na biblioteca.</p>
                     )}
                 </DialogContent>
             </Dialog>
 
-            {/* Expanded Image Preview */}
+            {/* Expanded Preview */}
             <Dialog open={expandedPreview} onOpenChange={setExpandedPreview}>
-                <DialogContent className="max-w-lg p-2 bg-black border-none">
+                <DialogContent className="max-w-lg p-1 bg-black border-none rounded-xl overflow-hidden">
                     {slideImages[currentSlide] && (
-                        <img 
-                            src={slideImages[currentSlide]} 
-                            alt="Preview ampliado" 
-                            className="w-full rounded-lg"
-                        />
+                        <img src={slideImages[currentSlide]} alt="Preview" className="w-full rounded-lg" />
                     )}
                 </DialogContent>
             </Dialog>
