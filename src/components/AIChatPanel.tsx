@@ -53,9 +53,10 @@ function stripMtxAction(content: string): string {
 }
 
 async function streamChat({
-  messages, campaignData, mode, profileId, onDelta, onDone, onError,
+  messages, campaignData, mode, profileId, scrapedContext, onDelta, onDone, onError,
 }: {
   messages: Msg[]; campaignData?: unknown; mode: string; profileId?: string;
+  scrapedContext?: string;
   onDelta: (t: string) => void; onDone: () => void; onError: (msg: string) => void;
 }) {
   const resp = await fetch(AI_CHAT_URL, {
@@ -64,7 +65,7 @@ async function streamChat({
       "Content-Type": "application/json",
       Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
     },
-    body: JSON.stringify({ messages, campaignData, mode, profileId }),
+    body: JSON.stringify({ messages, campaignData, mode, profileId, scrapedContext }),
   });
 
   if (!resp.ok) {
