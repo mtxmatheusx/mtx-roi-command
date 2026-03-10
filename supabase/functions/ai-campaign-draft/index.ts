@@ -129,9 +129,15 @@ serve(async (req) => {
 
 ${campaignData ? `**Dados atuais de performance:**\n${JSON.stringify(campaignData, null, 2)}` : "Sem dados de performance disponíveis."}
 
-${productContext ? `**Contexto adicional do produto/serviço (enviado pelo gestor):**\n${productContext}` : ""}
+## INSTRUÇÃO FINAL PARA GERAÇÃO DE COPY (REGRA INQUEBRÁVEL)
 
-IMPORTANTE: Baseie TODA a segmentação, copies e sementes semânticas EXCLUSIVAMENTE no Dossiê do Avatar e no Contexto do Produto acima. NÃO invente nichos, públicos ou interesses que não estejam alinhados com o perfil "${ctx.profile.name}".
+1. Leia o campo "unique_mechanism" do Dossiê do Avatar. Ele define O QUE a marca vende.
+2. Leia o campo "bleeding_pain" e "dream_outcome". Eles definem a DOR e o DESEJO do consumidor.
+3. Leia o campo "brand_voice". Ele define o TOM da copy.
+4. A copy VENDE o produto/serviço descrito no "unique_mechanism" PARA o avatar descrito no dossiê.
+5. NÃO USE palavras como: "Instagram", "feed", "posts", "stories", "reels", "seguidores", "engajamento", "algoritmo", "perfil", "alunas", "mentorias", "escala digital" — A MENOS que o "unique_mechanism" do dossiê EXPLICITAMENTE descreva um produto de marketing digital.
+6. Se o "unique_mechanism" fala de "Slow Fashion Humanizado", "tecidos éticos", "modelagens" → a copy deve vender ROUPAS e MODA para o consumidor.
+7. IGNORE completamente o "Contexto do Produto" para fins de copy se ele contradizer o dossiê.
 
 Gere EXATAMENTE 3 copies (direct_response, storytelling, social_proof), nome no padrão MTX, segmentação, orçamento diário e seu raciocínio estratégico completo.`;
 
