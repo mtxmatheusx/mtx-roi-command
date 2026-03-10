@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { fetchMasterContext } from "../_shared/fetch_master_context.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -17,6 +18,95 @@ function fail(msg: string, extra: Record<string, unknown> = {}) {
   return new Response(JSON.stringify({ error: msg, ...extra }), {
     status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
+}
+
+// ─── Auto-create remarketing audiences ───
+async function createPixelAudience(
+  adAccountId: string, accessToken: string, pixelId: string,
+  name: string, eventType: string, retentionDays: number
+): Promise<{ id: string } | null> {
+  const payload = {
+    name,
+    rule: JSON.stringify({
+      inclusions: {
+        operator: "or",
+        rules: [{
+          event_sources: [{ id: pixelId, type: "pixel" }],
+          retention_seconds: retentionDays * 86400,
+          filter: {
+            operator: "and",
+            filters: [{ field: "event", operator: "eq", value: eventType }],
+          },
+        }],
+      },
+    }),
+    access_token: accessToken,
+  };
+
+  const res = await fetch(`${META_API}/${adAccountId}/customaudiences`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+  if (data.error) {
+    console.warn(`Audience creation failed (${eventType}):`, data.error.message);
+    return null;
+  }
+  return { id: data.id };
+}
+
+// ─── AI copy generation aligned with dossier ───
+async function generateAlignedCopy(
+  profileId: string, campaignName: string, objective: string, targetingNotes: string | null
+): Promise<{ headline: string; primary_text: string } | null> {
+  try {
+    const ctx = await fetchMasterContext(profileId);
+    if (ctx.blocked) return null;
+
+    const prompt = `Gere UM anúncio para a campanha "${campaignName}" com objetivo ${objective}.
+${targetingNotes ? `Contexto de segmentação: ${targetingNotes}` : ""}
+
+REGRAS OBRIGATÓRIAS:
+- Use EXCLUSIVAMENTE o dossiê do avatar e o contexto do produto abaixo.
+- NÃO invente dados, métricas ou depoimentos fictícios.
+- Use os frameworks StoryBrand (Vilão→Guia→Plano) e Hormozi (Value Equation).
+- Headline: máximo 40 caracteres, gancho forte.
+- Primary Text: máximo 125 palavras, foco em conversão, termine com CTA claro.
+- Tom de voz alinhado ao perfil do cliente.
+
+${ctx.systemPromptBlock}
+
+Responda APENAS em JSON: {"headline":"...","primary_text":"..."}`;
+
+    const apiKey = Deno.env.get("LOVABLE_API_KEY");
+    if (!apiKey) return null;
+
+    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [
+          { role: "system", content: "Você é um copywriter de resposta direta sênior da MTX. Responda APENAS em JSON válido." },
+          { role: "user", content: prompt },
+        ],
+        temperature: 0.7,
+        max_tokens: 500,
+      }),
+    });
+
+    if (!res.ok) return null;
+    const data = await res.json();
+    const text = data.choices?.[0]?.message?.content || "";
+    // Extract JSON from response
+    const jsonMatch = text.match(/\{[\s\S]*"headline"[\s\S]*"primary_text"[\s\S]*\}/);
+    if (!jsonMatch) return null;
+    return JSON.parse(jsonMatch[0]);
+  } catch (e) {
+    console.warn("AI copy generation failed:", e);
+    return null;
+  }
 }
 
 serve(async (req) => {
@@ -39,7 +129,12 @@ serve(async (req) => {
     let body: any;
     try { body = JSON.parse(rawBody); } catch { return fail("JSON inválido"); }
 
-    const { profileId, campaign_name, objective, daily_budget, targeting_notes, use_catalog, destination_url, creative_url, headline, primary_text, cta_type, cta, audience_id, audience_ids, excluded_audience_ids } = body;
+    const {
+      profileId, campaign_name, objective, daily_budget, targeting_notes,
+      use_catalog, destination_url, creative_url, headline, primary_text,
+      cta_type, cta, audience_id, audience_ids, excluded_audience_ids,
+      remarketing, remarketing_days,
+    } = body;
     if (!profileId || !campaign_name) return fail("profileId e campaign_name obrigatórios");
 
     // Fetch profile
@@ -75,12 +170,59 @@ serve(async (req) => {
     const budget = daily_budget || 50;
     const linkUrl = destination_url || (Array.isArray(profile.product_urls) && profile.product_urls.length > 0 ? profile.product_urls[0] : "https://example.com");
 
+    // ─── Remarketing: auto-create audiences ───
+    const includeIds: string[] = audience_ids?.length ? [...audience_ids] : (audience_id ? [audience_id] : []);
+    const excludeIds: string[] = excluded_audience_ids ? [...excluded_audience_ids] : [];
+
+    if (remarketing && pixelId && pixelId.trim() !== "") {
+      const days = remarketing_days || 15;
+
+      // Create "AddToCart" audience (include)
+      const cartAudience = await createPixelAudience(
+        adAccountId, accessToken, pixelId,
+        `Remarketing - AddToCart ${days}d - ${campaign_name}`,
+        "AddToCart", days
+      );
+      if (cartAudience) {
+        includeIds.push(cartAudience.id);
+        steps.push(`✅ Público AddToCart ${days}d: ${cartAudience.id}`);
+      }
+
+      // Create "Purchase" audience (exclude)
+      const purchaseAudience = await createPixelAudience(
+        adAccountId, accessToken, pixelId,
+        `Exclusão - Compradores 30d - ${campaign_name}`,
+        "Purchase", 30
+      );
+      if (purchaseAudience) {
+        excludeIds.push(purchaseAudience.id);
+        steps.push(`✅ Exclusão Compradores 30d: ${purchaseAudience.id}`);
+      }
+    }
+
+    // ─── AI Copy Generation (if no explicit copy provided) ───
+    let finalHeadline = headline;
+    let finalPrimaryText = primary_text;
+
+    if (!finalHeadline || !finalPrimaryText) {
+      const aiCopy = await generateAlignedCopy(profileId, campaign_name, obj, targeting_notes);
+      if (aiCopy) {
+        finalHeadline = finalHeadline || aiCopy.headline;
+        finalPrimaryText = finalPrimaryText || aiCopy.primary_text;
+        steps.push("✅ Copy gerada pela IA (alinhada ao dossiê)");
+      }
+    }
+
+    // Fallbacks
+    finalHeadline = finalHeadline || campaign_name;
+    finalPrimaryText = finalPrimaryText || targeting_notes || "Descubra como transformar seus resultados";
+
     // Create draft record
     const { data: draft, error: draftErr } = await supabase.from("campaign_drafts").insert({
       user_id: user.id, profile_id: profileId, campaign_name, objective: obj,
       daily_budget: budget, status: "approved",
-      copy_options: [{ headline: campaign_name, primary_text: targeting_notes || "", cta: "Saiba Mais" }],
-      targeting_suggestion: { notes: targeting_notes },
+      copy_options: [{ headline: finalHeadline, primary_text: finalPrimaryText, cta: cta_type || cta || "LEARN_MORE" }],
+      targeting_suggestion: { notes: targeting_notes, remarketing, includeIds, excludeIds },
     }).select().single();
 
     if (draftErr || !draft) return fail("Erro ao criar rascunho");
@@ -116,9 +258,6 @@ serve(async (req) => {
       geo_locations: { countries: ["BR"] },
       targeting_automation: { advantage_audience: 1 },
     };
-    // Support single audience_id or multiple audience_ids
-    const includeIds: string[] = audience_ids?.length ? audience_ids : (audience_id ? [audience_id] : []);
-    const excludeIds: string[] = excluded_audience_ids || [];
 
     if (includeIds.length > 0) {
       targetingObj.custom_audiences = includeIds.map((id: string) => ({ id }));
@@ -168,12 +307,11 @@ serve(async (req) => {
     steps.push(`✅ Conjunto: ${metaAdSetId}`);
 
     // ─── Step 3: Ad ───
-    const adPrimaryText = primary_text || targeting_notes || "Descubra como transformar seus resultados";
     const resolvedCta = cta_type || cta || "LEARN_MORE";
     const linkData: Record<string, unknown> = {
-      message: adPrimaryText,
+      message: finalPrimaryText,
       link: linkUrl,
-      name: headline || campaign_name,
+      name: finalHeadline,
       call_to_action: { type: resolvedCta, value: { link: linkUrl } },
     };
     if (creative_url) {
@@ -216,7 +354,14 @@ serve(async (req) => {
     // Log
     await supabase.from("emergency_logs").insert({
       profile_id: profileId, user_id: user.id, action_type: "auto_publish",
-      details: { campaign_name, meta_campaign_id: metaCampaignId, meta_adset_id: metaAdSetId, meta_ad_id: metaAdId, objective: obj, daily_budget: budget },
+      details: {
+        campaign_name, meta_campaign_id: metaCampaignId,
+        meta_adset_id: metaAdSetId, meta_ad_id: metaAdId,
+        objective: obj, daily_budget: budget,
+        remarketing: !!remarketing,
+        audiences_included: includeIds,
+        audiences_excluded: excludeIds,
+      },
     });
 
     return new Response(JSON.stringify({
