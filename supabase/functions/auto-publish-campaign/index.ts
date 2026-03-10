@@ -266,11 +266,12 @@ serve(async (req) => {
     }
 
     // ─── Step 2: AdSet ───
+    const useAdvantagePlus = ["OUTCOME_SALES", "OUTCOME_LEADS"].includes(obj);
     const targetingObj: Record<string, unknown> = {
       age_min: 18,
       age_max: 65,
       geo_locations: { countries: ["BR"] },
-      targeting_automation: { advantage_audience: 1 },
+      targeting_automation: { advantage_audience: useAdvantagePlus ? 1 : 0 },
     };
 
     if (includeIds.length > 0) {
