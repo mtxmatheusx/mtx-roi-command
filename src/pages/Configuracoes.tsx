@@ -675,8 +675,33 @@ export default function Configuracoes() {
             )}
             {productContext && !absorbResult && (
               <div className="bg-secondary/50 border border-border rounded-lg p-4">
-                <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide mb-2">Contexto atual</p>
-                <div className="prose prose-sm max-w-none text-sm"><ReactMarkdown>{productContext}</ReactMarkdown></div>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Contexto atual</p>
+                  {editingContext ? (
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="ghost" onClick={() => { setEditingContext(false); setEditContextValue(productContext); }}>Cancelar</Button>
+                      <Button size="sm" onClick={async () => {
+                        const { error } = await supabase.from("client_profiles").update({ product_context: editContextValue }).eq("id", activeProfile.id);
+                        if (!error) {
+                          toast({ title: "Contexto atualizado!" });
+                          setEditingContext(false);
+                          refetchProfiles();
+                        } else {
+                          toast({ title: "Erro ao salvar", description: error.message, variant: "destructive" });
+                        }
+                      }}>Salvar</Button>
+                    </div>
+                  ) : (
+                    <Button size="sm" variant="ghost" onClick={() => { setEditContextValue(productContext); setEditingContext(true); }}>
+                      ✏️ Editar
+                    </Button>
+                  )}
+                </div>
+                {editingContext ? (
+                  <Textarea value={editContextValue} onChange={(e) => setEditContextValue(e.target.value)} rows={12} className="text-sm" />
+                ) : (
+                  <div className="prose prose-sm max-w-none text-sm"><ReactMarkdown>{productContext}</ReactMarkdown></div>
+                )}
               </div>
             )}
           </CardContent>
