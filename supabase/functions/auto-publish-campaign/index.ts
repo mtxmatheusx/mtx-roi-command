@@ -355,7 +355,7 @@ serve(async (req) => {
       await rollback();
       const msg = metaError(adData);
       await supabase.from("campaign_drafts").update({ status: "failed", error_message: `${msg} | Rollback.` }).eq("id", draft.id);
-      return fail(msg, { step: "ad", rollback: true });
+      return fail(msg, { step: "ad", rollback: true, targeting_debug: { targeting: targetingObj, objective: obj, advantage_audience: useAdvantagePlus ? 1 : 0 } });
     }
     const metaAdId = adData.id;
     steps.push(`✅ Anúncio: ${metaAdId}`);
