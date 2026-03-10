@@ -140,7 +140,7 @@ export default function LancarCampanha() {
   const [isPublishing, setIsPublishing] = useState(false);
   const [publishStep, setPublishStep] = useState("");
   const [publishProgress, setPublishProgress] = useState(0);
-  const [publishResult, setPublishResult] = useState<{ success: boolean; meta_campaign_id?: string; ads_manager_url?: string; error?: string; error_user_title?: string; error_user_msg?: string; fbtrace_id?: string; step?: string; steps?: string[]; rollback?: boolean; total_ads?: number; failed_ads?: number; campaign_results?: any[] } | null>(null);
+  const [publishResult, setPublishResult] = useState<{ success: boolean; meta_campaign_id?: string; ads_manager_url?: string; error?: string; error_user_title?: string; error_user_msg?: string; fbtrace_id?: string; step?: string; steps?: string[]; rollback?: boolean; total_ads?: number; failed_ads?: number; campaign_results?: any[]; targeting_debug?: any } | null>(null);
   const [publishLogs, setPublishLogs] = useState<{ time: string; message: string; status: "done" | "pending" | "error" }[]>([]);
   const [drafts, setDrafts] = useState<DraftRecord[]>([]);
   const [reasoningOpen, setReasoningOpen] = useState(false);
