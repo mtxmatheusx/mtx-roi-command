@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, Sparkles, ChevronLeft, ChevronRight, Share2, Download, Copy, Play, ImageIcon, Wand2, FileText, Users } from "lucide-react";
+import { Loader2, Sparkles, ChevronLeft, ChevronRight, Share2, Download, Copy, Play, ImageIcon, Wand2, FileText, Users, FolderOpen } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useClientProfiles } from "@/hooks/useClientProfiles";
 import { useAuth } from "@/hooks/useAuth";
@@ -11,6 +11,15 @@ import { VisualDNA } from "@/pages/LaboratorioVisual";
 import { motion, AnimatePresence } from "framer-motion";
 import ContentPlatformSelector, { Platform, ContentType } from "@/components/ContentPlatformSelector";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+
+interface CreativeAsset {
+    id: string;
+    file_url: string;
+    file_name: string;
+    file_type: string;
+    description: string | null;
+}
 
 interface UGCCharacter {
     id: string;
@@ -49,6 +58,9 @@ export default function CarouselPreview({ visualDNA }: CarouselPreviewProps) {
     const [showCaptions, setShowCaptions] = useState(false);
     const [ugcCharacters, setUgcCharacters] = useState<UGCCharacter[]>([]);
     const [selectedCharacterId, setSelectedCharacterId] = useState<string>("");
+    const [creativeAssets, setCreativeAssets] = useState<CreativeAsset[]>([]);
+    const [showLibrary, setShowLibrary] = useState(false);
+    const [libraryTarget, setLibraryTarget] = useState<number>(0);
     const { toast } = useToast();
     const { activeProfile } = useClientProfiles();
     const { user } = useAuth();
@@ -66,6 +78,27 @@ export default function CarouselPreview({ visualDNA }: CarouselPreviewProps) {
         };
         load();
     }, [user?.id, activeProfile?.id]);
+
+    // Load creative assets from library
+    useEffect(() => {
+        if (!user?.id || !activeProfile?.id) return;
+        const load = async () => {
+            const { data } = await supabase
+                .from("creative_assets")
+                .select("id, file_url, file_name, file_type, description")
+                .eq("user_id", user.id)
+                .eq("profile_id", activeProfile.id)
+                .order("created_at", { ascending: false });
+            if (data) setCreativeAssets(data.filter(a => a.file_type.startsWith("image")));
+        };
+        load();
+    }, [user?.id, activeProfile?.id]);
+
+    const useLibraryImage = (slideIndex: number, url: string) => {
+        setSlideImages((prev) => ({ ...prev, [slideIndex]: url }));
+        setShowLibrary(false);
+        toast({ title: "✅ Imagem aplicada", description: `Imagem da biblioteca aplicada ao slide ${slideIndex + 1}.` });
+    };
 
     const handleGenerate = async () => {
         if (!theme) return;
@@ -270,6 +303,17 @@ export default function CarouselPreview({ visualDNA }: CarouselPreviewProps) {
                                     )}
                                     {generatingAll ? "Gerando..." : "Gerar Todas"}
                                 </Button>
+                                {creativeAssets.length > 0 && (
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => { setLibraryTarget(currentSlide); setShowLibrary(true); }}
+                                        className="gap-2"
+                                    >
+                                        <FolderOpen className="w-3 h-3" />
+                                        Biblioteca
+                                    </Button>
+                                )}
                             </div>
                         </CardContent>
                     </Card>
@@ -503,6 +547,39 @@ export default function CarouselPreview({ visualDNA }: CarouselPreviewProps) {
                     </CardContent>
                 </Card>
             )}
+
+            {/* Creative Library Picker Dialog */}
+            <Dialog open={showLibrary} onOpenChange={setShowLibrary}>
+                <DialogContent className="max-w-2xl max-h-[70vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <FolderOpen className="w-5 h-5 text-primary" />
+                            Biblioteca de Criativos — Slide {libraryTarget + 1}
+                        </DialogTitle>
+                    </DialogHeader>
+                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 mt-2">
+                        {creativeAssets.map((asset) => (
+                            <button
+                                key={asset.id}
+                                onClick={() => useLibraryImage(libraryTarget, asset.file_url)}
+                                className="group relative aspect-square rounded-lg overflow-hidden border-2 border-transparent hover:border-primary transition-colors cursor-pointer"
+                            >
+                                <img
+                                    src={asset.file_url}
+                                    alt={asset.file_name}
+                                    className="w-full h-full object-cover"
+                                />
+                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
+                                    <span className="text-white text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity">Usar</span>
+                                </div>
+                            </button>
+                        ))}
+                    </div>
+                    {creativeAssets.length === 0 && (
+                        <p className="text-center text-sm text-muted-foreground py-8">Nenhum criativo na biblioteca.</p>
+                    )}
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
