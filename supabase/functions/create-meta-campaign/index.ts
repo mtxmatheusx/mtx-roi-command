@@ -236,7 +236,7 @@ serve(async (req) => {
       const errorMsg = metaError(adSetData);
       await rollbackCampaign();
       await supabase.from("campaign_drafts").update({ status: "failed", error_message: `${errorMsg} | Rollback executado.`, meta_campaign_id: metaCampaignId }).eq("id", draftId);
-      return fail(`${errorMsg} | Campanha parcial apagada automaticamente.`, { step: "adset", meta_campaign_id: metaCampaignId, steps, rollback: true });
+      return fail(`${errorMsg} | Campanha parcial apagada automaticamente.`, { step: "adset", meta_campaign_id: metaCampaignId, steps, rollback: true, targeting_debug: { targeting: targetingObj, adset_body_keys: Object.keys(adSetBody), objective: draft.objective, advantage_audience: useAdvantagePlus ? 1 : 0 } });
     }
 
     const metaAdSetId = adSetData.id;
@@ -418,7 +418,7 @@ serve(async (req) => {
         status: "failed",
         error_message: `Todos os anúncios falharam: ${errorMsg} | Rollback executado.`,
       }).eq("id", draftId);
-      return fail(`Todos os anúncios falharam: ${errorMsg}`, { step: "ad", meta_campaign_id: metaCampaignId, meta_adset_id: metaAdSetId, steps, rollback: true });
+      return fail(`Todos os anúncios falharam: ${errorMsg}`, { step: "ad", meta_campaign_id: metaCampaignId, meta_adset_id: metaAdSetId, steps, rollback: true, targeting_debug: { targeting: targetingObj, objective: draft.objective, advantage_audience: useAdvantagePlus ? 1 : 0 } });
     }
 
     // At least some ads succeeded

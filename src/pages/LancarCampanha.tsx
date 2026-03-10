@@ -140,7 +140,7 @@ export default function LancarCampanha() {
   const [isPublishing, setIsPublishing] = useState(false);
   const [publishStep, setPublishStep] = useState("");
   const [publishProgress, setPublishProgress] = useState(0);
-  const [publishResult, setPublishResult] = useState<{ success: boolean; meta_campaign_id?: string; ads_manager_url?: string; error?: string; error_user_title?: string; error_user_msg?: string; fbtrace_id?: string; step?: string; steps?: string[]; rollback?: boolean; total_ads?: number; failed_ads?: number; campaign_results?: any[] } | null>(null);
+  const [publishResult, setPublishResult] = useState<{ success: boolean; meta_campaign_id?: string; ads_manager_url?: string; error?: string; error_user_title?: string; error_user_msg?: string; fbtrace_id?: string; step?: string; steps?: string[]; rollback?: boolean; total_ads?: number; failed_ads?: number; campaign_results?: any[]; targeting_debug?: any } | null>(null);
   const [publishLogs, setPublishLogs] = useState<{ time: string; message: string; status: "done" | "pending" | "error" }[]>([]);
   const [drafts, setDrafts] = useState<DraftRecord[]>([]);
   const [reasoningOpen, setReasoningOpen] = useState(false);
@@ -511,7 +511,7 @@ export default function LancarCampanha() {
           const failedStep = result.step ? stepLabels[result.step] || result.step : "";
           addLog(`Falha${suffix}: ${failedStep} — ${result.error}`, "error");
           if (result.rollback) addLog(`Rollback executado${suffix}`, "done");
-          campaignResults.push({ success: false, error: result.error, step: result.step, name: campaignName });
+          campaignResults.push({ success: false, error: result.error, step: result.step, name: campaignName, targeting_debug: result.targeting_debug });
         } else {
           const adCount = result.total_ads || 1;
           addLog(`✅ Campanha${suffix} publicada! ${adCount} anúncio(s) criados`, "done");
@@ -549,6 +549,7 @@ export default function LancarCampanha() {
           success: false,
           error: failures.map((f: any) => f.error).join(" | "),
           campaign_results: campaignResults,
+          targeting_debug: failures[0]?.targeting_debug,
         });
       }
 
@@ -1552,6 +1553,16 @@ export default function LancarCampanha() {
                     )}
                     {publishResult.fbtrace_id && (
                       <p className="text-xs text-muted-foreground/60 font-mono">fbtrace_id: {publishResult.fbtrace_id}</p>
+                    )}
+                    {publishResult.targeting_debug && (
+                      <details className="mt-2">
+                        <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors flex items-center gap-1">
+                          🔍 Payload de Targeting (debug)
+                        </summary>
+                        <pre className="mt-2 text-[10px] font-mono bg-secondary/50 border border-border rounded-md p-3 overflow-x-auto max-h-48 overflow-y-auto text-muted-foreground whitespace-pre-wrap break-all">
+                          {JSON.stringify(publishResult.targeting_debug, null, 2)}
+                        </pre>
+                      </details>
                     )}
                   </div>
                 )}
