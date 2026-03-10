@@ -46,7 +46,7 @@ serve(async (req) => {
     userId = user.id;
 
     const body = await req.json();
-    const { draftId, creativeUrls } = body;
+    const { draftId, creativeUrls, audience_id, audience_ids, excluded_audience_ids, destination_url, cta_type, use_catalog, catalog_id } = body;
 
     if (!draftId) return fail("draftId é obrigatório");
 
@@ -173,6 +173,17 @@ serve(async (req) => {
       if (useAdvantagePlus) {
         targetingObj.targeting_automation = { advantage_audience: 1 };
       }
+    }
+
+    // ─── Inject custom audiences (remarketing) ───
+    const includeAudienceIds: string[] = audience_ids?.length ? [...audience_ids] : (audience_id ? [audience_id] : []);
+    if (includeAudienceIds.length > 0) {
+      targetingObj.custom_audiences = includeAudienceIds.map((id: string) => ({ id }));
+      console.log("Injecting custom_audiences:", includeAudienceIds);
+    }
+    if (excluded_audience_ids?.length > 0) {
+      targetingObj.excluded_custom_audiences = excluded_audience_ids.map((id: string) => ({ id }));
+      console.log("Injecting excluded_custom_audiences:", excluded_audience_ids);
     }
 
     console.log("Final targeting payload:", JSON.stringify(targetingObj));
