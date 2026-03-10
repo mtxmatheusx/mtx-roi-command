@@ -377,6 +377,8 @@ serve(async (req) => {
               cpa_meta: profile.cpa_meta, cpa_max_toleravel: profile.cpa_max_toleravel,
               roas_min_escala: profile.roas_min_escala, teto_diario_escala: profile.teto_diario_escala,
               limite_escala: profile.limite_escala,
+              rollback_enabled: profile.rollback_enabled,
+              rollback_roas_threshold: profile.rollback_roas_threshold,
             }, campaignInsights, adsetsList);
             decisions = aiResult.decisions.filter((d: Decision) => d.action !== "maintain");
             // Filter out duplicate_scale if vertical scaling is disabled
