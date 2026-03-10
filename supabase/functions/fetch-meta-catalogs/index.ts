@@ -64,14 +64,24 @@ serve(async (req) => {
 
     // Step 1: Get Business ID from Ad Account
     const acctInfoUrl = `${META_API}/${adAccountId}?fields=business&access_token=${accessToken}`;
+    console.log("Fetching ad account info:", adAccountId);
     const acctInfoRes = await fetch(acctInfoUrl);
     const acctInfo = await acctInfoRes.json();
+    console.log("Ad account response:", JSON.stringify(acctInfo));
+
+    if (acctInfo?.error) {
+      return new Response(JSON.stringify({ error: acctInfo.error.message, catalogs: [] }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     // Step 2: Fetch catalogs from Business
     if (acctInfo?.business?.id) {
       const bizCatalogsUrl = `${META_API}/${acctInfo.business.id}/owned_product_catalogs?fields=id,name,product_count,vertical&access_token=${accessToken}&limit=50`;
+      console.log("Fetching catalogs from business:", acctInfo.business.id);
       const bizRes = await fetch(bizCatalogsUrl);
       const bizData = await bizRes.json();
+      console.log("Catalogs response:", JSON.stringify(bizData));
 
       if (!bizData.error) {
         return new Response(JSON.stringify({
@@ -81,6 +91,10 @@ serve(async (req) => {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
+      
+      return new Response(JSON.stringify({ error: bizData.error.message, catalogs: [] }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // Fallback: no business or error — return empty
