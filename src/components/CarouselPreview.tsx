@@ -47,8 +47,25 @@ export default function CarouselPreview({ visualDNA }: CarouselPreviewProps) {
     const [platforms, setPlatforms] = useState<Platform[]>(["instagram"]);
     const [contentType, setContentType] = useState<ContentType>("carousel");
     const [showCaptions, setShowCaptions] = useState(false);
+    const [ugcCharacters, setUgcCharacters] = useState<UGCCharacter[]>([]);
+    const [selectedCharacterId, setSelectedCharacterId] = useState<string>("");
     const { toast } = useToast();
     const { activeProfile } = useClientProfiles();
+    const { user } = useAuth();
+
+    // Load UGC characters
+    useEffect(() => {
+        if (!user?.id || !activeProfile?.id) return;
+        const load = async () => {
+            const { data } = await supabase
+                .from("ugc_characters")
+                .select("id, name, fixed_description, image_references")
+                .eq("user_id", user.id)
+                .eq("profile_id", activeProfile.id);
+            if (data) setUgcCharacters(data);
+        };
+        load();
+    }, [user?.id, activeProfile?.id]);
 
     const handleGenerate = async () => {
         if (!theme) return;
