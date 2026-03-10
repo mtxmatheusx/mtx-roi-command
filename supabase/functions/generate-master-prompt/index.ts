@@ -96,13 +96,15 @@ REFERENCE IMAGE ANALYSIS: You are receiving a REFERENCE IMAGE of the client's re
       });
     }
 
+    const systemPrompt = style === "stylized" ? STYLIZED_PROMPT : PHOTOREALISTIC_PROMPT;
+
     const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         model: referenceImageUrl ? "google/gemini-2.5-pro" : "google/gemini-2.5-flash",
         messages: [
-          { role: "system", content: SYSTEM_PROMPT },
+          { role: "system", content: systemPrompt },
           { role: "user", content: userContent },
         ],
       }),
