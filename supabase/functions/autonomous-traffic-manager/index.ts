@@ -385,6 +385,31 @@ serve(async (req) => {
             if (!profile.vertical_scale_enabled) {
               decisions = decisions.filter((d: Decision) => d.action !== "duplicate_scale");
             }
+            // SAFETY VALIDATION: Override AI pause decisions that contradict actual metrics
+            decisions = decisions.filter((d: Decision) => {
+              if (d.action === "pause") {
+                const campaign = campaignInsights.find((c: CampaignInsight) => c.id === d.campaign_id);
+                if (!campaign) return true;
+                const cpaThreshold = profile.cpa_max_toleravel * 1.15;
+                const actualCpa = campaign.purchases > 0 ? campaign.spend / campaign.purchases : campaign.spend;
+                // If CPA is within limits, do NOT pause
+                if (profile.cpa_max_toleravel > 0 && actualCpa <= cpaThreshold && campaign.purchases > 0) {
+                  console.log(`SAFETY: Blocked AI pause for "${campaign.name}" — CPA R$${actualCpa.toFixed(2)} is within limit R$${cpaThreshold.toFixed(2)}`);
+                  return false;
+                }
+                // If reason text says MANTER, do NOT pause
+                if (d.reason && (d.reason.includes("MANTER") || d.reason.includes("dentro dos limites") || d.reason.includes("está dentro"))) {
+                  console.log(`SAFETY: Blocked AI pause for "${campaign?.name}" — reason says MAINTAIN`);
+                  return false;
+                }
+                // If spend is very low (< 30% of daily budget) and has conversions, don't pause
+                if (campaign.spend < campaign.daily_budget * 0.3 && campaign.purchases > 0) {
+                  console.log(`SAFETY: Blocked AI pause for "${campaign.name}" — low spend with conversions`);
+                  return false;
+                }
+              }
+              return true;
+            });
             aiSummary = aiResult.summary;
           } else {
             decisions = applyStaticRules(campaignInsights, profile, adsetsList);
