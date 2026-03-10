@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import {
   X, Send, Brain, Loader2, Rocket, Plus, MessageSquare, Trash2,
   Users, Zap, Paperclip, Image, CheckCircle2, XCircle, Clock,
-  Target, BarChart3, Palette, Settings, TrendingUp, Eye
+  Target, BarChart3, Palette, Settings, TrendingUp, Eye, Volume2, Square
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ReactMarkdown from "react-markdown";
