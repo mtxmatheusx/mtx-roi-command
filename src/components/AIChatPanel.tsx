@@ -32,6 +32,8 @@ interface CampaignAction {
   headline?: string;
   primary_text?: string;
   cta?: string;
+  remarketing?: boolean;
+  remarketing_days?: number;
 }
 
 interface PublishStep {

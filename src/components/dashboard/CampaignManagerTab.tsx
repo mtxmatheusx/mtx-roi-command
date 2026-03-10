@@ -138,7 +138,7 @@ export default function CampaignManagerTab({ campaigns, isLoading }: Props) {
           destination_url: form.destinationUrl || undefined,
           creative_url: creativeUrls[0] || undefined,
           headline: form.headline || undefined,
-          primary_text: form.primaryText || undefined,
+          primary_text: form.targetingNotes || undefined,
           cta_type: form.ctaType,
           remarketing: form.isRemarketing || undefined,
           audience_ids: form.isRemarketing ? audiences.filter(a => a.type === "include").map(a => a.id) : undefined,
