@@ -267,6 +267,8 @@ serve(async (req) => {
 
     // ─── Step 2: AdSet ───
     const targetingObj: Record<string, unknown> = {
+      age_min: 18,
+      age_max: 65,
       geo_locations: { countries: ["BR"] },
       targeting_automation: { advantage_audience: 1 },
     };
