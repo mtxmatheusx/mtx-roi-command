@@ -736,14 +736,40 @@ export default function LancarCampanha() {
                   {campaignCount} campanhas independentes serão criadas em paralelo, cada uma com seu próprio conjunto e anúncios.
                 </div>
               )}
-              <div className="flex items-center gap-3 p-3 rounded-lg border bg-secondary/50">
-                <Checkbox id="useCatalog" checked={useCatalog} onCheckedChange={(v) => setUseCatalog(!!v)} />
-                <label htmlFor="useCatalog" className="text-sm cursor-pointer flex items-center gap-2">
-                  <ShoppingBag className="w-4 h-4 text-primary" />
-                  Usar Catálogo de Produtos (DPA / Advantage+ Catalog)
-                  {profileCatalogId && <span className="text-xs text-muted-foreground">ID: {profileCatalogId}</span>}
-                  {!profileCatalogId && <span className="text-xs text-warning">Configure o Catalog ID em Configurações</span>}
-                </label>
+              <div className="space-y-2">
+                <div className="flex items-center gap-3 p-3 rounded-lg border bg-secondary/50">
+                  <Checkbox id="useCatalog" checked={useCatalog} onCheckedChange={(v) => setUseCatalog(!!v)} />
+                  <label htmlFor="useCatalog" className="text-sm cursor-pointer flex items-center gap-2">
+                    <ShoppingBag className="w-4 h-4 text-primary" />
+                    Usar Catálogo de Produtos (DPA / Advantage+ Catalog)
+                    {profileCatalogId && <span className="text-xs text-muted-foreground">ID: {profileCatalogId}</span>}
+                  </label>
+                </div>
+                {useCatalog && !profileCatalogId && (
+                  <div className="p-3 rounded-lg border border-warning/30 bg-warning/5 space-y-2">
+                    <Label htmlFor="inlineCatalogId" className="text-sm flex items-center gap-1.5">
+                      <ShoppingBag className="w-3.5 h-3.5 text-warning" />
+                      Catalog ID <span className="text-xs text-muted-foreground">(obrigatório)</span>
+                    </Label>
+                    <Input
+                      id="inlineCatalogId"
+                      placeholder="Ex: 123456789012345"
+                      value={inlineCatalogId}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/[^0-9]/g, "");
+                        setInlineCatalogId(val);
+                        if (val) setSelectedCatalog(val);
+                      }}
+                      className="font-mono text-sm"
+                    />
+                    {inlineCatalogId && inlineCatalogId.length < 10 && (
+                      <p className="text-xs text-destructive">O Catalog ID deve ter pelo menos 10 dígitos.</p>
+                    )}
+                    <p className="text-xs text-muted-foreground">
+                      Encontre o ID no Gerenciador de Comércio da Meta ou configure em Configurações para salvar permanentemente.
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Remarketing Section */}
