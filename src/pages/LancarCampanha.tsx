@@ -735,16 +735,15 @@ export default function LancarCampanha() {
                   {campaignCount} campanhas independentes serão criadas em paralelo, cada uma com seu próprio conjunto e anúncios.
                 </div>
               )}
-              {profileCatalogId && (
-                <div className="flex items-center gap-3 p-3 rounded-lg border bg-secondary/50">
-                  <Checkbox id="useCatalog" checked={useCatalog} onCheckedChange={(v) => setUseCatalog(!!v)} />
-                  <label htmlFor="useCatalog" className="text-sm cursor-pointer flex items-center gap-2">
-                    <ShoppingBag className="w-4 h-4 text-primary" />
-                    Usar Catálogo de Produtos (DPA / Advantage+ Catalog)
-                    <span className="text-xs text-muted-foreground">ID: {profileCatalogId}</span>
-                  </label>
-                </div>
-              )}
+              <div className="flex items-center gap-3 p-3 rounded-lg border bg-secondary/50">
+                <Checkbox id="useCatalog" checked={useCatalog} onCheckedChange={(v) => setUseCatalog(!!v)} />
+                <label htmlFor="useCatalog" className="text-sm cursor-pointer flex items-center gap-2">
+                  <ShoppingBag className="w-4 h-4 text-primary" />
+                  Usar Catálogo de Produtos (DPA / Advantage+ Catalog)
+                  {profileCatalogId && <span className="text-xs text-muted-foreground">ID: {profileCatalogId}</span>}
+                  {!profileCatalogId && <span className="text-xs text-warning">Configure o Catalog ID em Configurações</span>}
+                </label>
+              </div>
 
               {/* Remarketing Section */}
               <div className="space-y-3">
