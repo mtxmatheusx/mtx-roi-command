@@ -249,7 +249,7 @@ function applyStaticRules(campaigns: CampaignInsight[], profileConfig: any, adse
 async function duplicateAdset(adsetId: string, accessToken: string, newName?: string): Promise<{ success: boolean; new_adset_id?: string; error?: string }> {
   try {
     // Use Meta API copy endpoint
-    const copyResp = await fetch(`https://graph.facebook.com/v21.0/${adsetId}/copies`, {
+    const copyResp = await fetch(`https://graph.facebook.com/v23.0/${adsetId}/copies`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -315,9 +315,9 @@ serve(async (req) => {
 
         try {
           // Fetch campaign (yesterday-today), campaign today-only, and adset data in parallel
-          const campaignUrl = `https://graph.facebook.com/v21.0/${profile.ad_account_id}/campaigns?fields=id,name,effective_status,daily_budget,insights.time_range({"since":"${yesterday}","until":"${today}"}){spend,actions,action_values,ctr,frequency}&effective_status=["ACTIVE"]&access_token=${accessToken}&limit=100`;
-          const campaignTodayUrl = `https://graph.facebook.com/v21.0/${profile.ad_account_id}/campaigns?fields=id,insights.time_range({"since":"${today}","until":"${today}"}){spend,actions,action_values}&effective_status=["ACTIVE"]&access_token=${accessToken}&limit=100`;
-          const adsetUrl = `https://graph.facebook.com/v21.0/${profile.ad_account_id}/adsets?fields=id,name,daily_budget,effective_status,campaign_id,insights.time_range({"since":"${twoDaysAgo}","until":"${today}"}){spend,actions,action_values,ctr,frequency}&effective_status=["ACTIVE"]&access_token=${accessToken}&limit=100`;
+          const campaignUrl = `https://graph.facebook.com/v23.0/${profile.ad_account_id}/campaigns?fields=id,name,effective_status,daily_budget,insights.time_range({"since":"${yesterday}","until":"${today}"}){spend,actions,action_values,ctr,frequency}&effective_status=["ACTIVE"]&access_token=${accessToken}&limit=100`;
+          const campaignTodayUrl = `https://graph.facebook.com/v23.0/${profile.ad_account_id}/campaigns?fields=id,insights.time_range({"since":"${today}","until":"${today}"}){spend,actions,action_values}&effective_status=["ACTIVE"]&access_token=${accessToken}&limit=100`;
+          const adsetUrl = `https://graph.facebook.com/v23.0/${profile.ad_account_id}/adsets?fields=id,name,daily_budget,effective_status,campaign_id,insights.time_range({"since":"${twoDaysAgo}","until":"${today}"}){spend,actions,action_values,ctr,frequency}&effective_status=["ACTIVE"]&access_token=${accessToken}&limit=100`;
 
           const [campaignResp, campaignTodayResp, adsetResp] = await Promise.all([fetch(campaignUrl), fetch(campaignTodayUrl), fetch(adsetUrl)]);
           const [campaignData, campaignTodayData, adsetData] = await Promise.all([campaignResp.json(), campaignTodayResp.json(), adsetResp.json()]);
@@ -377,6 +377,8 @@ serve(async (req) => {
               cpa_meta: profile.cpa_meta, cpa_max_toleravel: profile.cpa_max_toleravel,
               roas_min_escala: profile.roas_min_escala, teto_diario_escala: profile.teto_diario_escala,
               limite_escala: profile.limite_escala,
+              rollback_enabled: profile.rollback_enabled,
+              rollback_roas_threshold: profile.rollback_roas_threshold,
             }, campaignInsights, adsetsList);
             decisions = aiResult.decisions.filter((d: Decision) => d.action !== "maintain");
             // Filter out duplicate_scale if vertical scaling is disabled
@@ -396,7 +398,7 @@ serve(async (req) => {
           for (const decision of decisions) {
             try {
               if (decision.action === "pause") {
-                const pauseResp = await fetch(`https://graph.facebook.com/v21.0/${decision.campaign_id}`, {
+                const pauseResp = await fetch(`https://graph.facebook.com/v23.0/${decision.campaign_id}`, {
                   method: "POST", headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({ status: "PAUSED", access_token: accessToken }),
                 });
@@ -425,7 +427,7 @@ serve(async (req) => {
                 const currentBudget = parseInt(campaignBudgetRaw || "0", 10) / 100;
                 const rollbackBudget = decision.new_budget || currentBudget / (1 + profile.limite_escala / 100);
 
-                const rollbackResp = await fetch(`https://graph.facebook.com/v21.0/${campaignId}`, {
+                const rollbackResp = await fetch(`https://graph.facebook.com/v23.0/${campaignId}`, {
                   method: "POST", headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({ daily_budget: Math.round(rollbackBudget * 100), access_token: accessToken }),
                 });
@@ -449,7 +451,7 @@ serve(async (req) => {
                   if (teto > 0 && newBudget > teto) {
                     profileResult.actions.push({ action: "scale", campaign_id: campaignId, reason: "Teto atingido", status: "ABORTED_CEILING" });
                   } else {
-                    const scaleResp = await fetch(`https://graph.facebook.com/v21.0/${campaignId}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ daily_budget: Math.round(newBudget * 100), access_token: accessToken }) });
+                    const scaleResp = await fetch(`https://graph.facebook.com/v23.0/${campaignId}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ daily_budget: Math.round(newBudget * 100), access_token: accessToken }) });
                     const scaleData = await scaleResp.json();
                     await sb.from("emergency_logs").insert({ profile_id: profile.id, user_id: profile.user_id, action_type: "agent_scale", details: { campaign_id: campaignId, campaign_name: campaign?.name, old_budget: campaignBudget, new_budget: newBudget, level: "campaign", reason: decision.reason, ai_driven: !!LOVABLE_API_KEY, success: scaleData.success || false } });
                     profileResult.actions.push({ action: "scale", campaign_id: campaignId, old_budget: campaignBudget, new_budget: newBudget, reason: decision.reason, status: scaleData.success ? "EXECUTED" : "FAILED" });
@@ -461,7 +463,7 @@ serve(async (req) => {
                     const newBudget = currentBudget * (1 + profile.limite_escala / 100);
                     const teto = profile.teto_diario_escala || 0;
                     if (teto > 0 && newBudget > teto) continue;
-                    const scaleResp = await fetch(`https://graph.facebook.com/v21.0/${adset.id}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ daily_budget: Math.round(newBudget * 100), access_token: accessToken }) });
+                    const scaleResp = await fetch(`https://graph.facebook.com/v23.0/${adset.id}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ daily_budget: Math.round(newBudget * 100), access_token: accessToken }) });
                     const scaleData = await scaleResp.json();
                     await sb.from("emergency_logs").insert({ profile_id: profile.id, user_id: profile.user_id, action_type: "agent_scale", details: { adset_id: adset.id, adset_name: adset.name, campaign_id: campaignId, old_budget: currentBudget, new_budget: newBudget, level: "adset", reason: decision.reason, ai_driven: !!LOVABLE_API_KEY, success: scaleData.success || false } });
                     profileResult.actions.push({ action: "scale", adset_id: adset.id, adset_name: adset.name, old_budget: currentBudget, new_budget: newBudget, reason: decision.reason, status: scaleData.success ? "EXECUTED" : "FAILED" });
