@@ -11,6 +11,15 @@ import { VisualDNA } from "@/pages/LaboratorioVisual";
 import { motion, AnimatePresence } from "framer-motion";
 import ContentPlatformSelector, { Platform, ContentType } from "@/components/ContentPlatformSelector";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+
+interface CreativeAsset {
+    id: string;
+    file_url: string;
+    file_name: string;
+    file_type: string;
+    description: string | null;
+}
 
 interface UGCCharacter {
     id: string;
