@@ -692,9 +692,6 @@ export default function Configuracoes() {
                         await updateProfile({ product_context: editContextValue });
                         toast({ title: "Contexto atualizado!" });
                         setEditingContext(false);
-                        } else {
-                          toast({ title: "Erro ao salvar", description: error.message, variant: "destructive" });
-                        }
                       }}>Salvar</Button>
                     </div>
                   ) : (
