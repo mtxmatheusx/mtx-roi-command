@@ -692,6 +692,53 @@ export default function CarouselPreview({ visualDNA }: CarouselPreviewProps) {
                                         </div>
                                     </div>
 
+                                    {/* Per-slide reference image upload */}
+                                    <div className="p-3.5 rounded-lg bg-secondary/50 border border-border space-y-2">
+                                        <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
+                                            <Upload className="w-3 h-3" /> Imagem de Referência (Slide {currentSlide + 1})
+                                        </span>
+                                        <p className="text-[10px] text-muted-foreground">
+                                            Envie uma foto do produto para que a IA gere a imagem incorporando esses detalhes.
+                                        </p>
+                                        {slideReferenceImages[currentSlide] ? (
+                                            <div className="relative inline-block">
+                                                <img src={slideReferenceImages[currentSlide]} alt="Referência" className="h-20 rounded-lg border border-border object-cover" />
+                                                <button
+                                                    onClick={() => removeSlideRef(currentSlide)}
+                                                    className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-0.5"
+                                                >
+                                                    <X className="w-3 h-3" />
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <div className="flex gap-2">
+                                                <Button variant="outline" size="sm" className="gap-1.5 text-xs h-8"
+                                                    disabled={uploadingRef}
+                                                    onClick={() => slideRefInputRef.current?.click()}>
+                                                    {uploadingRef ? <Loader2 className="w-3 h-3 animate-spin" /> : <Upload className="w-3 h-3" />}
+                                                    Enviar Referência
+                                                </Button>
+                                                {creativeAssets.length > 0 && (
+                                                    <Button variant="outline" size="sm" className="gap-1.5 text-xs h-8"
+                                                        onClick={() => { setLibraryTarget(currentSlide); setShowLibrary(true); }}>
+                                                        <FolderOpen className="w-3 h-3" /> Da Biblioteca
+                                                    </Button>
+                                                )}
+                                            </div>
+                                        )}
+                                        <input
+                                            ref={slideRefInputRef}
+                                            type="file"
+                                            accept="image/jpeg,image/png,image/webp"
+                                            className="hidden"
+                                            onChange={(e) => {
+                                                const file = e.target.files?.[0];
+                                                if (file) handleSlideRefUpload(file, currentSlide);
+                                                e.target.value = "";
+                                            }}
+                                        />
+                                    </div>
+
                                     {/* Generated preview */}
                                     {hasImage && (
                                         <div className="space-y-1.5">

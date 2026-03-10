@@ -50,7 +50,15 @@ serve(async (req) => {
 
     const fullPrompt = `Create a professional-grade Instagram carousel slide image with editorial quality. ${prompt}. ${paletteInfo} Style: ${visualDNA?.aesthetic || "Clean and modern"}. CRITICAL QUALITY DIRECTIVES: Shot on Hasselblad X2D 100C with XCD 90mm f/2.5 lens at native ISO 64. Camera RAW processed in Capture One Pro with careful highlight recovery and shadow detail. HUMAN RENDERING: Anatomically correct proportions, natural asymmetric features, realistic skin with visible pores and subsurface scattering, natural hair texture with individual strand detail, eyes with realistic iris patterns and specular highlights, natural lip texture. MATERIAL QUALITY: Authentic fabric rendering with visible thread count, proper drape physics, realistic leather grain, metal with accurate HDRI reflections. LIGHTING: Three-point studio setup with large octabox key light, edge-lit rim, and negative fill for sculpting. Natural color temperature mixing. POST-PROCESSING: Subtle frequency separation retouching preserving skin texture, dodge-and-burn contouring, color-accurate output. NO uncanny valley effects, NO waxy skin, NO anatomical errors, NO AI artifacts. 1080x1350 portrait format, social media ready. No text overlays.`;
 
-    console.log("Generating image with prompt:", fullPrompt.substring(0, 100));
+    console.log("Generating image with prompt:", fullPrompt.substring(0, 100), "| ref:", !!referenceImageUrl);
+
+    // Build message content — text-only or multimodal with reference image
+    const messageContent: any = referenceImageUrl
+      ? [
+          { type: "text", text: `Use the provided reference image as a visual guide for the product/subject. Incorporate the exact details, colors, textures and design of the reference into the generated scene. ${fullPrompt}` },
+          { type: "image_url", image_url: { url: referenceImageUrl } },
+        ]
+      : fullPrompt;
 
     const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -63,7 +71,7 @@ serve(async (req) => {
         messages: [
           {
             role: "user",
-            content: fullPrompt,
+            content: messageContent,
           },
         ],
         modalities: ["image", "text"],
