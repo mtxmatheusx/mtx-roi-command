@@ -427,7 +427,7 @@ serve(async (req) => {
                 const currentBudget = parseInt(campaignBudgetRaw || "0", 10) / 100;
                 const rollbackBudget = decision.new_budget || currentBudget / (1 + profile.limite_escala / 100);
 
-                const rollbackResp = await fetch(`https://graph.facebook.com/v21.0/${campaignId}`, {
+                const rollbackResp = await fetch(`https://graph.facebook.com/v23.0/${campaignId}`, {
                   method: "POST", headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({ daily_budget: Math.round(rollbackBudget * 100), access_token: accessToken }),
                 });
