@@ -114,6 +114,12 @@ export default function CarouselPreview({ visualDNA }: CarouselPreviewProps) {
         toast({ title: "✅ Imagem aplicada", description: `Imagem da biblioteca aplicada ao slide ${slideIndex + 1}.` });
     };
 
+    const useLibraryAsReference = (slideIndex: number, url: string) => {
+        setSlideReferenceImages(prev => ({ ...prev, [slideIndex]: url }));
+        setShowLibrary(false);
+        toast({ title: "📎 Referência aplicada", description: `Imagem de referência definida para o slide ${slideIndex + 1}.` });
+    };
+
     const handleGenerate = async () => {
         if (!theme) return;
         setLoading(true);
