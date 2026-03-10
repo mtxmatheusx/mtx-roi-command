@@ -595,6 +595,10 @@ export default function Configuracoes() {
           </CardContent>
         </Card>
 
+  // Edit context state
+  const [editingContext, setEditingContext] = useState(false);
+  const [editContextValue, setEditContextValue] = useState("");
+
 
         <Card>
           <CardHeader>
