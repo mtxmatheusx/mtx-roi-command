@@ -7,7 +7,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const META_API = "https://graph.facebook.com/v21.0";
+const META_API = "https://graph.facebook.com/v23.0";
 
 function metaError(data: any): string {
   return data?.error?.error_user_msg || data?.error?.message || "Erro desconhecido da Meta API";
@@ -86,12 +86,17 @@ serve(async (req) => {
     if (draftErr || !draft) return fail("Erro ao criar rascunho");
 
     // ─── Step 1: Campaign ───
+    const campaignForm = new URLSearchParams();
+    campaignForm.append("name", campaign_name);
+    campaignForm.append("objective", obj);
+    campaignForm.append("status", "PAUSED");
+    campaignForm.append("special_ad_categories", "[]");
+    campaignForm.append("access_token", accessToken);
+
     const campaignRes = await fetch(`${META_API}/${adAccountId}/campaigns`, {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: campaign_name, objective: obj, status: "PAUSED",
-        special_ad_categories: [], access_token: accessToken,
-      }),
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: campaignForm.toString(),
     });
     const campaignData = await campaignRes.json();
     if (campaignData.error) {
@@ -133,22 +138,29 @@ serve(async (req) => {
         : obj === "OUTCOME_ENGAGEMENT" ? "POST_ENGAGEMENT"
         : obj === "OUTCOME_AWARENESS" ? "REACH" : "LINK_CLICKS",
       bid_strategy: "LOWEST_COST_WITHOUT_CAP",
-      targeting: targetingObj,
-      is_adset_budget_sharing_enabled: false,
+      targeting: JSON.stringify(targetingObj),
+      is_adset_budget_sharing_enabled: "false",
       status: "PAUSED",
       access_token: accessToken,
     };
 
     if (isConversion) {
-      adSetBody.promoted_object = {
+      adSetBody.promoted_object = JSON.stringify({
         pixel_id: pixelId,
         custom_event_type: obj === "OUTCOME_LEADS" ? "LEAD" : "PURCHASE",
-      };
+      });
+    }
+
+    // Use form-encoded for better Meta API compatibility
+    const adSetForm = new URLSearchParams();
+    for (const [k, v] of Object.entries(adSetBody)) {
+      adSetForm.append(k, String(v));
     }
 
     const adSetRes = await fetch(`${META_API}/${adAccountId}/adsets`, {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(adSetBody),
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: adSetForm.toString(),
     });
     const adSetData = await adSetRes.json();
     if (adSetData.error) {
