@@ -846,13 +846,19 @@ export default function CarouselPreview({ visualDNA }: CarouselPreviewProps) {
                     </DialogHeader>
                     <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mt-2">
                         {creativeAssets.map((asset) => (
-                            <button key={asset.id} onClick={() => useLibraryImage(libraryTarget, asset.file_url)}
-                                className="group relative aspect-square rounded-lg overflow-hidden border border-border hover:border-primary transition-colors cursor-pointer">
+                            <div key={asset.id} className="group relative aspect-square rounded-lg overflow-hidden border border-border hover:border-primary transition-colors">
                                 <img src={asset.file_url} alt={asset.file_name} className="w-full h-full object-cover" />
-                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
-                                    <span className="text-white text-[10px] font-semibold opacity-0 group-hover:opacity-100 transition-opacity">Usar</span>
+                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-colors flex flex-col items-center justify-center gap-1.5">
+                                    <button onClick={() => useLibraryImage(libraryTarget, asset.file_url)}
+                                        className="text-white text-[10px] font-semibold opacity-0 group-hover:opacity-100 transition-opacity bg-primary/80 px-2.5 py-1 rounded cursor-pointer">
+                                        Usar como Imagem
+                                    </button>
+                                    <button onClick={() => useLibraryAsReference(libraryTarget, asset.file_url)}
+                                        className="text-white text-[10px] font-semibold opacity-0 group-hover:opacity-100 transition-opacity bg-secondary/80 px-2.5 py-1 rounded cursor-pointer">
+                                        📎 Usar como Referência
+                                    </button>
                                 </div>
-                            </button>
+                            </div>
                         ))}
                     </div>
                     {creativeAssets.length === 0 && (
