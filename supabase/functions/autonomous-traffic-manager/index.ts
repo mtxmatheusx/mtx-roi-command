@@ -71,12 +71,13 @@ REGRAS DE ESCALA HORIZONTAL (Budget Increase):
 - NÃO escalar se frequência > 2.5 e CTR < 1.0% (saturação)
 
 REGRAS DE ROLLBACK DE ESCALA (Proteção ROAS — CRÍTICO — avaliada com dados do DIA ATUAL):
-- Se a campanha/conjunto foi escalado (budget atual > budget anterior estimado) E ROAS do DIA ATUAL (today_roas) ≥ 10x E o aumento percentual do investimento é MAIOR que o aumento percentual do ROAS E purchases do DIA ATUAL (today_purchases) == 0 → ROLLBACK
+${profileConfig.rollback_enabled ? `- REGRA ATIVA (limiar: ${profileConfig.rollback_roas_threshold}x)
+- Se a campanha/conjunto foi escalado (budget atual > budget anterior estimado) E ROAS do DIA ATUAL (today_roas) ≥ ${profileConfig.rollback_roas_threshold}x E o aumento percentual do investimento é MAIOR que o aumento percentual do ROAS E purchases do DIA ATUAL (today_purchases) == 0 → ROLLBACK
 - Ação: Retornar o orçamento ao valor anterior (antes da escala) para estabilizar
 - Use "rollback" como action, informe new_budget com o valor anterior estimado
-- EXCEÇÃO: Se o ROAS do dia anterior era < 10x antes da escala, NÃO fazer rollback — continuar escalando
+- EXCEÇÃO: Se o ROAS do dia anterior era < ${profileConfig.rollback_roas_threshold}x antes da escala, NÃO fazer rollback — continuar escalando
 - Esta regra se aplica novamente sempre que as condições forem atendidas após nova escala
-- IMPORTANTE: Use os campos today_spend, today_purchases, today_roas para esta avaliação, NÃO os campos aggregados
+- IMPORTANTE: Use os campos today_spend, today_purchases, today_roas para esta avaliação, NÃO os campos aggregados` : `- REGRA DESATIVADA pelo usuário nas configurações. NÃO executar rollback.`}
 
 REGRAS DE ESCALA VERTICAL (Duplicação):
 - Se um adset já está com orçamento >= 80% do teto diário (R$ ${profileConfig.teto_diario_escala}) E ROAS > ${profileConfig.roas_min_escala} E purchases >= 3 → DUPLICAR_ESCALAR
