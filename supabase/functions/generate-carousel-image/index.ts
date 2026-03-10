@@ -30,7 +30,7 @@ serve(async (req) => {
       });
     }
 
-    const { prompt, visualDNA } = body;
+    const { prompt, visualDNA, referenceImageUrl } = body;
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 
     if (!LOVABLE_API_KEY) {
