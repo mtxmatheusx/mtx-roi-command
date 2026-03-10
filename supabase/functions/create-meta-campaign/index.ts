@@ -46,7 +46,7 @@ serve(async (req) => {
     userId = user.id;
 
     const body = await req.json();
-    const { draftId, creativeUrls } = body;
+    const { draftId, creativeUrls, audience_id, audience_ids, excluded_audience_ids, destination_url, cta_type, use_catalog, catalog_id } = body;
 
     if (!draftId) return fail("draftId é obrigatório");
 
