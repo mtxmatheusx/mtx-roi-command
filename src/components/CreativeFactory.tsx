@@ -135,7 +135,7 @@ export default function CreativeFactory({ winners }: CreativeFactoryProps) {
     setMasterPrompt("");
     try {
       const { data, error } = await supabase.functions.invoke("generate-master-prompt", {
-        body: { profileId: activeProfile.id, rawIdea: rawIdea.trim(), referenceImageUrl },
+        body: { profileId: activeProfile.id, rawIdea: rawIdea.trim(), referenceImageUrl, style: generationStyle },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
