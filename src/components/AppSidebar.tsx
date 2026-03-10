@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useSidebarState } from "@/hooks/useSidebarState";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
 
 interface NavGroup {
   label: string;
@@ -79,17 +80,36 @@ export default function AppSidebar() {
       >
         {({ isActive }: { isActive: boolean }) => (
           <>
-            {/* Active indicator bar */}
-            {isActive && (
-              <span
-                className={cn(
-                  "absolute left-0 top-1/2 -translate-y-1/2 w-[3px] rounded-r-full bg-primary transition-all",
-                  !showLabels ? "h-5" : "h-6"
-                )}
-              />
-            )}
+            {/* Animated active indicator bar */}
+            <AnimatePresence>
+              {isActive && (
+                <motion.span
+                  layoutId="sidebar-active-indicator"
+                  className={cn(
+                    "absolute left-0 top-1/2 -translate-y-1/2 w-[3px] rounded-r-full bg-primary",
+                    !showLabels ? "h-5" : "h-6"
+                  )}
+                  initial={{ opacity: 0, scaleY: 0 }}
+                  animate={{ opacity: 1, scaleY: 1 }}
+                  exit={{ opacity: 0, scaleY: 0 }}
+                  transition={{ type: "spring", stiffness: 350, damping: 30 }}
+                />
+              )}
+            </AnimatePresence>
             <Icon className={cn("w-4 h-4 shrink-0 transition-colors", isActive && "text-primary")} />
-            {showLabels && <span className="truncate">{label}</span>}
+            <AnimatePresence mode="wait">
+              {showLabels && (
+                <motion.span
+                  className="truncate"
+                  initial={{ opacity: 0, width: 0 }}
+                  animate={{ opacity: 1, width: "auto" }}
+                  exit={{ opacity: 0, width: 0 }}
+                  transition={{ duration: 0.15 }}
+                >
+                  {label}
+                </motion.span>
+              )}
+            </AnimatePresence>
           </>
         )}
       </RouterNavLink>
@@ -125,15 +145,23 @@ export default function AppSidebar() {
         !showLabels ? "px-2 py-4 justify-center" : "px-5 py-5 justify-between"
       )}>
         {!showLabels ? (
-          <div className="w-8 h-8 rounded-xl bg-primary flex items-center justify-center shadow-sm">
+          <motion.div
+            className="w-8 h-8 rounded-xl bg-primary flex items-center justify-center shadow-sm"
+            whileHover={{ scale: 1.08 }}
+            whileTap={{ scale: 0.95 }}
+          >
             <span className="text-primary-foreground font-bold text-sm">M</span>
-          </div>
+          </motion.div>
         ) : (
           <>
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-primary flex items-center justify-center shrink-0 shadow-sm">
+              <motion.div
+                className="w-8 h-8 rounded-xl bg-primary flex items-center justify-center shrink-0 shadow-sm"
+                whileHover={{ scale: 1.08 }}
+                whileTap={{ scale: 0.95 }}
+              >
                 <span className="text-primary-foreground font-bold text-sm">M</span>
-              </div>
+              </motion.div>
               <div>
                 <h1 className="text-sm font-semibold text-foreground leading-none">MTX Estratégias</h1>
                 <p className="text-[11px] text-muted-foreground mt-0.5">Command Center</p>
@@ -159,30 +187,61 @@ export default function AppSidebar() {
 
       {showLabels && <ProfileSelector />}
 
-      {/* Grouped Nav */}
-      <nav className={cn("flex-1 py-1 overflow-y-auto", !showLabels ? "px-1.5" : "px-3")} aria-label="Navegação principal">
-        {navGroups.map((group, gi) => (
-          <div key={group.label} className={cn(gi > 0 && "mt-1")}>
-            {/* Group label */}
-            {showLabels ? (
-              <p className="px-3 pt-3 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
-                {group.label}
-              </p>
-            ) : (
-              gi > 0 && (
-                <div className="my-2 mx-2">
-                  <div className="h-px bg-border" />
-                </div>
-              )
-            )}
-            <div className="space-y-0.5">
-              {group.items.map((item) => (
-                <NavItem key={item.to} to={item.to} label={item.label} icon={item.icon} end={item.end} />
-              ))}
-            </div>
-          </div>
-        ))}
-      </nav>
+      {/* Grouped Nav with animations */}
+      <LayoutGroup>
+        <nav className={cn("flex-1 py-1 overflow-y-auto", !showLabels ? "px-1.5" : "px-3")} aria-label="Navegação principal">
+          {navGroups.map((group, gi) => (
+            <motion.div
+              key={group.label}
+              className={cn(gi > 0 && "mt-1")}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: gi * 0.05, duration: 0.2 }}
+            >
+              {/* Group label */}
+              <AnimatePresence mode="wait">
+                {showLabels ? (
+                  <motion.p
+                    key="label"
+                    className="px-3 pt-3 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.15 }}
+                  >
+                    {group.label}
+                  </motion.p>
+                ) : (
+                  gi > 0 && (
+                    <motion.div
+                      key="divider"
+                      className="my-2 mx-2"
+                      initial={{ opacity: 0, scaleX: 0 }}
+                      animate={{ opacity: 1, scaleX: 1 }}
+                      exit={{ opacity: 0, scaleX: 0 }}
+                      transition={{ duration: 0.15 }}
+                    >
+                      <div className="h-px bg-border" />
+                    </motion.div>
+                  )
+                )}
+              </AnimatePresence>
+              <div className="space-y-0.5">
+                {group.items.map((item, ii) => (
+                  <motion.div
+                    key={item.to}
+                    initial={{ opacity: 0, x: -8 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: gi * 0.05 + ii * 0.02, duration: 0.2 }}
+                  >
+                    <NavItem to={item.to} label={item.label} icon={item.icon} end={item.end} />
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
+          ))}
+        </nav>
+      </LayoutGroup>
 
       {/* Footer */}
       <div className={cn(
