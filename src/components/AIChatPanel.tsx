@@ -1,5 +1,9 @@
-import { useState, useRef, useEffect } from "react";
-import { X, Send, Brain, Loader2, Rocket, Plus, MessageSquare, Trash2, Users, Zap } from "lucide-react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import {
+  X, Send, Brain, Loader2, Rocket, Plus, MessageSquare, Trash2,
+  Users, Zap, Paperclip, Image, CheckCircle2, XCircle, Clock,
+  Target, BarChart3, Palette, Settings, TrendingUp, Eye
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ReactMarkdown from "react-markdown";
 import { useClientProfiles } from "@/hooks/useClientProfiles";
@@ -7,9 +11,10 @@ import { useChatHistory, Msg } from "@/hooks/useChatHistory";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 interface CampaignAction {
-  action: string; // "create_campaign" | "create_audience"
+  action: string;
   campaign_name?: string;
   objective?: string;
   daily_budget?: number;
@@ -17,13 +22,22 @@ interface CampaignAction {
   reasoning?: string;
   use_catalog?: boolean;
   destination_url?: string;
-  // Audience fields
   audience_type?: string;
   audience_name?: string;
   retention_days?: number;
   url_filter?: string;
   source_audience_id?: string;
   ratio?: number;
+  creative_url?: string;
+  headline?: string;
+  primary_text?: string;
+  cta?: string;
+}
+
+interface PublishStep {
+  label: string;
+  status: "pending" | "running" | "done" | "error";
+  detail?: string;
 }
 
 const AI_CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-chat`;
@@ -95,8 +109,12 @@ export default function AIChatPanel() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [executingAction, setExecutingAction] = useState(false);
+  const [publishSteps, setPublishSteps] = useState<PublishStep[] | null>(null);
+  const [uploadedCreatives, setUploadedCreatives] = useState<string[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { activeProfile, cpaMeta, ticketMedio, limiteEscala, budgetMaximo, catalogId } = useClientProfiles();
   const { toast } = useToast();
 
@@ -108,7 +126,7 @@ export default function AIChatPanel() {
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
-  }, [messages]);
+  }, [messages, publishSteps]);
 
   const campaignContext = activeProfile
     ? {
@@ -118,15 +136,17 @@ export default function AIChatPanel() {
         limite_escala: limiteEscala,
         budget_maximo: budgetMaximo,
         catalog_id: catalogId || null,
+        pixel_id: activeProfile.pixel_id || null,
+        page_id: activeProfile.page_id || null,
+        has_token: !!activeProfile.meta_access_token,
+        uploaded_creatives: uploadedCreatives,
       }
     : undefined;
 
+  // ── Validations ──
   const validateProfileRequirements = (action: CampaignAction): string[] => {
     const missing: string[] = [];
-    if (!activeProfile) {
-      missing.push("Perfil ativo não selecionado");
-      return missing;
-    }
+    if (!activeProfile) { missing.push("Perfil ativo não selecionado"); return missing; }
     const token = activeProfile.meta_access_token;
     if (!token || token.trim() === "") missing.push("Meta Access Token");
     const isConversion = ["OUTCOME_SALES", "OUTCOME_LEADS"].includes(action.objective || "OUTCOME_SALES");
@@ -145,11 +165,55 @@ export default function AIChatPanel() {
   };
 
   const showMissingFieldsError = (missing: string[]) => {
-    const msg = `⚠️ **Configuração incompleta**\n\nOs seguintes campos são obrigatórios e estão faltando no perfil:\n\n${missing.map(f => `- ❌ **${f}**`).join("\n")}\n\nAcesse **Configurações** no menu lateral para preencher esses campos antes de executar esta ação.`;
+    const msg = `⚠️ **Configuração incompleta**\n\nOs seguintes campos são obrigatórios:\n\n${missing.map(f => `- ❌ **${f}**`).join("\n")}\n\nAcesse **Configurações** para preencher.`;
     toast({ title: "Configuração incompleta", description: `Faltando: ${missing.join(", ")}`, variant: "destructive" });
     setMessages((p) => [...p, { role: "assistant", content: msg }]);
   };
 
+  // ── Creative Upload ──
+  const handleCreativeUpload = useCallback(async (files: FileList | null) => {
+    if (!files || files.length === 0 || !user?.id || !activeProfile?.id) return;
+
+    const uploadedUrls: string[] = [];
+
+    for (const file of Array.from(files)) {
+      const ext = file.name.split(".").pop();
+      const path = `${user.id}/${activeProfile.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const { error: uploadErr } = await supabase.storage.from("creative-assets").upload(path, file);
+      if (uploadErr) {
+        toast({ title: "Erro ao enviar", description: uploadErr.message, variant: "destructive" });
+        continue;
+      }
+      const { data: urlData } = supabase.storage.from("creative-assets").getPublicUrl(path);
+      const fileUrl = urlData.publicUrl;
+      uploadedUrls.push(fileUrl);
+
+      await supabase.from("creative_assets").insert({
+        user_id: user.id,
+        profile_id: activeProfile.id,
+        file_name: file.name,
+        file_url: fileUrl,
+        file_type: file.type.startsWith("video") ? "video" : "image",
+        source_tag: "chat-upload",
+      });
+    }
+
+    if (uploadedUrls.length > 0) {
+      setUploadedCreatives(prev => [...prev, ...uploadedUrls]);
+      const names = Array.from(files).map(f => f.name).join(", ");
+      const previewHtml = uploadedUrls.map(u => `![criativo](${u})`).join("\n");
+      setMessages(p => [...p, {
+        role: "user",
+        content: `📎 Enviei ${uploadedUrls.length} criativo(s): ${names}`
+      }, {
+        role: "assistant",
+        content: `✅ **${uploadedUrls.length} criativo(s) recebido(s)!**\n\n${previewHtml}\n\nEles serão usados automaticamente ao publicar a campanha. Continue configurando ou peça para eu criar a campanha com esses criativos.`
+      }]);
+      toast({ title: "Criativos enviados", description: `${uploadedUrls.length} arquivo(s) prontos para uso.` });
+    }
+  }, [user?.id, activeProfile?.id, toast, setMessages]);
+
+  // ── Execute Actions ──
   const handleExecuteAction = async (action: CampaignAction) => {
     if (action.action === "create_audience") {
       const missing = validateProfileRequirements(action);
@@ -157,8 +221,6 @@ export default function AIChatPanel() {
       await handleCreateAudience(action);
       return;
     }
-
-    // Default: navigate to campaign launcher
     navigate("/lancar-campanha", {
       state: {
         prefill: {
@@ -181,7 +243,6 @@ export default function AIChatPanel() {
       toast({ title: "Erro", description: "Selecione um perfil ativo.", variant: "destructive" });
       return;
     }
-
     setExecutingAction(true);
     try {
       const body: Record<string, unknown> = {
@@ -189,58 +250,31 @@ export default function AIChatPanel() {
         audienceType: action.audience_type,
         name: action.audience_name,
       };
-
       if (action.audience_type === "website_visitors") {
-        body.rule = {
-          retention_seconds: (action.retention_days || 180) * 86400,
-          url_filter: action.url_filter || "",
-        };
+        body.rule = { retention_seconds: (action.retention_days || 180) * 86400, url_filter: action.url_filter || "" };
       } else if (action.audience_type === "engagement") {
-        body.rule = {
-          retention_seconds: (action.retention_days || 365) * 86400,
-        };
+        body.rule = { retention_seconds: (action.retention_days || 365) * 86400 };
       } else if (action.audience_type === "lookalike") {
-        body.lookalikeSpec = {
-          source_audience_id: action.source_audience_id,
-          ratio: action.ratio || 0.01,
-        };
+        body.lookalikeSpec = { source_audience_id: action.source_audience_id, ratio: action.ratio || 0.01 };
       }
-
       const { data, error } = await supabase.functions.invoke("manage-audiences", { body });
-
       if (error) {
-        // Extract meaningful message from FunctionsHttpError
         let errMsg = error.message || "Erro desconhecido";
-        try {
-          const ctx = await (error as any).context?.json?.();
-          if (ctx?.error) errMsg = ctx.error;
-        } catch {}
+        try { const ctx = await (error as any).context?.json?.(); if (ctx?.error) errMsg = ctx.error; } catch {}
         throw new Error(errMsg);
       }
       if (data?.error) throw new Error(data.error);
-
-      toast({
-        title: "✅ Público criado com sucesso!",
-        description: `${data.name} (ID: ${data.audience_id})`,
-      });
-
-      // Add success message to chat
-      setMessages((p) => [
-        ...p,
-        {
-          role: "assistant",
-          content: `✅ **Público criado com sucesso!**\n\n- **Nome:** ${data.name}\n- **ID:** \`${data.audience_id}\`\n- **Tipo:** ${data.type}\n\nEste público já está disponível para uso nas suas campanhas de remarketing.`,
-        },
-      ]);
+      toast({ title: "✅ Público criado!", description: `${data.name} (ID: ${data.audience_id})` });
+      setMessages((p) => [...p, {
+        role: "assistant",
+        content: `✅ **Público criado com sucesso!**\n\n- **Nome:** ${data.name}\n- **ID:** \`${data.audience_id}\`\n- **Tipo:** ${data.type}\n\nPronto para uso nas campanhas de remarketing.`,
+      }]);
     } catch (e: any) {
       toast({ title: "Erro ao criar público", description: e.message, variant: "destructive" });
-      setMessages((p) => [
-        ...p,
-        {
-          role: "assistant",
-          content: `❌ **Erro ao criar público:** ${e.message}\n\nVerifique as configurações do perfil (Pixel ID, Page ID) e tente novamente.`,
-        },
-      ]);
+      setMessages((p) => [...p, {
+        role: "assistant",
+        content: `❌ **Erro ao criar público:** ${e.message}\n\nVerifique Pixel ID e Page ID nas Configurações.`,
+      }]);
     } finally {
       setExecutingAction(false);
     }
@@ -253,8 +287,19 @@ export default function AIChatPanel() {
     }
     const missing = validateProfileRequirements(action);
     if (missing.length > 0) { showMissingFieldsError(missing); return; }
+
     setExecutingAction(true);
+    setPublishSteps([
+      { label: "Criando Campanha", status: "running" },
+      { label: "Configurando Conjunto de Anúncios", status: "pending" },
+      { label: "Criando Anúncio", status: "pending" },
+      { label: "Finalizando", status: "pending" },
+    ]);
+
     try {
+      // Step 1: running
+      await new Promise(r => setTimeout(r, 500));
+      
       const { data, error } = await supabase.functions.invoke("auto-publish-campaign", {
         body: {
           profileId: activeProfile.id,
@@ -264,8 +309,13 @@ export default function AIChatPanel() {
           targeting_notes: action.targeting_notes || "",
           use_catalog: action.use_catalog || false,
           destination_url: action.destination_url || "",
+          creative_url: uploadedCreatives.length > 0 ? uploadedCreatives[0] : (action.creative_url || ""),
+          headline: action.headline || "",
+          primary_text: action.primary_text || "",
+          cta: action.cta || "LEARN_MORE",
         },
       });
+
       if (error) {
         let errMsg = error.message || "Erro desconhecido";
         try { const ctx = await (error as any).context?.json?.(); if (ctx?.error) errMsg = ctx.error; } catch {}
@@ -273,22 +323,36 @@ export default function AIChatPanel() {
       }
       if (data?.error) throw new Error(data.error);
 
+      setPublishSteps([
+        { label: "Campanha Criada", status: "done", detail: data.meta_campaign_id },
+        { label: "Conjunto Criado", status: "done", detail: data.meta_adset_id },
+        { label: "Anúncio Criado", status: "done", detail: data.meta_ad_id },
+        { label: "Publicação Completa", status: "done" },
+      ]);
+
       toast({ title: "⚡ Campanha publicada!", description: `ID: ${data.meta_campaign_id}` });
       setMessages((p) => [...p, {
         role: "assistant",
-        content: `⚡ **Campanha publicada com sucesso (Deploy Autônomo)!**\n\n${(data.steps || []).map((s: string) => `- ${s}`).join("\n")}\n\n🔗 [Abrir no Ads Manager](${data.ads_manager_url})\n\n> ⚠️ Campanha criada em modo **PAUSADO**. Ative manualmente quando estiver pronto.`,
+        content: `⚡ **Campanha publicada com sucesso!**\n\n${(data.steps || []).map((s: string) => `- ✅ ${s}`).join("\n")}\n\n🔗 [Abrir no Ads Manager](${data.ads_manager_url})\n\n> ⚠️ Campanha criada em modo **PAUSADO**. Ative manualmente quando estiver pronto.`,
       }]);
+      setUploadedCreatives([]);
     } catch (e: any) {
-      toast({ title: "Erro no deploy autônomo", description: e.message, variant: "destructive" });
+      setPublishSteps(prev => prev?.map((s, i) =>
+        s.status === "running" ? { ...s, status: "error", detail: e.message } :
+        s.status === "pending" ? { ...s, status: "error" } : s
+      ) || null);
+      toast({ title: "Erro no deploy", description: e.message, variant: "destructive" });
       setMessages((p) => [...p, {
         role: "assistant",
-        content: `❌ **Erro no deploy autônomo:** ${e.message}\n\nVerifique as configurações do perfil (Token, Pixel ID, Page ID) e tente novamente.`,
+        content: `❌ **Erro no deploy:** ${e.message}\n\nVerifique Token, Pixel ID e Page ID nas Configurações.`,
       }]);
     } finally {
       setExecutingAction(false);
+      setTimeout(() => setPublishSteps(null), 8000);
     }
   };
 
+  // ── Send message ──
   const send = async () => {
     const text = input.trim();
     if (!text || loading) return;
@@ -306,7 +370,6 @@ export default function AIChatPanel() {
     setMessages((p) => [...p, userMsg]);
     setInput("");
     setLoading(true);
-
     await saveMessage(convId, "user", text);
 
     let assistantSoFar = "";
@@ -330,9 +393,7 @@ export default function AIChatPanel() {
       onDelta: upsert,
       onDone: async () => {
         setLoading(false);
-        if (assistantSoFar) {
-          await saveMessage(finalConvId, "assistant", assistantSoFar);
-        }
+        if (assistantSoFar) await saveMessage(finalConvId, "assistant", assistantSoFar);
       },
       onError: (msg) => {
         setLoading(false);
@@ -341,6 +402,28 @@ export default function AIChatPanel() {
     });
   };
 
+  // ── Quick Actions ──
+  const quickActions = [
+    { icon: <Rocket className="h-3.5 w-3.5" />, label: "🧭 Publicação guiada (passo a passo)", prompt: "Me guie passo a passo para publicar uma campanha completa. Verifique meu perfil, me ajude a definir objetivo, orçamento, segmentação, copy e criativo. Quero fazer tudo pelo chat." },
+    { icon: <Target className="h-3.5 w-3.5" />, label: "🎯 Campanha de vendas", prompt: "Crie uma campanha de vendas otimizada para conversão. Sugira o melhor objetivo, orçamento e segmentação com base no meu perfil." },
+    { icon: <Users className="h-3.5 w-3.5" />, label: "🔄 Remarketing + Público", prompt: "Quero criar uma campanha de remarketing completa. Primeiro crie o público personalizado e depois a campanha direcionada a ele." },
+    { icon: <Palette className="h-3.5 w-3.5" />, label: "🛍️ Campanha com catálogo (DPA)", prompt: "Crie uma campanha de vendas com catálogo de produtos (DPA). Configure remarketing dinâmico para visitantes do meu site." },
+    { icon: <BarChart3 className="h-3.5 w-3.5" />, label: "📊 Diagnóstico das campanhas", prompt: "Faça um diagnóstico completo das minhas campanhas ativas. Analise CPA, CTR, CPM e ROAS e me dê recomendações de otimização." },
+    { icon: <TrendingUp className="h-3.5 w-3.5" />, label: "🚀 Escalar campanha", prompt: "Analise minhas campanhas e identifique qual tem melhor desempenho para escalar. Sugira a estratégia de escala ideal." },
+  ];
+
+  // ── Profile status badge ──
+  const getProfileStatus = () => {
+    if (!activeProfile) return { color: "bg-destructive", text: "Sem perfil" };
+    const hasToken = !!activeProfile.meta_access_token;
+    const hasPixel = !!activeProfile.pixel_id?.trim();
+    const hasPage = !!activeProfile.page_id?.trim();
+    if (hasToken && hasPixel && hasPage) return { color: "bg-green-500", text: "Pronto" };
+    return { color: "bg-yellow-500", text: "Incompleto" };
+  };
+  const profileStatus = getProfileStatus();
+
+  // ── Render ──
   const renderMessage = (m: Msg, i: number) => {
     if (m.role === "user") {
       return (
@@ -358,49 +441,66 @@ export default function AIChatPanel() {
         <div className="max-w-[85%] space-y-2">
           {cleanContent && (
             <div className="rounded-lg px-3 py-2 text-sm bg-muted text-foreground">
-              <div className="prose prose-sm max-w-none [&_p]:my-1 [&_ul]:my-1 [&_li]:my-0.5">
+              <div className="prose prose-sm max-w-none [&_p]:my-1 [&_ul]:my-1 [&_li]:my-0.5 [&_img]:rounded-md [&_img]:max-h-40">
                 <ReactMarkdown>{cleanContent}</ReactMarkdown>
               </div>
             </div>
           )}
           {action && action.action === "create_audience" && (
-            <Button
-              onClick={() => handleExecuteAction(action)}
-              disabled={executingAction}
-              className="w-full gap-2 bg-blue-600 hover:bg-blue-700 text-white"
-              size="sm"
-            >
-              {executingAction ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Users className="h-4 w-4" />
-              )}
-              👥 Criar Público: {action.audience_name?.slice(0, 30)}...
+            <Button onClick={() => handleExecuteAction(action)} disabled={executingAction} className="w-full gap-2 bg-blue-600 hover:bg-blue-700 text-white" size="sm">
+              {executingAction ? <Loader2 className="h-4 w-4 animate-spin" /> : <Users className="h-4 w-4" />}
+              👥 Criar Público: {action.audience_name?.slice(0, 30)}
             </Button>
           )}
           {action && action.action === "create_campaign" && (
             <div className="space-y-1.5 w-full">
-              <Button
-                onClick={() => handleAutoPublish(action)}
-                disabled={executingAction}
-                className="w-full gap-2 bg-primary hover:bg-primary/90 text-primary-foreground"
-                size="sm"
-              >
+              {/* Campaign summary card */}
+              <div className="rounded-md border border-border bg-card/50 p-2 text-xs space-y-1">
+                <div className="flex items-center gap-1.5 font-medium text-foreground">
+                  <Target className="h-3 w-3 text-primary" />
+                  {action.campaign_name?.slice(0, 40)}
+                </div>
+                <div className="flex flex-wrap gap-2 text-muted-foreground">
+                  <span>📋 {action.objective?.replace("OUTCOME_", "")}</span>
+                  <span>💰 R${action.daily_budget}/dia</span>
+                  {action.use_catalog && <span>🛍️ Catálogo</span>}
+                  {uploadedCreatives.length > 0 && <span>🖼️ {uploadedCreatives.length} criativo(s)</span>}
+                </div>
+              </div>
+              <Button onClick={() => handleAutoPublish(action)} disabled={executingAction} className="w-full gap-2 bg-primary hover:bg-primary/90 text-primary-foreground" size="sm">
                 {executingAction ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
-                ⚡ Publicar Direto (sem wizard)
+                ⚡ Publicar Direto no Meta Ads
               </Button>
-              <Button
-                onClick={() => handleExecuteAction(action)}
-                variant="outline"
-                className="w-full gap-2"
-                size="sm"
-              >
+              <Button onClick={() => handleExecuteAction(action)} variant="outline" className="w-full gap-2" size="sm">
                 <Rocket className="h-4 w-4" />
-                🚀 Abrir no Wizard: {action.campaign_name?.slice(0, 25)}...
+                🚀 Abrir no Wizard
               </Button>
             </div>
           )}
         </div>
+      </div>
+    );
+  };
+
+  const renderPublishProgress = () => {
+    if (!publishSteps) return null;
+    return (
+      <div className="mx-4 mb-2 rounded-lg border border-border bg-card/80 p-3 space-y-2">
+        <p className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+          <Zap className="h-3.5 w-3.5 text-primary" /> Deploy em andamento
+        </p>
+        {publishSteps.map((step, i) => (
+          <div key={i} className="flex items-center gap-2 text-xs">
+            {step.status === "pending" && <Clock className="h-3.5 w-3.5 text-muted-foreground" />}
+            {step.status === "running" && <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />}
+            {step.status === "done" && <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />}
+            {step.status === "error" && <XCircle className="h-3.5 w-3.5 text-destructive" />}
+            <span className={step.status === "done" ? "text-foreground" : step.status === "error" ? "text-destructive" : "text-muted-foreground"}>
+              {step.label}
+            </span>
+            {step.detail && <span className="text-muted-foreground truncate ml-auto text-[10px] max-w-[100px]">{step.detail}</span>}
+          </div>
+        ))}
       </div>
     );
   };
@@ -410,37 +510,58 @@ export default function AIChatPanel() {
       {!open && (
         <button
           onClick={() => setOpen(true)}
-          className="fixed bottom-6 right-6 z-50 h-12 w-12 rounded-full bg-primary flex items-center justify-center shadow-lg hover:shadow-xl hover:scale-105 transition-all"
+          className="fixed bottom-6 right-6 z-50 h-14 w-14 rounded-full bg-primary flex items-center justify-center shadow-lg hover:shadow-xl hover:scale-105 transition-all group"
         >
-          <Brain className="h-5 w-5 text-primary-foreground" />
+          <Brain className="h-6 w-6 text-primary-foreground" />
+          <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-green-500 border-2 border-background animate-pulse" />
         </button>
       )}
 
       {open && (
-        <div className="fixed bottom-0 right-0 z-50 w-full sm:w-[400px] h-[560px] sm:h-[640px] sm:bottom-6 sm:right-6 bg-card border border-border rounded-t-xl sm:rounded-xl shadow-2xl flex flex-col overflow-hidden">
+        <div className="fixed bottom-0 right-0 z-50 w-full sm:w-[420px] h-[600px] sm:h-[680px] sm:bottom-6 sm:right-6 bg-card border border-border rounded-t-xl sm:rounded-xl shadow-2xl flex flex-col overflow-hidden">
           {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-card">
             <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
+              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
                 <Brain className="h-4 w-4 text-primary" />
               </div>
               <div>
-                <span className="font-medium text-sm text-foreground">Gestor IA</span>
-                <p className="text-[11px] text-muted-foreground">MTX Estratégias</p>
+                <span className="font-semibold text-sm text-foreground">Gestor IA</span>
+                <div className="flex items-center gap-1.5">
+                  <span className={`h-1.5 w-1.5 rounded-full ${profileStatus.color}`} />
+                  <p className="text-[10px] text-muted-foreground">
+                    {activeProfile?.name || "Nenhum perfil"} · {profileStatus.text}
+                  </p>
+                </div>
               </div>
             </div>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-0.5">
               <button onClick={() => setShowHistory(!showHistory)} className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors" title="Histórico">
                 <MessageSquare className="h-4 w-4" />
               </button>
-              <button onClick={() => { startNewChat(); setShowHistory(false); }} className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors" title="Nova conversa">
+              <button onClick={() => { startNewChat(); setShowHistory(false); setUploadedCreatives([]); }} className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors" title="Nova conversa">
                 <Plus className="h-4 w-4" />
+              </button>
+              <button onClick={() => navigate("/configuracoes")} className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors" title="Configurações">
+                <Settings className="h-4 w-4" />
               </button>
               <button onClick={() => setOpen(false)} className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
                 <X className="h-4 w-4" />
               </button>
             </div>
           </div>
+
+          {/* Uploaded creatives strip */}
+          {uploadedCreatives.length > 0 && !showHistory && (
+            <div className="px-3 py-1.5 border-b border-border bg-muted/30 flex items-center gap-2 overflow-x-auto">
+              <Paperclip className="h-3 w-3 text-muted-foreground shrink-0" />
+              <span className="text-[10px] text-muted-foreground shrink-0">{uploadedCreatives.length} criativo(s)</span>
+              {uploadedCreatives.map((url, i) => (
+                <img key={i} src={url} alt="criativo" className="h-6 w-6 rounded object-cover shrink-0 border border-border" />
+              ))}
+              <button onClick={() => setUploadedCreatives([])} className="text-[10px] text-destructive hover:underline shrink-0 ml-auto">Limpar</button>
+            </div>
+          )}
 
           {/* History sidebar */}
           {showHistory ? (
@@ -456,10 +577,7 @@ export default function AIChatPanel() {
                     c.id === activeConversationId ? "bg-primary/10 text-foreground" : "hover:bg-muted text-muted-foreground"
                   }`}
                 >
-                  <span
-                    className="truncate flex-1"
-                    onClick={() => { loadMessages(c.id); setShowHistory(false); }}
-                  >
+                  <span className="truncate flex-1" onClick={() => { loadMessages(c.id); setShowHistory(false); }}>
                     {c.title}
                   </span>
                   <button
@@ -478,37 +596,26 @@ export default function AIChatPanel() {
                 {loadingHistory ? (
                   <div className="flex justify-center mt-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
                 ) : messages.length === 0 ? (
-                  <div className="text-center text-muted-foreground text-sm mt-8">
-                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-3">
-                      <Brain className="h-5 w-5 text-primary" />
+                  <div className="text-center text-muted-foreground text-sm mt-4">
+                    <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-3">
+                      <Brain className="h-6 w-6 text-primary" />
                     </div>
-                    <p className="font-medium text-foreground">Olá! Sou seu Gestor de Tráfego IA.</p>
-                    <p className="mt-1 text-xs">Pergunte sobre campanhas, peça para criar ou otimizar. Posso executar no Meta Ads!</p>
-                    <div className="mt-3 space-y-1">
-                      <button
-                        onClick={() => { setInput("Me guie passo a passo para publicar uma campanha. Verifique se meu perfil tem todas as permissões necessárias e me ajude a configurar tudo."); }}
-                        className="block w-full text-left text-xs px-3 py-1.5 rounded-md bg-primary/10 border border-primary/20 hover:bg-primary/20 transition-colors font-medium text-primary"
-                      >
-                        🧭 Publicação guiada (passo a passo)
-                      </button>
-                      <button
-                        onClick={() => setInput("Crie uma campanha de remarketing para visitantes do meu site")}
-                        className="block w-full text-left text-xs px-3 py-1.5 rounded-md bg-muted hover:bg-accent transition-colors"
-                      >
-                        🔄 Criar campanha de remarketing
-                      </button>
-                      <button
-                        onClick={() => setInput("Crie um público personalizado de visitantes do site nos últimos 30 dias")}
-                        className="block w-full text-left text-xs px-3 py-1.5 rounded-md bg-muted hover:bg-accent transition-colors"
-                      >
-                        👥 Criar público personalizado
-                      </button>
-                      <button
-                        onClick={() => setInput("Crie uma campanha de vendas com catálogo de produtos e orçamento de R$100/dia")}
-                        className="block w-full text-left text-xs px-3 py-1.5 rounded-md bg-muted hover:bg-accent transition-colors"
-                      >
-                        🛍️ Campanha com catálogo (DPA)
-                      </button>
+                    <p className="font-semibold text-foreground">Central de Comando</p>
+                    <p className="mt-1 text-xs">Crie campanhas completas do início ao fim pelo chat.</p>
+                    <div className="mt-4 space-y-1.5">
+                      {quickActions.map((qa, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => { setInput(qa.prompt); }}
+                          className={`block w-full text-left text-xs px-3 py-2 rounded-md transition-colors ${
+                            idx === 0
+                              ? "bg-primary/10 border border-primary/20 hover:bg-primary/20 font-medium text-primary"
+                              : "bg-muted hover:bg-accent text-muted-foreground hover:text-foreground"
+                          }`}
+                        >
+                          {qa.label}
+                        </button>
+                      ))}
                     </div>
                   </div>
                 ) : (
@@ -523,17 +630,35 @@ export default function AIChatPanel() {
                 )}
               </div>
 
+              {/* Publish progress */}
+              {renderPublishProgress()}
+
               {/* Input */}
-              <div className="p-3 border-t border-border flex gap-2">
+              <div className="p-3 border-t border-border flex items-center gap-2">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  accept="image/*,video/*"
+                  className="hidden"
+                  onChange={(e) => handleCreativeUpload(e.target.files)}
+                />
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0"
+                  title="Enviar criativo (imagem/vídeo)"
+                >
+                  <Paperclip className="h-4 w-4" />
+                </button>
                 <input
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && send()}
-                  placeholder="Ex: Crie uma campanha de remarketing..."
-                  className="flex-1 bg-background border border-input rounded-md px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                  placeholder="Crie campanhas, públicos, analise métricas..."
+                  className="flex-1 bg-background border border-input rounded-md px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring min-w-0"
                   disabled={loading}
                 />
-                <Button size="icon" onClick={send} disabled={loading || !input.trim()}>
+                <Button size="icon" onClick={send} disabled={loading || !input.trim()} className="shrink-0">
                   <Send className="h-4 w-4" />
                 </Button>
               </div>
