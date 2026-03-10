@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, Sparkles, ChevronLeft, ChevronRight, Share2, Download, Copy, Play, ImageIcon, Wand2, FileText, Users, FolderOpen, Maximize2, GripVertical, PackageOpen } from "lucide-react";
+import { Loader2, Sparkles, ChevronLeft, ChevronRight, Share2, Download, Copy, Play, ImageIcon, Wand2, FileText, Users, FolderOpen, Maximize2, GripVertical, PackageOpen, Upload, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useClientProfiles } from "@/hooks/useClientProfiles";
 import { useAuth } from "@/hooks/useAuth";
