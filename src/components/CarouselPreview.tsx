@@ -183,6 +183,24 @@ export default function CarouselPreview({ visualDNA }: CarouselPreviewProps) {
                         contentType={contentType}
                         onContentTypeChange={setContentType}
                     />
+                    {ugcCharacters.length > 0 && (
+                        <div className="flex items-center gap-2">
+                            <Users className="w-4 h-4 text-muted-foreground" />
+                            <Select value={selectedCharacterId} onValueChange={setSelectedCharacterId}>
+                                <SelectTrigger className="flex-1 h-9 text-xs">
+                                    <SelectValue placeholder="Personagem UGC (opcional)" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="none">Nenhum personagem</SelectItem>
+                                    {ugcCharacters.map((c) => (
+                                        <SelectItem key={c.id} value={c.id}>
+                                            {c.name}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    )}
                     <div className="flex gap-2">
                         <Input
                             placeholder="Ex: 5 erros comuns no tráfego pago..."
