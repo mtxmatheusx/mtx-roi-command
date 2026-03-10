@@ -175,6 +175,17 @@ serve(async (req) => {
       }
     }
 
+    // ─── Inject custom audiences (remarketing) ───
+    const includeAudienceIds: string[] = audience_ids?.length ? [...audience_ids] : (audience_id ? [audience_id] : []);
+    if (includeAudienceIds.length > 0) {
+      targetingObj.custom_audiences = includeAudienceIds.map((id: string) => ({ id }));
+      console.log("Injecting custom_audiences:", includeAudienceIds);
+    }
+    if (excluded_audience_ids?.length > 0) {
+      targetingObj.excluded_custom_audiences = excluded_audience_ids.map((id: string) => ({ id }));
+      console.log("Injecting excluded_custom_audiences:", excluded_audience_ids);
+    }
+
     console.log("Final targeting payload:", JSON.stringify(targetingObj));
 
     const adSetBody: Record<string, unknown> = {
