@@ -7,7 +7,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const META_API = "https://graph.facebook.com/v21.0";
+const META_API = "https://graph.facebook.com/v23.0";
 
 function metaError(data: any): string {
   return data?.error?.error_user_msg || data?.error?.message || "Erro desconhecido da Meta API";
