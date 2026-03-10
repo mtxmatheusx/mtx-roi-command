@@ -127,7 +127,7 @@ serve(async (req) => {
       targetingObj.excluded_custom_audiences = excludeIds.map((id: string) => ({ id }));
     }
 
-    const adSetBody: Record<string, unknown> = {
+    const adSetPayload: Record<string, unknown> = {
       name: `${campaign_name} - Conjunto Auto`,
       campaign_id: metaCampaignId,
       daily_budget: Math.round(budget * 100),
@@ -138,29 +138,24 @@ serve(async (req) => {
         : obj === "OUTCOME_ENGAGEMENT" ? "POST_ENGAGEMENT"
         : obj === "OUTCOME_AWARENESS" ? "REACH" : "LINK_CLICKS",
       bid_strategy: "LOWEST_COST_WITHOUT_CAP",
-      targeting: JSON.stringify(targetingObj),
-      is_adset_budget_sharing_enabled: "false",
+      targeting: targetingObj,
+      is_adset_budget_sharing_enabled: false,
       status: "PAUSED",
       access_token: accessToken,
     };
 
     if (isConversion) {
-      adSetBody.promoted_object = JSON.stringify({
+      adSetPayload.promoted_object = {
         pixel_id: pixelId,
         custom_event_type: obj === "OUTCOME_LEADS" ? "LEAD" : "PURCHASE",
-      });
+      };
     }
 
-    // Use form-encoded for better Meta API compatibility
-    const adSetForm = new URLSearchParams();
-    for (const [k, v] of Object.entries(adSetBody)) {
-      adSetForm.append(k, String(v));
-    }
-
+    // Use JSON for AdSet to preserve boolean/object types required by Meta v23.0
     const adSetRes = await fetch(`${META_API}/${adAccountId}/adsets`, {
       method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: adSetForm.toString(),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(adSetPayload),
     });
     const adSetData = await adSetRes.json();
     if (adSetData.error) {
