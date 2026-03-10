@@ -266,11 +266,12 @@ serve(async (req) => {
     }
 
     // ─── Step 2: AdSet ───
+    const useAdvantagePlus = ["OUTCOME_SALES", "OUTCOME_LEADS"].includes(obj);
     const targetingObj: Record<string, unknown> = {
       age_min: 18,
       age_max: 65,
       geo_locations: { countries: ["BR"] },
-      targeting_automation: { advantage_audience: 1 },
+      targeting_automation: { advantage_audience: useAdvantagePlus ? 1 : 0 },
     };
 
     if (includeIds.length > 0) {
@@ -315,7 +316,7 @@ serve(async (req) => {
       await rollback();
       const msg = metaError(adSetData);
       await supabase.from("campaign_drafts").update({ status: "failed", error_message: `${msg} | Rollback.` }).eq("id", draft.id);
-      return fail(msg, { step: "adset", rollback: true });
+      return fail(msg, { step: "adset", rollback: true, targeting_debug: { targeting: targetingObj, objective: obj, advantage_audience: useAdvantagePlus ? 1 : 0, optimization_goal: optimizationGoal } });
     }
     const metaAdSetId = adSetData.id;
     steps.push(`✅ Conjunto: ${metaAdSetId}`);
@@ -354,7 +355,7 @@ serve(async (req) => {
       await rollback();
       const msg = metaError(adData);
       await supabase.from("campaign_drafts").update({ status: "failed", error_message: `${msg} | Rollback.` }).eq("id", draft.id);
-      return fail(msg, { step: "ad", rollback: true });
+      return fail(msg, { step: "ad", rollback: true, targeting_debug: { targeting: targetingObj, objective: obj, advantage_audience: useAdvantagePlus ? 1 : 0 } });
     }
     const metaAdId = adData.id;
     steps.push(`✅ Anúncio: ${metaAdId}`);
