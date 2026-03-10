@@ -79,6 +79,27 @@ export default function CarouselPreview({ visualDNA }: CarouselPreviewProps) {
         load();
     }, [user?.id, activeProfile?.id]);
 
+    // Load creative assets from library
+    useEffect(() => {
+        if (!user?.id || !activeProfile?.id) return;
+        const load = async () => {
+            const { data } = await supabase
+                .from("creative_assets")
+                .select("id, file_url, file_name, file_type, description")
+                .eq("user_id", user.id)
+                .eq("profile_id", activeProfile.id)
+                .order("created_at", { ascending: false });
+            if (data) setCreativeAssets(data.filter(a => a.file_type.startsWith("image")));
+        };
+        load();
+    }, [user?.id, activeProfile?.id]);
+
+    const useLibraryImage = (slideIndex: number, url: string) => {
+        setSlideImages((prev) => ({ ...prev, [slideIndex]: url }));
+        setShowLibrary(false);
+        toast({ title: "✅ Imagem aplicada", description: `Imagem da biblioteca aplicada ao slide ${slideIndex + 1}.` });
+    };
+
     const handleGenerate = async () => {
         if (!theme) return;
         setLoading(true);
