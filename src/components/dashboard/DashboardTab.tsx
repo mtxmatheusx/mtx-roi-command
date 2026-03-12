@@ -6,7 +6,7 @@ import MetricCard from "@/components/MetricCard";
 import CampaignsTable from "@/components/CampaignsTable";
 import DashboardCharts from "@/components/DashboardCharts";
 import { Progress } from "@/components/ui/progress";
-import { DollarSign, TrendingUp, Target, BarChart3, Loader2, AlertTriangle, Eye, MousePointerClick, ShoppingBag, ShieldCheck, OctagonAlert, Activity } from "lucide-react";
+import { DollarSign, TrendingUp, Target, BarChart3, Loader2, AlertTriangle, Eye, MousePointerClick, ShoppingBag, ShieldCheck, OctagonAlert, Activity, X } from "lucide-react";
 
 interface LogEntry {
   time: string;
