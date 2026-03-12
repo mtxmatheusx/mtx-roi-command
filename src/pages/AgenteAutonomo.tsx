@@ -84,6 +84,16 @@ export default function AgenteAutonomo() {
       setRunResult(data);
       const activeResult = data?.results?.find((r: any) => r.profile_id === activeProfile?.id) || data?.results?.[0];
       toast({ title: "✅ Agente executado", description: activeResult?.ai_summary || `${data?.results?.length || 0} perfis analisados.` });
+
+      // Check for self-heal actions and notify
+      const selfHealActions = activeResult?.actions?.filter((a: any) => a.recovered || a.action === "self_heal") || [];
+      if (selfHealActions.length > 0) {
+        toast({
+          title: "🔧 Auto-correção acionada",
+          description: `${selfHealActions.length} falha(s) corrigida(s) automaticamente pelo agente.`,
+        });
+      }
+
       loadLogs();
     } catch (e: any) {
       toast({ title: "Erro", description: e.message, variant: "destructive" });
@@ -199,6 +209,14 @@ export default function AgenteAutonomo() {
   const pauseCount = logs.filter(l => l.action_type === "agent_pause" || l.action_type === "guardian" || l.action_type === "hourly_pause").length;
   const protectedCount = logs.filter(l => l.action_type === "guardian_protected").length;
   const hourlyActionCount = logs.filter(l => l.action_type.startsWith("hourly_")).length;
+  const selfHealCount = logs.filter(l => l.action_type === "agent_self_heal").length;
+
+  // Recovery rate: last 24h
+  const now24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const recentLogs = logs.filter(l => new Date(l.created_at) >= now24h);
+  const recentFailures = recentLogs.filter(l => l.details?.success === false || l.details?.recovered);
+  const recentRecovered = recentLogs.filter(l => l.details?.recovered === true || l.action_type === "agent_self_heal");
+  const recoveryRate = recentFailures.length > 0 ? Math.round((recentRecovered.length / recentFailures.length) * 100) : null;
 
   return (
     <AppLayout>
@@ -220,6 +238,31 @@ export default function AgenteAutonomo() {
             {isRunning ? "Executando..." : "Executar Agora"}
           </Button>
         </div>
+
+        {/* Recovery Rate Card */}
+        {(selfHealCount > 0 || recentFailures.length > 0) && (
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+            <Card className="border-primary/30 bg-primary/5">
+              <CardContent className="p-4 flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <ShieldCheck className="w-6 h-6 text-primary" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium">Taxa de Recuperação (24h)</p>
+                  <p className="text-[10px] text-muted-foreground">
+                    {recentRecovered.length} corrigida(s) de {recentFailures.length} falha(s)
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className={`text-3xl font-bold ${recoveryRate !== null && recoveryRate >= 80 ? "text-success" : recoveryRate !== null && recoveryRate >= 50 ? "text-warning" : "text-destructive"}`}>
+                    {recoveryRate !== null ? `${recoveryRate}%` : "—"}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground">confiabilidade</p>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
 
         {/* Status Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -611,7 +654,7 @@ export default function AgenteAutonomo() {
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: i * 0.03 }}
-                    className="flex items-start gap-3 p-3 rounded-lg border bg-card hover:bg-secondary/30 transition-colors"
+                    className={`flex items-start gap-3 p-3 rounded-lg border transition-colors ${log.action_type === "agent_self_heal" || log.details?.recovered ? "bg-primary/5 border-primary/30 hover:bg-primary/10" : "bg-card hover:bg-secondary/30"}`}
                   >
                     <div className="mt-0.5">{getActionIcon(log.action_type)}</div>
                     <div className="flex-1 min-w-0">
