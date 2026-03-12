@@ -315,7 +315,16 @@ export function useMetaAds(dateRange?: DateRange, profileConfig?: { adAccountId?
     staleTime: shortRange ? 0 : 5 * 60 * 1000,
     retry: (failureCount, error) => {
       const msg = (error as Error)?.message || "";
-      if (msg.includes("rate limit") || msg.includes("Limite") || msg.includes("permission") || msg.includes("(#10)") || msg.includes("ads_read") || msg.includes("Unsupported get request")) return false;
+      if (
+        msg.includes("rate limit") ||
+        msg.includes("Limite") ||
+        msg.includes("permission") ||
+        msg.includes("(#10)") ||
+        msg.includes("ads_read") ||
+        msg.includes("Unsupported get request") ||
+        msg.includes("Session has expired") ||
+        msg.includes("Error validating access token")
+      ) return false;
       return failureCount < 1;
     },
   });
