@@ -24,9 +24,9 @@ interface DashboardTabProps {
   isTokenExpired: boolean;
   isCached: boolean;
   dataVerified: boolean;
+  fetchedAt: string | null;
   budgetMaximo: number;
   budgetFrequency: string;
-  cpaMeta: number;
   totalSpend: number;
   totalRevenue: number;
   totalProfit: number;
