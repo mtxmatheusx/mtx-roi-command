@@ -161,8 +161,11 @@ export default function AgenteAutonomo() {
       case "agent_duplicate": return <Zap className="w-4 h-4 text-primary" />;
       case "kill_switch": return <AlertTriangle className="w-4 h-4 text-amber-500" />;
       case "hourly_resume": return <Play className="w-4 h-4 text-success" />;
-      case "hourly_reduce": return <TrendingUp className="w-4 h-4 text-warning" />;
+      case "hourly_reduce":
+      case "agent_reduce": return <TrendingUp className="w-4 h-4 text-warning" />;
       case "hourly_daypart": return <Timer className="w-4 h-4 text-warning" />;
+      case "guardian_protected": return <Shield className="w-4 h-4 text-blue-500" />;
+      case "agent_rollback": return <RotateCcw className="w-4 h-4 text-amber-500" />;
       default: return <Activity className="w-4 h-4" />;
     }
   };
@@ -178,8 +181,11 @@ export default function AgenteAutonomo() {
       case "agent_duplicate": return <Badge className="bg-primary/15 text-primary border-primary/30">DUPLICADO</Badge>;
       case "kill_switch": return <Badge className="bg-amber-500/15 text-amber-500 border-amber-500/30">KILL SWITCH</Badge>;
       case "hourly_resume": return <Badge className="bg-success/15 text-success border-success/30">REATIVADO</Badge>;
-      case "hourly_reduce": return <Badge className="bg-warning/15 text-warning border-warning/30">REDUZIDO</Badge>;
+      case "hourly_reduce":
+      case "agent_reduce": return <Badge className="bg-warning/15 text-warning border-warning/30">REDUZIDO</Badge>;
       case "hourly_daypart": return <Badge className="bg-warning/15 text-warning border-warning/30">DAYPART</Badge>;
+      case "guardian_protected": return <Badge className="bg-blue-500/15 text-blue-500 border-blue-500/30">🛡️ PROTEGIDA</Badge>;
+      case "agent_rollback": return <Badge className="bg-amber-500/15 text-amber-500 border-amber-500/30">ROLLBACK</Badge>;
       default: return <Badge variant="outline">{type}</Badge>;
     }
   };
@@ -189,6 +195,7 @@ export default function AgenteAutonomo() {
   const duplicateCount = logs.filter(l => l.action_type === "agent_duplicate").length;
   const scaleCount = logs.filter(l => l.action_type === "agent_scale" || l.action_type === "auto_scale").length;
   const pauseCount = logs.filter(l => l.action_type === "agent_pause" || l.action_type === "guardian" || l.action_type === "hourly_pause").length;
+  const protectedCount = logs.filter(l => l.action_type === "guardian_protected").length;
   const hourlyActionCount = logs.filter(l => l.action_type.startsWith("hourly_")).length;
 
   return (
