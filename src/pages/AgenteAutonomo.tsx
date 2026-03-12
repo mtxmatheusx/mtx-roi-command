@@ -559,9 +559,9 @@ export default function AgenteAutonomo() {
 
         {/* Configuration hint */}
         {!hasGuardianEnabled && !hasScaleEnabled && (
-          <Card className="border-amber-500/30 bg-amber-500/5">
+          <Card className="border-warning/30 bg-warning/5">
             <CardContent className="p-4 flex items-center gap-3">
-              <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0" />
+              <AlertTriangle className="w-5 h-5 text-warning shrink-0" />
               <div>
                 <p className="text-sm font-medium">Agente Inativo</p>
                 <p className="text-xs text-muted-foreground">
