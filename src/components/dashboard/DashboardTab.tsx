@@ -159,7 +159,7 @@ export default function DashboardTab(props: DashboardTabProps) {
             className="glass-card p-8 text-center"
           >
             <p className="text-xs font-medium text-muted-foreground tracking-wider uppercase mb-3">Lucro Líquido Total</p>
-            <p className="text-3xl sm:text-5xl font-bold tracking-tighter text-success hero-number">{formatCurrency(totalProfit)}</p>
+            <p className={`text-3xl sm:text-5xl font-bold tracking-tighter hero-number ${totalProfit >= 0 ? "text-success" : "text-destructive"}`}>{formatCurrency(totalProfit)}</p>
             <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4 mt-4">
               <span className="text-sm text-muted-foreground">
                 Receita <span className="font-semibold text-foreground">{formatCurrency(totalRevenue)}</span>
