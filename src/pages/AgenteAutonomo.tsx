@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Bot, Play, Pause, TrendingUp, ShieldCheck, Activity, AlertTriangle, Clock, Zap, RefreshCw, Loader2, Copy, Timer, Sun, Moon } from "lucide-react";
+import { Bot, Play, Pause, TrendingUp, ShieldCheck, Activity, AlertTriangle, Clock, Zap, RefreshCw, Loader2, Copy, Timer, Sun, Moon, Shield, RotateCcw } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import AgentRulesEditor from "@/components/AgentRulesEditor";
 
