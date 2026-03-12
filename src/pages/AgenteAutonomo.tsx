@@ -63,7 +63,7 @@ export default function AgenteAutonomo() {
       .select("*")
       .eq("user_id", user!.id)
       .eq("profile_id", activeProfile!.id)
-      .in("action_type", ["agent_pause", "agent_scale", "agent_duplicate", "guardian", "auto_scale", "kill_switch", "hourly_pause", "hourly_resume", "hourly_scale", "hourly_reduce", "hourly_daypart"])
+      .in("action_type", ["agent_pause", "agent_scale", "agent_reduce", "agent_rollback", "agent_duplicate", "agent_self_heal", "guardian", "guardian_protected", "auto_scale", "kill_switch", "hourly_pause", "hourly_resume", "hourly_scale", "hourly_reduce", "hourly_daypart"])
       .order("created_at", { ascending: false })
       .limit(50);
     if (data) {
@@ -159,13 +159,14 @@ export default function AgenteAutonomo() {
       case "auto_scale":
       case "hourly_scale": return <TrendingUp className="w-4 h-4 text-success" />;
       case "agent_duplicate": return <Zap className="w-4 h-4 text-primary" />;
-      case "kill_switch": return <AlertTriangle className="w-4 h-4 text-amber-500" />;
+      case "kill_switch": return <AlertTriangle className="w-4 h-4 text-warning" />;
       case "hourly_resume": return <Play className="w-4 h-4 text-success" />;
       case "hourly_reduce":
       case "agent_reduce": return <TrendingUp className="w-4 h-4 text-warning" />;
       case "hourly_daypart": return <Timer className="w-4 h-4 text-warning" />;
-      case "guardian_protected": return <Shield className="w-4 h-4 text-blue-500" />;
-      case "agent_rollback": return <RotateCcw className="w-4 h-4 text-amber-500" />;
+      case "guardian_protected": return <Shield className="w-4 h-4 text-primary" />;
+      case "agent_rollback": return <RotateCcw className="w-4 h-4 text-warning" />;
+      case "agent_self_heal": return <ShieldCheck className="w-4 h-4 text-primary" />;
       default: return <Activity className="w-4 h-4" />;
     }
   };
@@ -179,13 +180,14 @@ export default function AgenteAutonomo() {
       case "auto_scale":
       case "hourly_scale": return <Badge className="bg-success/15 text-success border-success/30">ESCALADO</Badge>;
       case "agent_duplicate": return <Badge className="bg-primary/15 text-primary border-primary/30">DUPLICADO</Badge>;
-      case "kill_switch": return <Badge className="bg-amber-500/15 text-amber-500 border-amber-500/30">KILL SWITCH</Badge>;
+      case "kill_switch": return <Badge className="bg-warning/15 text-warning border-warning/30">KILL SWITCH</Badge>;
       case "hourly_resume": return <Badge className="bg-success/15 text-success border-success/30">REATIVADO</Badge>;
       case "hourly_reduce":
       case "agent_reduce": return <Badge className="bg-warning/15 text-warning border-warning/30">REDUZIDO</Badge>;
       case "hourly_daypart": return <Badge className="bg-warning/15 text-warning border-warning/30">DAYPART</Badge>;
-      case "guardian_protected": return <Badge className="bg-blue-500/15 text-blue-500 border-blue-500/30">🛡️ PROTEGIDA</Badge>;
-      case "agent_rollback": return <Badge className="bg-amber-500/15 text-amber-500 border-amber-500/30">ROLLBACK</Badge>;
+      case "guardian_protected": return <Badge className="bg-primary/15 text-primary border-primary/30">🛡️ PROTEGIDA</Badge>;
+      case "agent_rollback": return <Badge className="bg-warning/15 text-warning border-warning/30">ROLLBACK</Badge>;
+      case "agent_self_heal": return <Badge className="bg-primary/15 text-primary border-primary/30">AUTO-CORREÇÃO</Badge>;
       default: return <Badge variant="outline">{type}</Badge>;
     }
   };
@@ -557,9 +559,9 @@ export default function AgenteAutonomo() {
 
         {/* Configuration hint */}
         {!hasGuardianEnabled && !hasScaleEnabled && (
-          <Card className="border-amber-500/30 bg-amber-500/5">
+          <Card className="border-warning/30 bg-warning/5">
             <CardContent className="p-4 flex items-center gap-3">
-              <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0" />
+              <AlertTriangle className="w-5 h-5 text-warning shrink-0" />
               <div>
                 <p className="text-sm font-medium">Agente Inativo</p>
                 <p className="text-xs text-muted-foreground">
@@ -646,8 +648,8 @@ export default function AgenteAutonomo() {
                         </p>
                       )}
                     </div>
-                    <Badge variant={log.details?.success ? "default" : "destructive"} className="text-[10px] shrink-0">
-                      {log.details?.success ? "OK" : "FALHA"}
+                    <Badge variant={log.details?.recovered ? "secondary" : log.details?.success ? "default" : "destructive"} className="text-[10px] shrink-0">
+                      {log.details?.recovered ? "RECUPERADO" : log.details?.success ? "OK" : "FALHA"}
                     </Badge>
                   </motion.div>
                 ))}

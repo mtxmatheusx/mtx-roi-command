@@ -70,6 +70,124 @@ function campaignAgeDays(createdTime: string): number {
   return Math.floor((now.getTime() - created.getTime()) / 86400000);
 }
 
+const MIN_SAFE_BUDGET_REAIS = 1;
+
+function normalizeCampaignRef(value: string): string {
+  return (value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function resolveCampaignReference(ref: string, campaigns: CampaignInsight[]): CampaignInsight | undefined {
+  if (!ref) return undefined;
+
+  const byId = campaigns.find((c) => c.id === ref);
+  if (byId) return byId;
+
+  const numericId = ref.match(/\d{12,}/)?.[0];
+  if (numericId) {
+    const byNumericId = campaigns.find((c) => c.id === numericId);
+    if (byNumericId) return byNumericId;
+  }
+
+  const normalizedRef = normalizeCampaignRef(ref);
+  if (!normalizedRef) return undefined;
+
+  const exactName = campaigns.find((c) => normalizeCampaignRef(c.name) === normalizedRef);
+  if (exactName) return exactName;
+
+  return campaigns.find((c) => {
+    const normalizedName = normalizeCampaignRef(c.name);
+    return normalizedName.includes(normalizedRef) || normalizedRef.includes(normalizedName);
+  });
+}
+
+function parseBudgetToReais(value: string | number | null | undefined): number {
+  const cents = typeof value === "number" ? value : parseInt(String(value ?? "0"), 10);
+  if (!Number.isFinite(cents) || cents <= 0) return 0;
+  return cents / 100;
+}
+
+function ensureValidBudget(value: number): number {
+  if (!Number.isFinite(value) || value <= 0) return MIN_SAFE_BUDGET_REAIS;
+  return Math.max(MIN_SAFE_BUDGET_REAIS, Math.round(value * 100) / 100);
+}
+
+function budgetRatioForAction(action: string, currentBudget: number, newBudget?: number): number {
+  if (currentBudget > 0 && newBudget && Number.isFinite(newBudget) && newBudget > 0) {
+    return newBudget / currentBudget;
+  }
+
+  if (action === "reduce" || action === "pause") return 0.7;
+  if (action === "scale") return 1.1;
+  if (action === "rollback") return 0.85;
+  return 1;
+}
+
+async function applyAdsetBudgetFallback(
+  campaignId: string,
+  adsets: any[],
+  accessToken: string,
+  ratio: number
+): Promise<{ success: boolean; updated: number; attempts: number; old_avg_budget: number; new_avg_budget: number; errors: string[] }> {
+  const campaignAdsets = (adsets || []).filter((a: any) => a.campaign_id === campaignId);
+  const editableAdsets = campaignAdsets
+    .map((a: any) => ({ adset: a, oldBudget: parseBudgetToReais(a.daily_budget) }))
+    .filter((item: any) => item.oldBudget > 0);
+
+  if (editableAdsets.length === 0) {
+    return {
+      success: false,
+      updated: 0,
+      attempts: 0,
+      old_avg_budget: 0,
+      new_avg_budget: 0,
+      errors: ["Nenhum adset com daily_budget válido para fallback."],
+    };
+  }
+
+  let updated = 0;
+  let attempts = 0;
+  let oldBudgetSum = 0;
+  let newBudgetSum = 0;
+  const errors: string[] = [];
+
+  for (const item of editableAdsets) {
+    const oldBudget = item.oldBudget;
+    const newBudget = ensureValidBudget(oldBudget * ratio);
+
+    const result = await metaApiCallWithRetry(
+      `https://graph.facebook.com/v23.0/${item.adset.id}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ daily_budget: Math.round(newBudget * 100), access_token: accessToken }),
+      }
+    );
+
+    attempts += result.attempts;
+    if (result.success) {
+      updated += 1;
+      oldBudgetSum += oldBudget;
+      newBudgetSum += newBudget;
+    } else {
+      errors.push(`adset ${item.adset.id}: ${result.error || "erro desconhecido"}`);
+    }
+  }
+
+  return {
+    success: updated > 0,
+    updated,
+    attempts,
+    old_avg_budget: updated > 0 ? oldBudgetSum / updated : 0,
+    new_avg_budget: updated > 0 ? newBudgetSum / updated : 0,
+    errors,
+  };
+}
+
 // ─── Retry wrapper for Meta API calls ──────────────────────
 
 async function metaApiCallWithRetry(
@@ -464,60 +582,290 @@ serve(async (req) => {
           profileResult.campaigns_analyzed = campaignInsights.length;
           profileResult.timeframes = { dtd: today, wtd: wtdSince, mtd: mtdSince };
 
-          // ─── Execute Decisions (with retry) ───────────
+          // ─── Execute Decisions (with self-heal) ───────────
           for (const decision of decisions) {
+            let execDecision: Decision = { ...decision };
+
             try {
-              const campaign = campaignInsights.find((c) => c.id === decision.campaign_id);
+              const campaign = resolveCampaignReference(execDecision.campaign_id, campaignInsights);
+              const targetCampaignId = campaign?.id || execDecision.campaign_id;
+              const resolved_from = campaign && campaign.id !== execDecision.campaign_id ? execDecision.campaign_id : undefined;
 
-              if (decision.action === "pause") {
-                const result = await metaApiCallWithRetry(
-                  `https://graph.facebook.com/v23.0/${decision.campaign_id}`,
-                  { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: "PAUSED", access_token: accessToken }) },
+              if (!campaign && execDecision.action !== "duplicate_scale") {
+                await sb.from("emergency_logs").insert({
+                  profile_id: profile.id,
+                  user_id: profile.user_id,
+                  action_type: "agent_self_heal",
+                  details: {
+                    success: false,
+                    reason: "campaign_reference_not_found",
+                    original_campaign_ref: execDecision.campaign_id,
+                    action: execDecision.action,
+                    hour: currentHour,
+                  },
+                });
+
+                profileResult.actions.push({
+                  ...execDecision,
+                  status: "FAILED",
+                  error: `Campanha não encontrada para referência: ${execDecision.campaign_id}`,
+                });
+                continue;
+              }
+
+              // Reforço de segurança em runtime: nunca pausar campanha jovem
+              if (execDecision.action === "pause" && campaign && campaign.age_days < MIN_DAYS_BEFORE_PAUSE) {
+                const reducedBudget = ensureValidBudget((campaign.daily_budget || MIN_SAFE_BUDGET_REAIS) * 0.7);
+                execDecision = {
+                  ...execDecision,
+                  action: "reduce",
+                  reason: `[Auto-proteção runtime] Campanha jovem (${campaign.age_days} dias < ${MIN_DAYS_BEFORE_PAUSE}). Pausa bloqueada e convertida em redução de 30%. Motivo original: ${execDecision.reason}`,
+                  new_budget: reducedBudget,
+                  previous_budget: campaign.daily_budget,
+                };
+              }
+
+              if (execDecision.action === "pause") {
+                const pauseResult = await metaApiCallWithRetry(
+                  `https://graph.facebook.com/v23.0/${targetCampaignId}`,
+                  {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ status: "PAUSED", access_token: accessToken }),
+                  }
                 );
-                await sb.from("emergency_logs").insert({
-                  profile_id: profile.id, user_id: profile.user_id, action_type: "agent_pause",
-                  details: { campaign_id: decision.campaign_id, campaign_name: campaign?.name, reason: decision.reason, ai_driven: !!LOVABLE_API_KEY, success: result.success, attempts: result.attempts, hour: currentHour, age_days: campaign?.age_days },
-                });
-                profileResult.actions.push({ ...decision, status: result.success ? "EXECUTED" : "FAILED", attempts: result.attempts, error: result.error });
 
-              } else if (decision.action === "duplicate_scale") {
-                const adsetId = decision.adset_id;
-                if (!adsetId) { profileResult.actions.push({ ...decision, status: "SKIPPED", error: "adset_id ausente" }); continue; }
-                const dupResult = await duplicateAdset(adsetId, accessToken, "[SCALE COPY 🚀] ");
-                await sb.from("emergency_logs").insert({
-                  profile_id: profile.id, user_id: profile.user_id, action_type: "agent_duplicate",
-                  details: { campaign_id: decision.campaign_id, campaign_name: campaign?.name, original_adset_id: adsetId, new_adset_id: dupResult.new_adset_id, reason: decision.reason, success: dupResult.success, hour: currentHour },
-                });
-                profileResult.actions.push({ ...decision, new_adset_id: dupResult.new_adset_id, status: dupResult.success ? "DUPLICATED" : "FAILED", error: dupResult.error });
+                let recovery: { success: boolean; type: string; details: Record<string, any> } | null = null;
 
-              } else if (decision.action === "rollback" || decision.action === "scale" || decision.action === "reduce") {
-                const campaignRaw = (campaignResp.data || []).find((c: any) => c.id === decision.campaign_id);
-                const currentBudget = parseInt(campaignRaw?.daily_budget || "0", 10) / 100;
-                let newBudget: number;
+                if (!pauseResult.success && campaign) {
+                  const baseBudget = campaign.daily_budget > 0 ? campaign.daily_budget : MIN_SAFE_BUDGET_REAIS;
+                  const reducedBudget = ensureValidBudget(baseBudget * 0.7);
 
-                if (decision.action === "rollback") {
-                  newBudget = decision.new_budget || currentBudget / (1 + profile.limite_escala / 100);
-                } else if (decision.action === "scale") {
-                  newBudget = decision.new_budget || currentBudget * (1 + profile.limite_escala / 100);
-                  const teto = profile.teto_diario_escala || 0;
-                  if (teto > 0 && newBudget > teto) { profileResult.actions.push({ ...decision, status: "ABORTED_CEILING" }); continue; }
-                } else {
-                  newBudget = decision.new_budget || currentBudget * 0.7;
+                  const campaignReduce = await metaApiCallWithRetry(
+                    `https://graph.facebook.com/v23.0/${campaign.id}`,
+                    {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ daily_budget: Math.round(reducedBudget * 100), access_token: accessToken }),
+                    }
+                  );
+
+                  if (campaignReduce.success) {
+                    recovery = {
+                      success: true,
+                      type: "campaign_budget_reduce",
+                      details: { old_budget: baseBudget, new_budget: reducedBudget, attempts: campaignReduce.attempts },
+                    };
+                  } else {
+                    const adsetFallback = await applyAdsetBudgetFallback(campaign.id, adsetsList, accessToken, 0.7);
+                    recovery = {
+                      success: adsetFallback.success,
+                      type: "adset_budget_reduce",
+                      details: {
+                        updated_adsets: adsetFallback.updated,
+                        old_avg_budget: adsetFallback.old_avg_budget,
+                        new_avg_budget: adsetFallback.new_avg_budget,
+                        attempts: adsetFallback.attempts,
+                        errors: adsetFallback.errors,
+                        primary_error: campaignReduce.error || pauseResult.error,
+                      },
+                    };
+                  }
+
+                  await sb.from("emergency_logs").insert({
+                    profile_id: profile.id,
+                    user_id: profile.user_id,
+                    action_type: "agent_self_heal",
+                    details: {
+                      success: recovery.success,
+                      source_action: "pause",
+                      campaign_id: campaign.id,
+                      campaign_name: campaign.name,
+                      root_cause: pauseResult.error || "pause_failed_unknown",
+                      recovery_type: recovery.type,
+                      recovery_details: recovery.details,
+                      hour: currentHour,
+                    },
+                  });
                 }
 
-                const result = await metaApiCallWithRetry(
-                  `https://graph.facebook.com/v23.0/${decision.campaign_id}`,
-                  { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ daily_budget: Math.round(newBudget * 100), access_token: accessToken }) },
-                );
-                const actionType = decision.action === "rollback" ? "agent_rollback" : decision.action === "scale" ? "agent_scale" : "agent_reduce";
+                const finalSuccess = pauseResult.success || !!recovery?.success;
+
                 await sb.from("emergency_logs").insert({
-                  profile_id: profile.id, user_id: profile.user_id, action_type: actionType,
-                  details: { campaign_id: decision.campaign_id, campaign_name: campaign?.name, old_budget: currentBudget, new_budget: newBudget, reason: decision.reason, success: result.success, attempts: result.attempts, hour: currentHour, age_days: campaign?.age_days },
+                  profile_id: profile.id,
+                  user_id: profile.user_id,
+                  action_type: "agent_pause",
+                  details: {
+                    campaign_id: campaign?.id || targetCampaignId,
+                    campaign_name: campaign?.name,
+                    resolved_from,
+                    reason: execDecision.reason,
+                    ai_driven: !!LOVABLE_API_KEY,
+                    success: finalSuccess,
+                    primary_success: pauseResult.success,
+                    recovered: !!recovery?.success,
+                    recovery_type: recovery?.type,
+                    recovery_details: recovery?.details,
+                    attempts: pauseResult.attempts,
+                    hour: currentHour,
+                    age_days: campaign?.age_days,
+                    error: finalSuccess ? undefined : pauseResult.error,
+                  },
                 });
-                profileResult.actions.push({ ...decision, old_budget: currentBudget, new_budget: newBudget, status: result.success ? "EXECUTED" : "FAILED", attempts: result.attempts, error: result.error });
+
+                profileResult.actions.push({
+                  ...execDecision,
+                  campaign_id: campaign?.id || targetCampaignId,
+                  status: finalSuccess ? (pauseResult.success ? "EXECUTED" : "RECOVERED") : "FAILED",
+                  attempts: pauseResult.attempts,
+                  recovered: !!recovery?.success,
+                  recovery_type: recovery?.type,
+                  error: finalSuccess ? undefined : pauseResult.error,
+                });
+
+              } else if (execDecision.action === "duplicate_scale") {
+                const adsetId = execDecision.adset_id;
+                if (!adsetId) {
+                  profileResult.actions.push({ ...execDecision, status: "SKIPPED", error: "adset_id ausente" });
+                  continue;
+                }
+
+                const dupResult = await duplicateAdset(adsetId, accessToken, "[SCALE COPY 🚀] ");
+                await sb.from("emergency_logs").insert({
+                  profile_id: profile.id,
+                  user_id: profile.user_id,
+                  action_type: "agent_duplicate",
+                  details: {
+                    campaign_id: campaign?.id || execDecision.campaign_id,
+                    campaign_name: campaign?.name,
+                    original_adset_id: adsetId,
+                    new_adset_id: dupResult.new_adset_id,
+                    reason: execDecision.reason,
+                    success: dupResult.success,
+                    hour: currentHour,
+                    error: dupResult.error,
+                  },
+                });
+
+                profileResult.actions.push({
+                  ...execDecision,
+                  campaign_id: campaign?.id || execDecision.campaign_id,
+                  new_adset_id: dupResult.new_adset_id,
+                  status: dupResult.success ? "DUPLICATED" : "FAILED",
+                  error: dupResult.error,
+                });
+
+              } else if (execDecision.action === "rollback" || execDecision.action === "scale" || execDecision.action === "reduce") {
+                const campaignRaw = (campaignResp.data || []).find((c: any) => c.id === (campaign?.id || execDecision.campaign_id));
+                let currentBudget = parseBudgetToReais(campaignRaw?.daily_budget);
+                if (currentBudget <= 0 && campaign) currentBudget = campaign.daily_budget;
+
+                let newBudget: number;
+                if (execDecision.action === "rollback") {
+                  newBudget = ensureValidBudget(execDecision.new_budget || (currentBudget > 0 ? currentBudget / (1 + profile.limite_escala / 100) : MIN_SAFE_BUDGET_REAIS));
+                } else if (execDecision.action === "scale") {
+                  newBudget = ensureValidBudget(execDecision.new_budget || (currentBudget > 0 ? currentBudget * (1 + profile.limite_escala / 100) : MIN_SAFE_BUDGET_REAIS * 1.1));
+                  const teto = profile.teto_diario_escala || 0;
+                  if (teto > 0 && newBudget > teto) {
+                    profileResult.actions.push({ ...execDecision, campaign_id: campaign?.id || execDecision.campaign_id, status: "ABORTED_CEILING" });
+                    continue;
+                  }
+                } else {
+                  newBudget = ensureValidBudget(execDecision.new_budget || (currentBudget > 0 ? currentBudget * 0.7 : MIN_SAFE_BUDGET_REAIS));
+                }
+
+                let campaignBudgetResult = {
+                  success: false,
+                  attempts: 0,
+                  error: currentBudget <= 0 ? "campaign_daily_budget_unavailable" : "not_executed",
+                } as { success: boolean; attempts: number; error?: string };
+
+                if (currentBudget > 0) {
+                  const result = await metaApiCallWithRetry(
+                    `https://graph.facebook.com/v23.0/${campaign?.id || execDecision.campaign_id}`,
+                    {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ daily_budget: Math.round(newBudget * 100), access_token: accessToken }),
+                    }
+                  );
+                  campaignBudgetResult = { success: result.success, attempts: result.attempts, error: result.error };
+                }
+
+                const ratio = budgetRatioForAction(execDecision.action, currentBudget, newBudget);
+                let adsetFallback: Awaited<ReturnType<typeof applyAdsetBudgetFallback>> | null = null;
+
+                if (!campaignBudgetResult.success && campaign) {
+                  adsetFallback = await applyAdsetBudgetFallback(campaign.id, adsetsList, accessToken, ratio);
+
+                  await sb.from("emergency_logs").insert({
+                    profile_id: profile.id,
+                    user_id: profile.user_id,
+                    action_type: "agent_self_heal",
+                    details: {
+                      success: adsetFallback.success,
+                      source_action: execDecision.action,
+                      campaign_id: campaign.id,
+                      campaign_name: campaign.name,
+                      root_cause: campaignBudgetResult.error || "campaign_budget_update_failed",
+                      recovery_type: "adset_budget_fallback",
+                      recovery_details: {
+                        ratio,
+                        updated_adsets: adsetFallback.updated,
+                        old_avg_budget: adsetFallback.old_avg_budget,
+                        new_avg_budget: adsetFallback.new_avg_budget,
+                        attempts: adsetFallback.attempts,
+                        errors: adsetFallback.errors,
+                      },
+                      hour: currentHour,
+                    },
+                  });
+                }
+
+                const finalSuccess = campaignBudgetResult.success || !!adsetFallback?.success;
+                const actionType = execDecision.action === "rollback" ? "agent_rollback" : execDecision.action === "scale" ? "agent_scale" : "agent_reduce";
+
+                await sb.from("emergency_logs").insert({
+                  profile_id: profile.id,
+                  user_id: profile.user_id,
+                  action_type: actionType,
+                  details: {
+                    campaign_id: campaign?.id || execDecision.campaign_id,
+                    campaign_name: campaign?.name,
+                    resolved_from,
+                    old_budget: currentBudget,
+                    new_budget: newBudget,
+                    reason: execDecision.reason,
+                    success: finalSuccess,
+                    primary_success: campaignBudgetResult.success,
+                    recovered: !!adsetFallback?.success,
+                    fallback: adsetFallback
+                      ? {
+                          updated_adsets: adsetFallback.updated,
+                          old_avg_budget: adsetFallback.old_avg_budget,
+                          new_avg_budget: adsetFallback.new_avg_budget,
+                        }
+                      : null,
+                    attempts: campaignBudgetResult.attempts + (adsetFallback?.attempts || 0),
+                    hour: currentHour,
+                    age_days: campaign?.age_days,
+                    error: finalSuccess ? undefined : campaignBudgetResult.error,
+                  },
+                });
+
+                profileResult.actions.push({
+                  ...execDecision,
+                  campaign_id: campaign?.id || execDecision.campaign_id,
+                  old_budget: currentBudget,
+                  new_budget: newBudget,
+                  status: finalSuccess ? (campaignBudgetResult.success ? "EXECUTED" : "RECOVERED") : "FAILED",
+                  attempts: campaignBudgetResult.attempts + (adsetFallback?.attempts || 0),
+                  recovered: !!adsetFallback?.success,
+                  error: finalSuccess ? undefined : campaignBudgetResult.error,
+                });
               }
             } catch (execErr) {
-              profileResult.actions.push({ ...decision, status: "ERROR", error: (execErr as Error).message });
+              profileResult.actions.push({ ...execDecision, status: "ERROR", error: (execErr as Error).message });
             }
           }
 
