@@ -9,7 +9,49 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { profiles } = await req.json();
+    const body = await req.json();
+
+    // Handle low recovery rate alert
+    if (body.type === "low_recovery_rate") {
+      const { recovery_rate, failures, recovered, user_email, profile_id } = body;
+      console.log(`[LOW RECOVERY ALERT] Profile: ${profile_id}, Rate: ${recovery_rate}%, Failures: ${failures}, Recovered: ${recovered}, Email: ${user_email}`);
+      
+      // Log the alert to emergency_logs via Supabase
+      const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+      const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+      
+      if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
+        await fetch(`${SUPABASE_URL}/rest/v1/emergency_logs`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "apikey": SUPABASE_SERVICE_ROLE_KEY,
+            "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+            "Prefer": "return=minimal",
+          },
+          body: JSON.stringify({
+            user_id: body.user_id || "00000000-0000-0000-0000-000000000000",
+            profile_id,
+            action_type: "recovery_alert",
+            details: {
+              recovery_rate,
+              failures,
+              recovered,
+              user_email,
+              alert_sent: true,
+              timestamp: new Date().toISOString(),
+            },
+          }),
+        });
+      }
+
+      return new Response(JSON.stringify({ 
+        success: true, 
+        message: `Alerta de baixa confiabilidade registrado. Taxa: ${recovery_rate}%` 
+      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    const { profiles } = body;
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
