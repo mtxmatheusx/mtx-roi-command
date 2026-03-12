@@ -648,8 +648,8 @@ export default function AgenteAutonomo() {
                         </p>
                       )}
                     </div>
-                    <Badge variant={log.details?.success ? "default" : "destructive"} className="text-[10px] shrink-0">
-                      {log.details?.success ? "OK" : "FALHA"}
+                    <Badge variant={log.details?.recovered ? "secondary" : log.details?.success ? "default" : "destructive"} className="text-[10px] shrink-0">
+                      {log.details?.recovered ? "RECUPERADO" : log.details?.success ? "OK" : "FALHA"}
                     </Badge>
                   </motion.div>
                 ))}
