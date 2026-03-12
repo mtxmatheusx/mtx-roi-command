@@ -37,14 +37,23 @@ export default function AgenteAutonomo() {
   const [hourlyEnabled, setHourlyEnabled] = useState(false);
   const [businessStart, setBusinessStart] = useState(8);
   const [businessEnd, setBusinessEnd] = useState(23);
+  const [daypartConfig, setDaypartConfig] = useState({
+    enabled: false,
+    morning: { enabled: true, multiplier: 1.0 },
+    afternoon: { enabled: true, multiplier: 1.0 },
+    evening: { enabled: true, multiplier: 1.0 },
+    latenight: { enabled: true, multiplier: 1.0 },
+    auto_learn: true,
+  });
 
   useEffect(() => {
     if (!user?.id || !activeProfile?.id) return;
     loadLogs();
-    // Load hourly optimizer settings from profile
     setHourlyEnabled(!!(activeProfile as any)?.hourly_optimizer_enabled);
     setBusinessStart((activeProfile as any)?.business_hours_start ?? 8);
     setBusinessEnd((activeProfile as any)?.business_hours_end ?? 23);
+    const dc = (activeProfile as any)?.daypart_config;
+    if (dc) setDaypartConfig({ ...daypartConfig, ...dc });
   }, [user?.id, activeProfile?.id]);
 
   const loadLogs = async () => {
