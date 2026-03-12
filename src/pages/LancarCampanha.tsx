@@ -1429,6 +1429,73 @@ export default function LancarCampanha() {
                       <span className={item.ok ? "text-foreground" : "text-muted-foreground"}>{item.label}</span>
                     </div>
                   ))}
+
+                  {/* Inline URL + Catalog editor */}
+                  <div className="pt-3 mt-2 border-t border-border space-y-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs flex items-center gap-1.5">
+                        <Globe className="w-3.5 h-3.5 text-primary" />
+                        URL de Destino {!useCatalog && "*"}
+                      </Label>
+                      <Input
+                        placeholder="https://seu-produto.com/oferta"
+                        value={destinationUrl}
+                        onChange={(e) => setDestinationUrl(e.target.value)}
+                        disabled={useCatalog}
+                        className="h-9 text-sm"
+                      />
+                    </div>
+
+                    <div className="flex items-center gap-3 p-2.5 rounded-lg border border-border bg-secondary/50">
+                      <Checkbox id="useCatalogStep3" checked={useCatalog} onCheckedChange={(v) => {
+                        setUseCatalog(!!v);
+                        if (v && !catalogs.length) loadCatalogs();
+                      }} />
+                      <label htmlFor="useCatalogStep3" className="text-xs cursor-pointer flex items-center gap-1.5">
+                        <ShoppingBag className="w-3.5 h-3.5 text-primary" />
+                        Usar Catálogo de Produtos (DPA)
+                        {profileCatalogId && <span className="text-[10px] text-muted-foreground">ID: {profileCatalogId}</span>}
+                      </label>
+                    </div>
+
+                    {useCatalog && (
+                      <div className="space-y-2">
+                        {catalogs.length > 0 ? (
+                          <Select value={selectedCatalog} onValueChange={setSelectedCatalog}>
+                            <SelectTrigger className="h-9 text-sm">
+                              <SelectValue placeholder="Selecione um catálogo" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {catalogs.map((c) => (
+                                <SelectItem key={c.id} value={c.id}>
+                                  {c.name} {c.product_count ? `(${c.product_count} produtos)` : ""}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : !profileCatalogId ? (
+                          <div className="space-y-1.5">
+                            <Label className="text-xs">Catalog ID Manual</Label>
+                            <Input
+                              placeholder="Ex: 123456789012345"
+                              value={inlineCatalogId}
+                              onChange={(e) => {
+                                const val = e.target.value.replace(/[^0-9]/g, "");
+                                setInlineCatalogId(val);
+                                if (val) setSelectedCatalog(val);
+                              }}
+                              className="h-9 font-mono text-xs"
+                            />
+                          </div>
+                        ) : null}
+                        {catalogsLoading && (
+                          <p className="text-xs text-muted-foreground flex items-center gap-1">
+                            <Loader2 className="w-3 h-3 animate-spin" /> Carregando catálogos...
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
 
