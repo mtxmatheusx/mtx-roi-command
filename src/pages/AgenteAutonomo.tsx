@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Bot, Play, Pause, TrendingUp, ShieldCheck, Activity, AlertTriangle, Clock, Zap, RefreshCw, Loader2, Copy, Timer, Sun, Moon, Shield, RotateCcw, Mail } from "lucide-react";
+import { Bot, Play, Pause, TrendingUp, ShieldCheck, Activity, AlertTriangle, Clock, Zap, RefreshCw, Loader2, Copy, Timer, Sun, Moon, Shield, RotateCcw, Mail, FileText } from "lucide-react";
 import { AreaChart, Area, ResponsiveContainer, Tooltip as RechartsTooltip, XAxis } from "recharts";
 import { Input } from "@/components/ui/input";
 import AgentRulesEditor from "@/components/AgentRulesEditor";
@@ -243,6 +243,8 @@ export default function AgenteAutonomo() {
 
   // Email alert for low recovery rate
   const [alertSent, setAlertSent] = useState(false);
+  const [isSendingReport, setIsSendingReport] = useState(false);
+
   const handleSendRecoveryAlert = async () => {
     if (!activeProfile?.id || !user?.id) return;
     try {
@@ -264,6 +266,21 @@ export default function AgenteAutonomo() {
     }
   };
 
+  const handleSendReportNow = async () => {
+    setIsSendingReport(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("daily-email-report", {
+        body: { manual: true },
+      });
+      if (error) throw error;
+      toast({ title: "📊 Relatório enviado", description: data?.message || "Relatório diário gerado e enviado com sucesso." });
+    } catch (e: any) {
+      toast({ title: "Erro ao enviar relatório", description: e.message, variant: "destructive" });
+    } finally {
+      setIsSendingReport(false);
+    }
+  };
+
   return (
     <AppLayout>
       <ActiveProfileHeader />
@@ -279,10 +296,16 @@ export default function AgenteAutonomo() {
               IA que monitora, otimiza e protege suas campanhas 24/7
             </p>
           </div>
-          <Button onClick={handleManualRun} disabled={isRunning || !activeProfile} className="gap-2">
-            {isRunning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
-            {isRunning ? "Executando..." : "Executar Agora"}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={handleSendReportNow} disabled={isSendingReport} className="gap-2">
+              {isSendingReport ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
+              {isSendingReport ? "Enviando..." : "Enviar Relatório Agora"}
+            </Button>
+            <Button onClick={handleManualRun} disabled={isRunning || !activeProfile} className="gap-2">
+              {isRunning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
+              {isRunning ? "Executando..." : "Executar Agora"}
+            </Button>
+          </div>
         </div>
 
         {/* Recovery Rate Card */}
