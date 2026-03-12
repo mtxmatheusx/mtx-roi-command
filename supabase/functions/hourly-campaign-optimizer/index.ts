@@ -410,7 +410,7 @@ serve(async (req) => {
             const aiResult = await getHourlyAIDecision(
               LOVABLE_API_KEY, profile.name,
               { cpa_meta: profile.cpa_meta, cpa_max_toleravel: profile.cpa_max_toleravel, roas_min_escala: profile.roas_min_escala, teto_diario_escala: profile.teto_diario_escala, limite_escala: profile.limite_escala },
-              campaignSummaries, hourlyData, currentHour, businessStart, businessEnd
+              campaignSummaries, hourlyData, currentHour, businessStart, businessEnd, daypart, weeklyPattern
             );
             decisions = aiResult.decisions.filter((d: any) => d.action !== "maintain");
             aiSummary = aiResult.summary;
