@@ -70,6 +70,124 @@ function campaignAgeDays(createdTime: string): number {
   return Math.floor((now.getTime() - created.getTime()) / 86400000);
 }
 
+const MIN_SAFE_BUDGET_REAIS = 1;
+
+function normalizeCampaignRef(value: string): string {
+  return (value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function resolveCampaignReference(ref: string, campaigns: CampaignInsight[]): CampaignInsight | undefined {
+  if (!ref) return undefined;
+
+  const byId = campaigns.find((c) => c.id === ref);
+  if (byId) return byId;
+
+  const numericId = ref.match(/\d{12,}/)?.[0];
+  if (numericId) {
+    const byNumericId = campaigns.find((c) => c.id === numericId);
+    if (byNumericId) return byNumericId;
+  }
+
+  const normalizedRef = normalizeCampaignRef(ref);
+  if (!normalizedRef) return undefined;
+
+  const exactName = campaigns.find((c) => normalizeCampaignRef(c.name) === normalizedRef);
+  if (exactName) return exactName;
+
+  return campaigns.find((c) => {
+    const normalizedName = normalizeCampaignRef(c.name);
+    return normalizedName.includes(normalizedRef) || normalizedRef.includes(normalizedName);
+  });
+}
+
+function parseBudgetToReais(value: string | number | null | undefined): number {
+  const cents = typeof value === "number" ? value : parseInt(String(value ?? "0"), 10);
+  if (!Number.isFinite(cents) || cents <= 0) return 0;
+  return cents / 100;
+}
+
+function ensureValidBudget(value: number): number {
+  if (!Number.isFinite(value) || value <= 0) return MIN_SAFE_BUDGET_REAIS;
+  return Math.max(MIN_SAFE_BUDGET_REAIS, Math.round(value * 100) / 100);
+}
+
+function budgetRatioForAction(action: string, currentBudget: number, newBudget?: number): number {
+  if (currentBudget > 0 && newBudget && Number.isFinite(newBudget) && newBudget > 0) {
+    return newBudget / currentBudget;
+  }
+
+  if (action === "reduce" || action === "pause") return 0.7;
+  if (action === "scale") return 1.1;
+  if (action === "rollback") return 0.85;
+  return 1;
+}
+
+async function applyAdsetBudgetFallback(
+  campaignId: string,
+  adsets: any[],
+  accessToken: string,
+  ratio: number
+): Promise<{ success: boolean; updated: number; attempts: number; old_avg_budget: number; new_avg_budget: number; errors: string[] }> {
+  const campaignAdsets = (adsets || []).filter((a: any) => a.campaign_id === campaignId);
+  const editableAdsets = campaignAdsets
+    .map((a: any) => ({ adset: a, oldBudget: parseBudgetToReais(a.daily_budget) }))
+    .filter((item: any) => item.oldBudget > 0);
+
+  if (editableAdsets.length === 0) {
+    return {
+      success: false,
+      updated: 0,
+      attempts: 0,
+      old_avg_budget: 0,
+      new_avg_budget: 0,
+      errors: ["Nenhum adset com daily_budget válido para fallback."],
+    };
+  }
+
+  let updated = 0;
+  let attempts = 0;
+  let oldBudgetSum = 0;
+  let newBudgetSum = 0;
+  const errors: string[] = [];
+
+  for (const item of editableAdsets) {
+    const oldBudget = item.oldBudget;
+    const newBudget = ensureValidBudget(oldBudget * ratio);
+
+    const result = await metaApiCallWithRetry(
+      `https://graph.facebook.com/v23.0/${item.adset.id}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ daily_budget: Math.round(newBudget * 100), access_token: accessToken }),
+      }
+    );
+
+    attempts += result.attempts;
+    if (result.success) {
+      updated += 1;
+      oldBudgetSum += oldBudget;
+      newBudgetSum += newBudget;
+    } else {
+      errors.push(`adset ${item.adset.id}: ${result.error || "erro desconhecido"}`);
+    }
+  }
+
+  return {
+    success: updated > 0,
+    updated,
+    attempts,
+    old_avg_budget: updated > 0 ? oldBudgetSum / updated : 0,
+    new_avg_budget: updated > 0 ? newBudgetSum / updated : 0,
+    errors,
+  };
+}
+
 // ─── Retry wrapper for Meta API calls ──────────────────────
 
 async function metaApiCallWithRetry(
