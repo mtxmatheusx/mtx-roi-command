@@ -145,10 +145,19 @@ export default function Dashboard() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="bg-card border border-border flex-wrap h-auto gap-1 p-1">
-          <TabsTrigger value="dashboard" className="gap-2 text-xs sm:text-sm"><BarChart3 className="w-4 h-4" /><span className="hidden sm:inline">Dashboard</span></TabsTrigger>
-          <TabsTrigger value="campaign-manager" className="gap-2 text-xs sm:text-sm"><Briefcase className="w-4 h-4" /><span className="hidden sm:inline">Gestão</span></TabsTrigger>
-        </TabsList>
+        <div className="flex items-center gap-2 flex-wrap">
+          <TabsList className="bg-card border border-border flex-wrap h-auto gap-1 p-1">
+            <TabsTrigger value="dashboard" className="gap-2 text-xs sm:text-sm"><BarChart3 className="w-4 h-4" /><span className="hidden sm:inline">Dashboard</span></TabsTrigger>
+            <TabsTrigger value="campaign-manager" className="gap-2 text-xs sm:text-sm"><Briefcase className="w-4 h-4" /><span className="hidden sm:inline">Gestão</span></TabsTrigger>
+          </TabsList>
+          <a href="https://developers.facebook.com/tools/explorer/" target="_blank" rel="noopener noreferrer">
+            <Button variant="outline" size="sm" className="gap-2 h-8 text-xs sm:text-sm">
+              <Eye className="w-4 h-4" />
+              <span className="hidden sm:inline">Graph API Explorer</span>
+              <span className="sm:hidden">Graph API</span>
+            </Button>
+          </a>
+        </div>
 
         <TabsContent value="dashboard">
           <DashboardTab
