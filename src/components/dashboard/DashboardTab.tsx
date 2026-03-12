@@ -28,6 +28,7 @@ interface DashboardTabProps {
   budgetMaximo: number;
   budgetFrequency: string;
   cpaMeta: number;
+  totalSpend: number;
   totalRevenue: number;
   totalProfit: number;
   totalPurchases: number;
