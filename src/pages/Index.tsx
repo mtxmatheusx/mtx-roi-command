@@ -170,7 +170,7 @@ export default function Dashboard() {
             isPermissionError={isPermissionError}
             isTokenExpired={isTokenExpired}
             isCached={isCached}
-            fetchedAt={fetchedAt}
+            dataVerified={dataVerified}
             budgetMaximo={budgetMaximo}
             budgetFrequency={budgetFrequency}
             cpaMeta={cpaMeta}
