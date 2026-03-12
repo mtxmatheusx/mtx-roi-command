@@ -162,6 +162,7 @@ export default function AgenteAutonomo() {
       case "kill_switch": return <AlertTriangle className="w-4 h-4 text-amber-500" />;
       case "hourly_resume": return <Play className="w-4 h-4 text-success" />;
       case "hourly_reduce": return <TrendingUp className="w-4 h-4 text-warning" />;
+      case "hourly_daypart": return <Timer className="w-4 h-4 text-warning" />;
       default: return <Activity className="w-4 h-4" />;
     }
   };
