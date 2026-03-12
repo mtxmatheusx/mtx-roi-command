@@ -219,6 +219,51 @@ export default function AgenteAutonomo() {
   const recentRecovered = recentLogs.filter(l => l.details?.recovered === true || l.action_type === "agent_self_heal");
   const recoveryRate = recentFailures.length > 0 ? Math.round((recentRecovered.length / recentFailures.length) * 100) : null;
 
+  // 7-day recovery rate history for sparkline
+  const recoveryHistory = Array.from({ length: 7 }, (_, i) => {
+    const dayStart = new Date(Date.now() - (6 - i) * 24 * 60 * 60 * 1000);
+    dayStart.setHours(0, 0, 0, 0);
+    const dayEnd = new Date(dayStart);
+    dayEnd.setHours(23, 59, 59, 999);
+    const dayLogs = logs.filter(l => {
+      const d = new Date(l.created_at);
+      return d >= dayStart && d <= dayEnd;
+    });
+    const failures = dayLogs.filter(l => l.details?.success === false || l.details?.recovered);
+    const recovered = dayLogs.filter(l => l.details?.recovered === true || l.action_type === "agent_self_heal");
+    const rate = failures.length > 0 ? Math.round((recovered.length / failures.length) * 100) : null;
+    return {
+      day: dayStart.toLocaleDateString("pt-BR", { weekday: "short" }).replace(".", ""),
+      rate: rate ?? 100,
+      failures: failures.length,
+      recovered: recovered.length,
+      hasData: failures.length > 0,
+    };
+  });
+
+  // Email alert for low recovery rate
+  const [alertSent, setAlertSent] = useState(false);
+  const handleSendRecoveryAlert = async () => {
+    if (!activeProfile?.id || !user?.id) return;
+    try {
+      const { error } = await supabase.functions.invoke("agency-alerts", {
+        body: {
+          type: "low_recovery_rate",
+          profile_id: activeProfile.id,
+          recovery_rate: recoveryRate,
+          failures: recentFailures.length,
+          recovered: recentRecovered.length,
+          user_email: user.email,
+        },
+      });
+      if (error) throw error;
+      setAlertSent(true);
+      toast({ title: "📧 Alerta enviado", description: "Notificação de baixa confiabilidade enviada por email." });
+    } catch (e: any) {
+      toast({ title: "Erro ao enviar alerta", description: e.message, variant: "destructive" });
+    }
+  };
+
   return (
     <AppLayout>
       <ActiveProfileHeader />
