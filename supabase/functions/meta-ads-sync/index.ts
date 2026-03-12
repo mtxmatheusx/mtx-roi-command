@@ -168,10 +168,19 @@ Deno.serve(async (req) => {
       const testData = await testRes.json();
       if (testData?.error) {
         const msg = testData.error.message || "";
-        const isRateLimit = msg.includes("Application request limit reached");
+        const isRateLimit = isRateLimitError(msg);
+        const isTokenExpired = isTokenExpiredError(msg);
         return new Response(
-          JSON.stringify({ error: isRateLimit ? "Limite de requisições da Meta atingido. Aguarde alguns minutos." : msg }),
-          { status: isRateLimit ? 429 : 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          JSON.stringify({
+            error: isRateLimit
+              ? "Limite de requisições da Meta atingido. Aguarde alguns minutos."
+              : isTokenExpired
+                ? "Token da Meta expirado. Atualize o token do perfil para voltar a sincronizar."
+                : msg,
+            type: testData.error?.type,
+            errorCode: isTokenExpired ? "TOKEN_EXPIRED" : undefined,
+          }),
+          { status: isRateLimit ? 429 : isTokenExpired ? 401 : 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
