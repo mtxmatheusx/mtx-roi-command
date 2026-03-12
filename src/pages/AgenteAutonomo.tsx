@@ -84,6 +84,16 @@ export default function AgenteAutonomo() {
       setRunResult(data);
       const activeResult = data?.results?.find((r: any) => r.profile_id === activeProfile?.id) || data?.results?.[0];
       toast({ title: "✅ Agente executado", description: activeResult?.ai_summary || `${data?.results?.length || 0} perfis analisados.` });
+
+      // Check for self-heal actions and notify
+      const selfHealActions = activeResult?.actions?.filter((a: any) => a.recovered || a.action === "self_heal") || [];
+      if (selfHealActions.length > 0) {
+        toast({
+          title: "🔧 Auto-correção acionada",
+          description: `${selfHealActions.length} falha(s) corrigida(s) automaticamente pelo agente.`,
+        });
+      }
+
       loadLogs();
     } catch (e: any) {
       toast({ title: "Erro", description: e.message, variant: "destructive" });
