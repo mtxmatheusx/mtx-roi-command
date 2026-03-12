@@ -132,6 +132,8 @@ async function getHourlyAIDecision(
   currentHour: number,
   businessStart: number,
   businessEnd: number,
+  daypartConfig: DaypartConfig,
+  weeklyPattern: Map<string, { spend: number; purchases: number; revenue: number }>,
 ): Promise<{ decisions: any[]; summary: string }> {
   try {
     const controller = new AbortController();
