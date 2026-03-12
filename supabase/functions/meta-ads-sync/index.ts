@@ -6,17 +6,29 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+function isRateLimitError(message: string): boolean {
+  return message.includes("Application request limit reached") || message.toLowerCase().includes("rate limit");
+}
+
+function isTokenExpiredError(message: string): boolean {
+  return (
+    message.includes("Session has expired") ||
+    message.includes("Error validating access token") ||
+    message.includes("invalid or has expired")
+  );
+}
+
 function buildUrl(adAccountId: string, fields: string, accessToken: string, opts: {
   since?: string; until?: string; datePreset?: string; level?: string;
 }) {
   const base = `https://graph.facebook.com/v21.0/${adAccountId}/insights?fields=${fields}&limit=50&access_token=${accessToken}`;
   const level = opts.level || "campaign";
   let url = `${base}&level=${level}`;
-  url += `&action_attribution_windows=[\"7d_click\",\"1d_view\"]`;
+  url += `&action_attribution_windows=["7d_click","1d_view"]`;
   url += `&time_zone=America/Sao_Paulo`;
 
   if (opts.since && opts.until) {
-    url += `&time_range={\"since\":\"${opts.since}\",\"until\":\"${opts.until}\"}`;
+    url += `&time_range={"since":"${opts.since}","until":"${opts.until}"}`;
     if (level === "account") {
       url += `&time_increment=1`;
     }
