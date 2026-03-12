@@ -30,7 +30,7 @@ function AppLayoutInner({ children }: { children: ReactNode }) {
           isMobile ? "ml-0" : collapsed ? "ml-[56px]" : "ml-60"
         )}
       >
-        <header className="flex items-center justify-between px-4 sm:px-8 py-3 border-b border-border bg-card">
+        <header className="sticky top-0 z-30 flex items-center justify-between px-4 sm:px-8 py-3 border-b border-border bg-card/95 backdrop-blur-sm">
           {isMobile && (
             <button
               onClick={() => setMobileOpen(true)}
