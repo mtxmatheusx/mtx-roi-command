@@ -209,6 +209,14 @@ export default function AgenteAutonomo() {
   const pauseCount = logs.filter(l => l.action_type === "agent_pause" || l.action_type === "guardian" || l.action_type === "hourly_pause").length;
   const protectedCount = logs.filter(l => l.action_type === "guardian_protected").length;
   const hourlyActionCount = logs.filter(l => l.action_type.startsWith("hourly_")).length;
+  const selfHealCount = logs.filter(l => l.action_type === "agent_self_heal").length;
+
+  // Recovery rate: last 24h
+  const now24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const recentLogs = logs.filter(l => new Date(l.created_at) >= now24h);
+  const recentFailures = recentLogs.filter(l => l.details?.success === false || l.details?.recovered);
+  const recentRecovered = recentLogs.filter(l => l.details?.recovered === true || l.action_type === "agent_self_heal");
+  const recoveryRate = recentFailures.length > 0 ? Math.round((recentRecovered.length / recentFailures.length) * 100) : null;
 
   return (
     <AppLayout>
