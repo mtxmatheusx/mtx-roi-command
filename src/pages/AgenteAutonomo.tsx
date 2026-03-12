@@ -296,10 +296,16 @@ export default function AgenteAutonomo() {
               IA que monitora, otimiza e protege suas campanhas 24/7
             </p>
           </div>
-          <Button onClick={handleManualRun} disabled={isRunning || !activeProfile} className="gap-2">
-            {isRunning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
-            {isRunning ? "Executando..." : "Executar Agora"}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={handleSendReportNow} disabled={isSendingReport} className="gap-2">
+              {isSendingReport ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
+              {isSendingReport ? "Enviando..." : "Enviar Relatório Agora"}
+            </Button>
+            <Button onClick={handleManualRun} disabled={isRunning || !activeProfile} className="gap-2">
+              {isRunning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
+              {isRunning ? "Executando..." : "Executar Agora"}
+            </Button>
+          </div>
         </div>
 
         {/* Recovery Rate Card */}
