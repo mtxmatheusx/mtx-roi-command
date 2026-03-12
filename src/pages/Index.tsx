@@ -173,8 +173,8 @@ export default function Dashboard() {
             dataVerified={dataVerified}
             fetchedAt={fetchedAt}
             budgetMaximo={budgetMaximo}
+            budgetFrequency={budgetFrequency}
             cpaMeta={cpaMeta}
-            totalSpend={totalSpend}
             totalRevenue={totalRevenue}
             totalProfit={totalProfit}
             totalPurchases={totalPurchases}
