@@ -81,32 +81,35 @@ export default function DashboardTab(props: DashboardTabProps) {
     deltaProfit, deltaSpend, deltaCPA, deltaROAS, deltaPurchases, deltaCPM, deltaCTR, deltaTM, logs,
   } = props;
 
+  const [dismissed, setDismissed] = useState<Record<string, boolean>>({});
+  const dismiss = (key: string) => setDismissed((prev) => ({ ...prev, [key]: true }));
+
   return (
     <div className="space-y-6">
       {/* Status Banners */}
-      {isPermissionError && (
-        <AlertBanner variant="warning">
-          Conecte seu Token com permissão <strong className="mx-1">ads_read</strong> na Meta para visualizar dados reais.
-        </AlertBanner>
-      )}
-      {isTokenExpired && (
-        <AlertBanner variant="error">
-          Token da Meta expirado. Atualize o token nas <strong className="mx-1">Configurações</strong> para voltar a sincronizar dados reais.
-        </AlertBanner>
-      )}
-      {isCached && (
-        <AlertBanner variant="info">
-          Exibindo dados do cache local (última sync: {fetchedAt ? new Date(fetchedAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) : "—"}).
-        </AlertBanner>
-      )}
-      {isRateLimited && !isCached && !isTokenExpired && (
-        <AlertBanner>Limite de requisições da Meta atingido. Exibindo dados de demonstração.</AlertBanner>
-      )}
-      {isUsingMock && !isRateLimited && !isPermissionError && !isCached && !isTokenExpired && (
-        <AlertBanner>Exibindo dados de demonstração. Configure o Ad Account ID em <strong className="mx-1">Configurações</strong>.</AlertBanner>
-      )}
-
-      {/* Budget Progress */}
+      <AnimatePresence>
+        {isPermissionError && !dismissed.permission && (
+          <AlertBanner key="permission" variant="warning" onDismiss={() => dismiss("permission")}>
+            Conecte seu Token com permissão <strong className="mx-1">ads_read</strong> na Meta para visualizar dados reais.
+          </AlertBanner>
+        )}
+        {isTokenExpired && !dismissed.tokenExpired && (
+          <AlertBanner key="tokenExpired" variant="error" onDismiss={() => dismiss("tokenExpired")}>
+            Token da Meta expirado. Atualize o token nas <strong className="mx-1">Configurações</strong> para voltar a sincronizar dados reais.
+          </AlertBanner>
+        )}
+        {isCached && !dismissed.cached && (
+          <AlertBanner key="cached" variant="info" onDismiss={() => dismiss("cached")}>
+            Exibindo dados do cache local (última sync: {fetchedAt ? new Date(fetchedAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) : "—"}).
+          </AlertBanner>
+        )}
+        {isRateLimited && !isCached && !isTokenExpired && !dismissed.rateLimit && (
+          <AlertBanner key="rateLimit" onDismiss={() => dismiss("rateLimit")}>Limite de requisições da Meta atingido. Exibindo dados de demonstração.</AlertBanner>
+        )}
+        {isUsingMock && !isRateLimited && !isPermissionError && !isCached && !isTokenExpired && !dismissed.mock && (
+          <AlertBanner key="mock" onDismiss={() => dismiss("mock")}>Exibindo dados de demonstração. Configure o Ad Account ID em <strong className="mx-1">Configurações</strong>.</AlertBanner>
+        )}
+      </AnimatePresence>
       {budgetMaximo > 0 && !isLoading && (() => {
         const freqLabels: Record<string, string> = { daily: "Diário", weekly: "Semanal", monthly: "Mensal" };
         const today = new Date().toISOString().slice(0, 10);
