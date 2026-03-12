@@ -171,8 +171,8 @@ export default function Dashboard() {
             isTokenExpired={isTokenExpired}
             isCached={isCached}
             dataVerified={dataVerified}
+            fetchedAt={fetchedAt}
             budgetMaximo={budgetMaximo}
-            budgetFrequency={budgetFrequency}
             cpaMeta={cpaMeta}
             totalSpend={totalSpend}
             totalRevenue={totalRevenue}
