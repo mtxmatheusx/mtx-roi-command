@@ -227,7 +227,21 @@ export function useMetaAds(dateRange?: DateRange, profileConfig?: { adAccountId?
 
       const { data, error } = await supabase.functions.invoke("meta-ads-sync", { body });
 
-      const errorMsg = data?.error || (error as Error)?.message || "";
+      let errorMsg = data?.error || "";
+      let errorCode: string | undefined = data?.errorCode;
+
+      if (error) {
+        const context = (error as Error & { context?: Response }).context;
+        if (context) {
+          const parsedError = await context.clone().json().catch(() => null) as { error?: string; errorCode?: string } | null;
+          if (parsedError?.error) errorMsg = parsedError.error;
+          if (parsedError?.errorCode) errorCode = parsedError.errorCode;
+        }
+        if (!errorMsg) {
+          errorMsg = (error as Error).message || "";
+        }
+      }
+
       const isRateLimit = typeof errorMsg === "string" && (
         errorMsg.includes("Limite de requisições") ||
         errorMsg.includes("Application request limit reached") ||
@@ -239,11 +253,13 @@ export function useMetaAds(dateRange?: DateRange, profileConfig?: { adAccountId?
         errorMsg.includes("Unsupported get request") ||
         (errorMsg.includes("permission") && !isRateLimit)
       );
+      const isTokenExpired = typeof errorMsg === "string" && isMetaTokenExpired(errorMsg, errorCode);
 
-      // On rate limit or permission error, try cache first
-      if (isRateLimit || isPermission) {
+      // On known Meta errors, try cache first
+      if (isRateLimit || isPermission || isTokenExpired) {
         setIsRateLimited(isRateLimit);
         setIsPermissionError(isPermission);
+        setIsTokenExpired(isTokenExpired);
         const cached = loadFromCache(adAccountId);
         if (cached) {
           setIsCached(true);
@@ -254,6 +270,7 @@ export function useMetaAds(dateRange?: DateRange, profileConfig?: { adAccountId?
       }
       setIsRateLimited(false);
       setIsPermissionError(false);
+      setIsTokenExpired(false);
       setIsCached(false);
 
       if (error) throw error;
