@@ -41,6 +41,11 @@ export default function AgenteAutonomo() {
   useEffect(() => {
     if (!user?.id || !activeProfile?.id) return;
     loadLogs();
+    // Load hourly optimizer settings from profile
+    setHourlyEnabled(!!(activeProfile as any)?.hourly_optimizer_enabled);
+    setBusinessStart((activeProfile as any)?.business_hours_start ?? 8);
+    setBusinessEnd((activeProfile as any)?.business_hours_end ?? 23);
+  }, [user?.id, activeProfile?.id]);
   }, [user?.id, activeProfile?.id]);
 
   const loadLogs = async () => {
