@@ -168,8 +168,8 @@ export default function Dashboard() {
             isUsingMock={isUsingMock}
             isRateLimited={isRateLimited}
             isPermissionError={isPermissionError}
+            isTokenExpired={isTokenExpired}
             isCached={isCached}
-            dataVerified={dataVerified}
             fetchedAt={fetchedAt}
             budgetMaximo={budgetMaximo}
             budgetFrequency={budgetFrequency}
