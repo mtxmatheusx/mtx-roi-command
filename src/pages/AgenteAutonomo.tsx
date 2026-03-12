@@ -239,6 +239,31 @@ export default function AgenteAutonomo() {
           </Button>
         </div>
 
+        {/* Recovery Rate Card */}
+        {(selfHealCount > 0 || recentFailures.length > 0) && (
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+            <Card className="border-primary/30 bg-primary/5">
+              <CardContent className="p-4 flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <ShieldCheck className="w-6 h-6 text-primary" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium">Taxa de Recuperação (24h)</p>
+                  <p className="text-[10px] text-muted-foreground">
+                    {recentRecovered.length} corrigida(s) de {recentFailures.length} falha(s)
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className={`text-3xl font-bold ${recoveryRate !== null && recoveryRate >= 80 ? "text-success" : recoveryRate !== null && recoveryRate >= 50 ? "text-warning" : "text-destructive"}`}>
+                    {recoveryRate !== null ? `${recoveryRate}%` : "—"}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground">confiabilidade</p>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+
         {/* Status Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
