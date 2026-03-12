@@ -79,15 +79,20 @@ export default function DashboardTab(props: DashboardTabProps) {
           Conecte seu Token com permissão <strong className="mx-1">ads_read</strong> na Meta para visualizar dados reais.
         </AlertBanner>
       )}
+      {isTokenExpired && (
+        <AlertBanner variant="error">
+          Token da Meta expirado. Atualize o token nas <strong className="mx-1">Configurações</strong> para voltar a sincronizar dados reais.
+        </AlertBanner>
+      )}
       {isCached && (
         <AlertBanner variant="info">
           Exibindo dados do cache local (última sync: {fetchedAt ? new Date(fetchedAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) : "—"}).
         </AlertBanner>
       )}
-      {isRateLimited && !isCached && (
+      {isRateLimited && !isCached && !isTokenExpired && (
         <AlertBanner>Limite de requisições da Meta atingido. Exibindo dados de demonstração.</AlertBanner>
       )}
-      {isUsingMock && !isRateLimited && !isPermissionError && !isCached && (
+      {isUsingMock && !isRateLimited && !isPermissionError && !isCached && !isTokenExpired && (
         <AlertBanner>Exibindo dados de demonstração. Configure o Ad Account ID em <strong className="mx-1">Configurações</strong>.</AlertBanner>
       )}
 
