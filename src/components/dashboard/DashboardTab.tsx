@@ -21,8 +21,8 @@ interface DashboardTabProps {
   isUsingMock: boolean;
   isRateLimited: boolean;
   isPermissionError: boolean;
+  isTokenExpired: boolean;
   isCached: boolean;
-  dataVerified: boolean;
   fetchedAt: string | null;
   budgetMaximo: number;
   budgetFrequency: string;
