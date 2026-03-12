@@ -165,11 +165,14 @@ export type Database = {
           avatar_dossier: string | null
           budget_frequency: string
           budget_maximo: number
+          business_hours_end: number
+          business_hours_start: number
           catalog_id: string | null
           cpa_max_toleravel: number
           cpa_meta: number
           created_at: string
           gemini_api_key: string | null
+          hourly_optimizer_enabled: boolean
           id: string
           is_active: boolean
           limite_escala: number
@@ -194,11 +197,14 @@ export type Database = {
           avatar_dossier?: string | null
           budget_frequency?: string
           budget_maximo?: number
+          business_hours_end?: number
+          business_hours_start?: number
           catalog_id?: string | null
           cpa_max_toleravel?: number
           cpa_meta?: number
           created_at?: string
           gemini_api_key?: string | null
+          hourly_optimizer_enabled?: boolean
           id?: string
           is_active?: boolean
           limite_escala?: number
@@ -223,11 +229,14 @@ export type Database = {
           avatar_dossier?: string | null
           budget_frequency?: string
           budget_maximo?: number
+          business_hours_end?: number
+          business_hours_start?: number
           catalog_id?: string | null
           cpa_max_toleravel?: number
           cpa_meta?: number
           created_at?: string
           gemini_api_key?: string | null
+          hourly_optimizer_enabled?: boolean
           id?: string
           is_active?: boolean
           limite_escala?: number
