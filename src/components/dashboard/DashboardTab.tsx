@@ -27,7 +27,7 @@ interface DashboardTabProps {
   fetchedAt: string | null;
   budgetMaximo: number;
   budgetFrequency: string;
-  totalSpend: number;
+  cpaMeta: number;
   totalRevenue: number;
   totalProfit: number;
   totalPurchases: number;
