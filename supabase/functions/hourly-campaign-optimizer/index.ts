@@ -71,7 +71,31 @@ async function fetchHourlyBreakdown(accountId: string, accessToken: string, toda
   }
 }
 
-// Fetch today-total insights per campaign
+// Fetch 7-day hourly aggregate for pattern learning
+async function fetchWeeklyHourlyPattern(accountId: string, accessToken: string): Promise<Map<string, { spend: number; purchases: number; revenue: number }>> {
+  const since = dateStr(new Date(Date.now() - 7 * 86400000));
+  const until = dateStr(new Date(Date.now() - 86400000));
+  const url = `https://graph.facebook.com/v23.0/${accountId}/insights?fields=spend,actions,action_values&time_range={"since":"${since}","until":"${until}"}&breakdowns=hourly_stats_aggregated_by_advertiser_time_zone&level=account&limit=500&access_token=${accessToken}`;
+  try {
+    const resp = await fetch(url);
+    const data = await resp.json();
+    const map = new Map<string, { spend: number; purchases: number; revenue: number }>();
+    for (const row of (data.data || [])) {
+      const hourRange = row.hourly_stats_aggregated_by_advertiser_time_zone || "";
+      const m = parseMetrics(row);
+      const existing = map.get(hourRange) || { spend: 0, purchases: 0, revenue: 0 };
+      map.set(hourRange, {
+        spend: existing.spend + m.spend,
+        purchases: existing.purchases + m.purchases,
+        revenue: existing.revenue + m.revenue,
+      });
+    }
+    return map;
+  } catch {
+    return new Map();
+  }
+}
+
 async function fetchTodayInsights(accountId: string, accessToken: string, today: string): Promise<Map<string, any>> {
   const url = `https://graph.facebook.com/v23.0/${accountId}/insights?fields=campaign_id,spend,actions,action_values,impressions,clicks,ctr&time_range={"since":"${today}","until":"${today}"}&level=campaign&limit=500&access_token=${accessToken}`;
   try {
