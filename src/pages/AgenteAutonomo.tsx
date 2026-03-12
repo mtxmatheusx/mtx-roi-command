@@ -289,22 +289,75 @@ export default function AgenteAutonomo() {
         {(selfHealCount > 0 || recentFailures.length > 0) && (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
             <Card className="border-primary/30 bg-primary/5">
-              <CardContent className="p-4 flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
-                  <ShieldCheck className="w-6 h-6 text-primary" />
+              <CardContent className="p-4 space-y-3">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                    <ShieldCheck className="w-6 h-6 text-primary" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium">Taxa de Recuperação (24h)</p>
+                    <p className="text-[10px] text-muted-foreground">
+                      {recentRecovered.length} corrigida(s) de {recentFailures.length} falha(s)
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className={`text-3xl font-bold ${recoveryRate !== null && recoveryRate >= 80 ? "text-success" : recoveryRate !== null && recoveryRate >= 50 ? "text-warning" : "text-destructive"}`}>
+                      {recoveryRate !== null ? `${recoveryRate}%` : "—"}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground">confiabilidade</p>
+                  </div>
                 </div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium">Taxa de Recuperação (24h)</p>
-                  <p className="text-[10px] text-muted-foreground">
-                    {recentRecovered.length} corrigida(s) de {recentFailures.length} falha(s)
-                  </p>
+
+                {/* 7-day sparkline */}
+                <div>
+                  <p className="text-[10px] text-muted-foreground mb-1">Evolução — últimos 7 dias</p>
+                  <div className="h-16">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={recoveryHistory} margin={{ top: 2, right: 4, bottom: 0, left: 4 }}>
+                        <defs>
+                          <linearGradient id="recoveryFill" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.2} />
+                            <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                          </linearGradient>
+                        </defs>
+                        <XAxis dataKey="day" tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
+                        <RechartsTooltip
+                          content={({ active, payload }) => {
+                            if (!active || !payload?.length) return null;
+                            const d = payload[0].payload;
+                            return (
+                              <div className="rounded-lg border bg-card px-3 py-2 text-xs shadow-lg">
+                                <p className="font-medium">{d.day}</p>
+                                <p className="text-muted-foreground">{d.hasData ? `${d.rate}% (${d.recovered}/${d.failures})` : "Sem falhas"}</p>
+                              </div>
+                            );
+                          }}
+                        />
+                        <Area type="monotone" dataKey="rate" stroke="hsl(var(--primary))" strokeWidth={2} fill="url(#recoveryFill)" dot={false} />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <p className={`text-3xl font-bold ${recoveryRate !== null && recoveryRate >= 80 ? "text-success" : recoveryRate !== null && recoveryRate >= 50 ? "text-warning" : "text-destructive"}`}>
-                    {recoveryRate !== null ? `${recoveryRate}%` : "—"}
-                  </p>
-                  <p className="text-[10px] text-muted-foreground">confiabilidade</p>
-                </div>
+
+                {/* Low recovery alert */}
+                {recoveryRate !== null && recoveryRate < 50 && (
+                  <div className="flex items-center gap-3 p-2 rounded-lg border border-destructive/30 bg-destructive/5">
+                    <AlertTriangle className="w-4 h-4 text-destructive shrink-0" />
+                    <p className="text-xs text-destructive flex-1">
+                      Taxa de recuperação abaixo de 50%. Atenção requerida.
+                    </p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-1 text-xs h-7 border-destructive/30 text-destructive hover:bg-destructive/10"
+                      onClick={handleSendRecoveryAlert}
+                      disabled={alertSent}
+                    >
+                      <Mail className="w-3 h-3" />
+                      {alertSent ? "Enviado" : "Alertar por Email"}
+                    </Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </motion.div>
