@@ -259,12 +259,30 @@ Deno.serve(async (req) => {
     for (const result of results) {
       if (result?.error) {
         const msg = typeof result.error === "string" ? result.error : result.error?.message || "";
-        if (typeof msg === "string" && msg.includes("Application request limit reached")) {
-          return new Response(
-            JSON.stringify({ error: "Limite de requisições da Meta atingido. Aguarde alguns minutos e tente novamente.", type: "RateLimitError" }),
-            { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
+        if (typeof msg === "string") {
+          if (isRateLimitError(msg)) {
+            return new Response(
+              JSON.stringify({ error: "Limite de requisições da Meta atingido. Aguarde alguns minutos e tente novamente.", type: "RateLimitError" }),
+              { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+
+          if (isTokenExpiredError(msg)) {
+            return new Response(
+              JSON.stringify({
+                error: "Token da Meta expirado. Atualize o token do perfil para voltar a sincronizar.",
+                type: result.error?.type || "OAuthException",
+                errorCode: "TOKEN_EXPIRED",
+              }),
+              { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
         }
+
+        return new Response(
+          JSON.stringify({ error: msg || "Erro ao buscar dados na Meta.", type: result.error?.type }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
       }
     }
 
