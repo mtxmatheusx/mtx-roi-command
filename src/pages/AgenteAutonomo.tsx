@@ -243,6 +243,8 @@ export default function AgenteAutonomo() {
 
   // Email alert for low recovery rate
   const [alertSent, setAlertSent] = useState(false);
+  const [isSendingReport, setIsSendingReport] = useState(false);
+
   const handleSendRecoveryAlert = async () => {
     if (!activeProfile?.id || !user?.id) return;
     try {
@@ -261,6 +263,21 @@ export default function AgenteAutonomo() {
       toast({ title: "📧 Alerta enviado", description: "Notificação de baixa confiabilidade enviada por email." });
     } catch (e: any) {
       toast({ title: "Erro ao enviar alerta", description: e.message, variant: "destructive" });
+    }
+  };
+
+  const handleSendReportNow = async () => {
+    setIsSendingReport(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("daily-email-report", {
+        body: { manual: true },
+      });
+      if (error) throw error;
+      toast({ title: "📊 Relatório enviado", description: data?.message || "Relatório diário gerado e enviado com sucesso." });
+    } catch (e: any) {
+      toast({ title: "Erro ao enviar relatório", description: e.message, variant: "destructive" });
+    } finally {
+      setIsSendingReport(false);
     }
   };
 
