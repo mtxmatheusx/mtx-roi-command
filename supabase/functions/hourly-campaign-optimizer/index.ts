@@ -339,21 +339,26 @@ serve(async (req) => {
         const accessToken = profile.meta_access_token || Deno.env.get("META_ACCESS_TOKEN");
         const businessStart = profile.business_hours_start ?? 8;
         const businessEnd = profile.business_hours_end ?? 23;
+        const daypart: DaypartConfig = { ...defaultDaypartConfig, ...(profile.daypart_config || {}) };
+        const currentDaypart = getDaypart(currentHour);
         const profileResult: any = {
           profile: profile.name, profile_id: profile.id,
           actions: [], ai_summary: "", hour: currentHour,
           business_hours: `${businessStart}h-${businessEnd}h`,
+          daypart: currentDaypart,
+          daypart_multiplier: daypart.enabled ? (daypart as any)[currentDaypart]?.multiplier ?? 1.0 : 1.0,
         };
 
         try {
-          // Fetch campaigns + today/yesterday insights + hourly breakdown in parallel
+          // Fetch campaigns + today/yesterday insights + hourly breakdown + weekly pattern in parallel
           const campaignUrl = `https://graph.facebook.com/v23.0/${profile.ad_account_id}/campaigns?fields=id,name,effective_status,daily_budget&effective_status=["ACTIVE","PAUSED"]&access_token=${accessToken}&limit=100`;
 
-          const [campaignResp, todayMap, yesterdayMap, hourlyData] = await Promise.all([
+          const [campaignResp, todayMap, yesterdayMap, hourlyData, weeklyPattern] = await Promise.all([
             fetch(campaignUrl).then(r => r.json()),
             fetchTodayInsights(profile.ad_account_id, accessToken, today),
             fetchYesterdayInsights(profile.ad_account_id, accessToken, yesterday),
             fetchHourlyBreakdown(profile.ad_account_id, accessToken, today),
+            daypart.auto_learn ? fetchWeeklyHourlyPattern(profile.ad_account_id, accessToken) : Promise.resolve(new Map()),
           ]);
 
           if (campaignResp.error) {
