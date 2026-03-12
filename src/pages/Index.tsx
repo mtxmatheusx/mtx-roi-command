@@ -80,6 +80,14 @@ export default function Dashboard() {
 
   useEffect(() => { generateLogs(); }, [fetchedAt, campaigns.length]);
 
+  // Auto-refresh every 15 minutes
+  useEffect(() => {
+    const interval = setInterval(() => {
+      forceRefetch();
+    }, 15 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [forceRefetch]);
+
   const totalSpend = campaigns.reduce((s, c) => s + c.spend, 0);
   const totalRevenue = campaigns.reduce((s, c) => s + c.revenue, 0);
   const totalProfit = totalRevenue - totalSpend;
