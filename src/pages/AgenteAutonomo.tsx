@@ -134,6 +134,22 @@ export default function AgenteAutonomo() {
     toast({ title: "Horário comercial atualizado" });
   };
 
+  const handleSaveDaypart = async () => {
+    if (!activeProfile?.id) return;
+    await supabase
+      .from("client_profiles")
+      .update({ daypart_config: daypartConfig } as any)
+      .eq("id", activeProfile.id);
+    toast({ title: "Configuração de Dayparting salva" });
+  };
+
+  const updateDaypartPeriod = (period: string, field: string, value: any) => {
+    setDaypartConfig((prev: any) => ({
+      ...prev,
+      [period]: { ...prev[period], [field]: value },
+    }));
+  };
+
   const getActionIcon = (type: string) => {
     switch (type) {
       case "agent_pause":
