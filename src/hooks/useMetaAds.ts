@@ -193,6 +193,7 @@ export function useMetaAds(dateRange?: DateRange, profileConfig?: { adAccountId?
   const [dataVerified, setDataVerified] = useState(false);
   const [isRateLimited, setIsRateLimited] = useState(false);
   const [isPermissionError, setIsPermissionError] = useState(false);
+  const [isTokenExpired, setIsTokenExpired] = useState(false);
   const [isCached, setIsCached] = useState(false);
 
   const shortRange = isShortRange(dateRange);
