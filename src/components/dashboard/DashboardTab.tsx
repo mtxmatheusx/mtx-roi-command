@@ -1,4 +1,5 @@
-import { motion } from "framer-motion";
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { subDays, format } from "date-fns";
 import { formatCurrency } from "@/lib/mockData";
 import MetricCard from "@/components/MetricCard";
