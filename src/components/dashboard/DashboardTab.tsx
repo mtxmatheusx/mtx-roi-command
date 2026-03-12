@@ -65,7 +65,7 @@ const AlertBanner = ({ children, variant = "warning" }: { children: React.ReactN
 
 export default function DashboardTab(props: DashboardTabProps) {
   const {
-    campaigns, daily, previous, isLoading, isUsingMock, isRateLimited, isPermissionError, isCached,
+    campaigns, daily, previous, isLoading, isUsingMock, isRateLimited, isPermissionError, isTokenExpired, isCached,
     dataVerified, fetchedAt, budgetMaximo, budgetFrequency, cpaMeta,
     totalSpend, totalRevenue, totalProfit, totalPurchases, avgCPA, roas, avgCPM, avgCTR, calcTicketMedio,
     deltaProfit, deltaSpend, deltaCPA, deltaROAS, deltaPurchases, deltaCPM, deltaCTR, deltaTM, logs,
