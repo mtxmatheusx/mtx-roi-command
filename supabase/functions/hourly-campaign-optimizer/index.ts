@@ -15,6 +15,36 @@ function currentHourBRT(): number {
   return (new Date().getUTCHours() - 3 + 24) % 24;
 }
 
+function getDaypart(hour: number): string {
+  if (hour >= 6 && hour < 12) return "morning";
+  if (hour >= 12 && hour < 18) return "afternoon";
+  if (hour >= 18 && hour < 24) return "evening";
+  return "latenight"; // 0-5
+}
+
+function getDaypartLabel(dp: string): string {
+  const labels: Record<string, string> = { morning: "Manhã (6h-12h)", afternoon: "Tarde (12h-18h)", evening: "Noite (18h-0h)", latenight: "Madrugada (0h-6h)" };
+  return labels[dp] || dp;
+}
+
+interface DaypartConfig {
+  enabled: boolean;
+  morning: { enabled: boolean; multiplier: number };
+  afternoon: { enabled: boolean; multiplier: number };
+  evening: { enabled: boolean; multiplier: number };
+  latenight: { enabled: boolean; multiplier: number };
+  auto_learn: boolean;
+}
+
+const defaultDaypartConfig: DaypartConfig = {
+  enabled: false,
+  morning: { enabled: true, multiplier: 1.0 },
+  afternoon: { enabled: true, multiplier: 1.0 },
+  evening: { enabled: true, multiplier: 1.0 },
+  latenight: { enabled: true, multiplier: 1.0 },
+  auto_learn: true,
+};
+
 function parseMetrics(ins: any) {
   if (!ins) return { spend: 0, purchases: 0, revenue: 0, ctr: 0, cpc: 0, impressions: 0, clicks: 0 };
   const spend = parseFloat(ins.spend || "0");
