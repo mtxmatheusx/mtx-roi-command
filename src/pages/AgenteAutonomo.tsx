@@ -179,6 +179,7 @@ export default function AgenteAutonomo() {
       case "kill_switch": return <Badge className="bg-amber-500/15 text-amber-500 border-amber-500/30">KILL SWITCH</Badge>;
       case "hourly_resume": return <Badge className="bg-success/15 text-success border-success/30">REATIVADO</Badge>;
       case "hourly_reduce": return <Badge className="bg-warning/15 text-warning border-warning/30">REDUZIDO</Badge>;
+      case "hourly_daypart": return <Badge className="bg-warning/15 text-warning border-warning/30">DAYPART</Badge>;
       default: return <Badge variant="outline">{type}</Badge>;
     }
   };
