@@ -15,6 +15,36 @@ function currentHourBRT(): number {
   return (new Date().getUTCHours() - 3 + 24) % 24;
 }
 
+function getDaypart(hour: number): string {
+  if (hour >= 6 && hour < 12) return "morning";
+  if (hour >= 12 && hour < 18) return "afternoon";
+  if (hour >= 18 && hour < 24) return "evening";
+  return "latenight"; // 0-5
+}
+
+function getDaypartLabel(dp: string): string {
+  const labels: Record<string, string> = { morning: "Manhã (6h-12h)", afternoon: "Tarde (12h-18h)", evening: "Noite (18h-0h)", latenight: "Madrugada (0h-6h)" };
+  return labels[dp] || dp;
+}
+
+interface DaypartConfig {
+  enabled: boolean;
+  morning: { enabled: boolean; multiplier: number };
+  afternoon: { enabled: boolean; multiplier: number };
+  evening: { enabled: boolean; multiplier: number };
+  latenight: { enabled: boolean; multiplier: number };
+  auto_learn: boolean;
+}
+
+const defaultDaypartConfig: DaypartConfig = {
+  enabled: false,
+  morning: { enabled: true, multiplier: 1.0 },
+  afternoon: { enabled: true, multiplier: 1.0 },
+  evening: { enabled: true, multiplier: 1.0 },
+  latenight: { enabled: true, multiplier: 1.0 },
+  auto_learn: true,
+};
+
 function parseMetrics(ins: any) {
   if (!ins) return { spend: 0, purchases: 0, revenue: 0, ctr: 0, cpc: 0, impressions: 0, clicks: 0 };
   const spend = parseFloat(ins.spend || "0");
@@ -41,7 +71,31 @@ async function fetchHourlyBreakdown(accountId: string, accessToken: string, toda
   }
 }
 
-// Fetch today-total insights per campaign
+// Fetch 7-day hourly aggregate for pattern learning
+async function fetchWeeklyHourlyPattern(accountId: string, accessToken: string): Promise<Map<string, { spend: number; purchases: number; revenue: number }>> {
+  const since = dateStr(new Date(Date.now() - 7 * 86400000));
+  const until = dateStr(new Date(Date.now() - 86400000));
+  const url = `https://graph.facebook.com/v23.0/${accountId}/insights?fields=spend,actions,action_values&time_range={"since":"${since}","until":"${until}"}&breakdowns=hourly_stats_aggregated_by_advertiser_time_zone&level=account&limit=500&access_token=${accessToken}`;
+  try {
+    const resp = await fetch(url);
+    const data = await resp.json();
+    const map = new Map<string, { spend: number; purchases: number; revenue: number }>();
+    for (const row of (data.data || [])) {
+      const hourRange = row.hourly_stats_aggregated_by_advertiser_time_zone || "";
+      const m = parseMetrics(row);
+      const existing = map.get(hourRange) || { spend: 0, purchases: 0, revenue: 0 };
+      map.set(hourRange, {
+        spend: existing.spend + m.spend,
+        purchases: existing.purchases + m.purchases,
+        revenue: existing.revenue + m.revenue,
+      });
+    }
+    return map;
+  } catch {
+    return new Map();
+  }
+}
+
 async function fetchTodayInsights(accountId: string, accessToken: string, today: string): Promise<Map<string, any>> {
   const url = `https://graph.facebook.com/v23.0/${accountId}/insights?fields=campaign_id,spend,actions,action_values,impressions,clicks,ctr&time_range={"since":"${today}","until":"${today}"}&level=campaign&limit=500&access_token=${accessToken}`;
   try {
@@ -78,6 +132,8 @@ async function getHourlyAIDecision(
   currentHour: number,
   businessStart: number,
   businessEnd: number,
+  daypartConfig: DaypartConfig,
+  weeklyPattern: Map<string, { spend: number; purchases: number; revenue: number }>,
 ): Promise<{ decisions: any[]; summary: string }> {
   try {
     const controller = new AbortController();
@@ -103,58 +159,67 @@ async function getHourlyAIDecision(
         messages: [
           {
             role: "system",
-            content: `Você é o MTX Hourly Optimizer — um agente de otimização de tráfego que opera HORA A HORA com foco em negócios com horários de operação específicos.
+            content: `Você é o MTX Hourly Optimizer v2 — um agente de otimização de tráfego que opera HORA A HORA com dayparting inteligente.
 
 ⏰ HORA ATUAL (BRT): ${currentHour}:00
-📍 HORÁRIO COMERCIAL DO NEGÓCIO: ${businessStart}h às ${businessEnd}h
-📊 STATUS: ${isWithinBusinessHours ? "⚡ DENTRO DO HORÁRIO COMERCIAL — Negócio está operando!" : isPrePeak ? "🔜 PRÉ-PICO — Preparando para o horário comercial" : "😴 FORA DO HORÁRIO — Negócio fechado"}
+📍 HORÁRIO COMERCIAL: ${businessStart}h às ${businessEnd}h
+📊 STATUS: ${isWithinBusinessHours ? "⚡ DENTRO DO HORÁRIO COMERCIAL" : isPrePeak ? "🔜 PRÉ-PICO" : "😴 FORA DO HORÁRIO"}
+🕐 DAYPART ATUAL: ${getDaypartLabel(getDaypart(currentHour))}
 
-## FILOSOFIA DE OTIMIZAÇÃO HORÁRIA
+## SISTEMA DE DAYPARTING (ORÇAMENTO POR PERÍODO)
 
-Diferente do agente de 3h, você opera com GRANULARIDADE MÁXIMA:
-- Analise a performance HORA A HORA do dia atual
-- Compare com o mesmo horário de ONTEM
-- Identifique padrões de pico e vale no consumo
+${daypartConfig.enabled ? `✅ DAYPARTING ATIVO — Multiplicadores configurados pelo usuário:
+- Manhã (6h-12h): ${daypartConfig.morning.enabled ? `${daypartConfig.morning.multiplier}x` : "DESATIVADO"} 
+- Tarde (12h-18h): ${daypartConfig.afternoon.enabled ? `${daypartConfig.afternoon.multiplier}x` : "DESATIVADO"}
+- Noite (18h-0h): ${daypartConfig.evening.enabled ? `${daypartConfig.evening.multiplier}x` : "DESATIVADO"}
+- Madrugada (0h-6h): ${daypartConfig.latenight.enabled ? `${daypartConfig.latenight.multiplier}x` : "DESATIVADO"}
 
-### REGRAS PARA NEGÓCIOS COM HORÁRIO ESPECÍFICO
+REGRA CRÍTICA DE DAYPARTING:
+- O multiplicador define o budget IDEAL para este período
+- Multiplier 1.0 = budget original (100%)
+- Multiplier 1.5 = aumentar budget em 50% 
+- Multiplier 0.5 = reduzir budget em 50%
+- Multiplier 0.0 ou período desativado = PAUSAR campanhas
+- Se estamos entrando num período com multiplier diferente do anterior → AJUSTAR budget
+- Na transição entre períodos, calcule: new_budget = budget_base × multiplier_do_periodo_atual` : "❌ DAYPARTING MANUAL DESATIVADO — Usar análise de dados para decidir"}
 
-1. **Pré-Pico (2h antes da abertura)**: 
-   - Verificar se campanhas estão ativas e entregando
-   - Se budget estiver quase esgotado, NÃO escalar — redistribuir
-   - Garantir que o orçamento está disponível para o pico
+${daypartConfig.auto_learn ? `## 📈 APRENDIZADO AUTOMÁTICO (últimos 7 dias por hora)
+Padrão histórico de performance por faixa horária:
+${Array.from(weeklyPattern.entries()).sort().map(([hour, data]) => {
+  const roas = data.spend > 0 ? (data.revenue / data.spend).toFixed(2) : "0";
+  return `   ${hour}: spend=R$${data.spend.toFixed(0)} purchases=${data.purchases} roas=${roas}x`;
+}).join("\n") || "   Sem dados suficientes para aprendizado"}
 
-2. **Durante Horário Comercial**:
-   - Se uma campanha está gastando muito rápido sem conversões → Reduzir budget (não pausar imediatamente)
-   - Se campanha tem ROAS > ${profileConfig.roas_min_escala || 2}x na última hora → Escalar agressivamente
-   - Se CTR caiu > 50% vs hora anterior → Sinal de saturação, considerar pause
+Use estes padrões para VALIDAR suas decisões:
+- Se historicamente este horário tem bom ROAS → confiar mais em escalar
+- Se historicamente este horário tem mal ROAS → ser mais conservador
+- Cruze o padrão semanal com os dados do dia atual` : ""}
 
-3. **Fora do Horário Comercial**:
-   - ${businessEnd > businessStart ? `Negócio opera de dia (${businessStart}h-${businessEnd}h)` : `Negócio opera à noite/madrugada (${businessStart}h-${businessEnd}h)`}
-   - ${isWithinBusinessHours ? "" : "Campanhas fora do horário podem ser PAUSADAS para economizar budget"}
-   - Se o negócio NÃO pode atender pedidos agora → pausar é CORRETO
-   - Se é delivery/online que opera 24h → manter com orçamento reduzido
+## REGRAS DE OTIMIZAÇÃO HORÁRIA
 
-4. **Análise Comparativa (Hoje vs Ontem)**:
-   - Se performance hoje no mesmo horário é 30%+ pior que ontem → Alerta
-   - Se performance hoje é 30%+ melhor que ontem → Oportunidade de escala
+1. **Pré-Pico (2h antes da abertura)**: Garantir campaigns ativas e budget disponível
+2. **Durante Horário Comercial**: 
+   - Gasto rápido sem conversões → Reduzir (não pausar)
+   - ROAS > ${profileConfig.roas_min_escala || 2}x na última hora → Escalar
+3. **Fora do Horário**: Pausar se negócio não atende; reduzir se delivery/online
+4. **Hoje vs Ontem**: 30%+ pior → Alerta | 30%+ melhor → Escalar
 
-### AÇÕES DISPONÍVEIS:
-- "pause": Pausar campanha (fora do horário ou CPA incontrolável)
-- "resume": Reativar campanha pausada (entrando no horário comercial)
-- "scale": Aumentar budget em ${profileConfig.limite_escala}%
-- "reduce": Reduzir budget em 20% (gastar sem converter)
+### AÇÕES:
+- "pause": Pausar (fora do horário / CPA incontrolável / período desativado)
+- "resume": Reativar (entrando no horário comercial / novo período)
+- "scale": Aumentar budget (${profileConfig.limite_escala}% OU pelo multiplier do daypart)
+- "reduce": Reduzir budget (20% OU pelo multiplier do daypart)
+- "daypart_adjust": Ajustar budget para o multiplicador do período atual
 - "maintain": Sem ação (não listar)
 
-CPA Meta: R$ ${profileConfig.cpa_meta} | CPA Máximo: R$ ${profileConfig.cpa_max_toleravel}
-ROAS Mínimo Escala: ${profileConfig.roas_min_escala} | Teto Diário: R$ ${profileConfig.teto_diario_escala}
-
-Retorne decisões APENAS para campanhas que precisam de ação AGORA.`,
+CPA Meta: R$ ${profileConfig.cpa_meta} | CPA Máx: R$ ${profileConfig.cpa_max_toleravel}
+ROAS Min: ${profileConfig.roas_min_escala} | Teto: R$ ${profileConfig.teto_diario_escala}`,
           },
           {
             role: "user",
             content: `Perfil: ${profileName}
 
-📊 CAMPANHAS — Performance HOJE (total acumulado):
+📊 CAMPANHAS — Performance HOJE:
 ${campaignSummaries.map(c => `━━ ${c.name} [ID: ${c.id}] — Status: ${c.status}
    Budget: R$${c.daily_budget} | Spend hoje: R$${c.today_spend.toFixed(2)} (${c.budget_pct.toFixed(0)}% usado)
    Purchases: ${c.today_purchases} | Revenue: R$${c.today_revenue.toFixed(2)} | ROAS: ${c.today_roas.toFixed(2)}x
@@ -162,10 +227,10 @@ ${campaignSummaries.map(c => `━━ ${c.name} [ID: ${c.id}] — Status: ${c.sta
    Ontem: Spend R$${c.yesterday_spend.toFixed(2)} | Purchases ${c.yesterday_purchases} | ROAS ${c.yesterday_roas.toFixed(2)}x
    Variação: ${c.spend_change > 0 ? "+" : ""}${c.spend_change.toFixed(0)}% spend | ${c.roas_change > 0 ? "+" : ""}${c.roas_change.toFixed(0)}% roas`).join("\n")}
 
-⏱ BREAKDOWN POR HORA (últimas horas do dia):
+⏱ BREAKDOWN HORÁRIO HOJE:
 ${hourlyData.slice(-20).map(h => `   ${h.hourly_stats_aggregated_by_advertiser_time_zone || "?"} — ${h.campaign_name}: spend=R$${parseFloat(h.spend || "0").toFixed(2)} clicks=${h.clicks || 0} ctr=${parseFloat(h.ctr || "0").toFixed(2)}%`).join("\n") || "   Sem dados horários disponíveis"}
 
-Analise e decida ações para ESTA HORA.`,
+Analise e decida ações para ESTA HORA (${currentHour}h), considerando dayparting e padrões históricos.`,
           },
         ],
         tools: [
@@ -173,7 +238,7 @@ Analise e decida ações para ESTA HORA.`,
             type: "function",
             function: {
               name: "execute_hourly_decisions",
-              description: "Execute hourly campaign optimization decisions",
+              description: "Execute hourly campaign optimization decisions with dayparting",
               parameters: {
                 type: "object",
                 properties: {
@@ -183,15 +248,15 @@ Analise e decida ações para ESTA HORA.`,
                       type: "object",
                       properties: {
                         campaign_id: { type: "string" },
-                        action: { type: "string", enum: ["pause", "resume", "scale", "reduce", "maintain"] },
-                        reason: { type: "string", description: "Justificativa com dados horários" },
-                        new_budget: { type: "number", description: "New budget for scale/reduce actions" },
+                        action: { type: "string", enum: ["pause", "resume", "scale", "reduce", "daypart_adjust", "maintain"] },
+                        reason: { type: "string", description: "Justificativa com dados horários e daypart" },
+                        new_budget: { type: "number", description: "New budget for scale/reduce/daypart_adjust actions" },
                       },
                       required: ["campaign_id", "action", "reason"],
                       additionalProperties: false,
                     },
                   },
-                  summary: { type: "string", description: "Resumo da análise horária com contexto de horário comercial." },
+                  summary: { type: "string", description: "Resumo da análise horária com contexto de dayparting." },
                 },
                 required: ["decisions", "summary"],
                 additionalProperties: false,
@@ -274,21 +339,26 @@ serve(async (req) => {
         const accessToken = profile.meta_access_token || Deno.env.get("META_ACCESS_TOKEN");
         const businessStart = profile.business_hours_start ?? 8;
         const businessEnd = profile.business_hours_end ?? 23;
+        const daypart: DaypartConfig = { ...defaultDaypartConfig, ...(profile.daypart_config || {}) };
+        const currentDaypart = getDaypart(currentHour);
         const profileResult: any = {
           profile: profile.name, profile_id: profile.id,
           actions: [], ai_summary: "", hour: currentHour,
           business_hours: `${businessStart}h-${businessEnd}h`,
+          daypart: currentDaypart,
+          daypart_multiplier: daypart.enabled ? (daypart as any)[currentDaypart]?.multiplier ?? 1.0 : 1.0,
         };
 
         try {
-          // Fetch campaigns + today/yesterday insights + hourly breakdown in parallel
+          // Fetch campaigns + today/yesterday insights + hourly breakdown + weekly pattern in parallel
           const campaignUrl = `https://graph.facebook.com/v23.0/${profile.ad_account_id}/campaigns?fields=id,name,effective_status,daily_budget&effective_status=["ACTIVE","PAUSED"]&access_token=${accessToken}&limit=100`;
 
-          const [campaignResp, todayMap, yesterdayMap, hourlyData] = await Promise.all([
+          const [campaignResp, todayMap, yesterdayMap, hourlyData, weeklyPattern] = await Promise.all([
             fetch(campaignUrl).then(r => r.json()),
             fetchTodayInsights(profile.ad_account_id, accessToken, today),
             fetchYesterdayInsights(profile.ad_account_id, accessToken, yesterday),
             fetchHourlyBreakdown(profile.ad_account_id, accessToken, today),
+            daypart.auto_learn ? fetchWeeklyHourlyPattern(profile.ad_account_id, accessToken) : Promise.resolve(new Map()),
           ]);
 
           if (campaignResp.error) {
@@ -340,7 +410,7 @@ serve(async (req) => {
             const aiResult = await getHourlyAIDecision(
               LOVABLE_API_KEY, profile.name,
               { cpa_meta: profile.cpa_meta, cpa_max_toleravel: profile.cpa_max_toleravel, roas_min_escala: profile.roas_min_escala, teto_diario_escala: profile.teto_diario_escala, limite_escala: profile.limite_escala },
-              campaignSummaries, hourlyData, currentHour, businessStart, businessEnd
+              campaignSummaries, hourlyData, currentHour, businessStart, businessEnd, daypart, weeklyPattern
             );
             decisions = aiResult.decisions.filter((d: any) => d.action !== "maintain");
             aiSummary = aiResult.summary;
@@ -380,6 +450,26 @@ serve(async (req) => {
                   details: { campaign_id: decision.campaign_id, campaign_name: campaign.name, reason: decision.reason, hour: currentHour, success: data.success || false },
                 });
                 profileResult.actions.push({ ...decision, campaign_name: campaign.name, status: data.success ? "RESUMED" : "FAILED" });
+
+              } else if (decision.action === "daypart_adjust") {
+                const currentBudget = campaign.daily_budget;
+                const multiplier = (daypart as any)[currentDaypart]?.multiplier ?? 1.0;
+                const newBudget = decision.new_budget || currentBudget * multiplier;
+                const teto = profile.teto_diario_escala || 0;
+                if (teto > 0 && newBudget > teto) {
+                  profileResult.actions.push({ ...decision, status: "ABORTED_CEILING" });
+                  continue;
+                }
+                const resp = await fetch(`https://graph.facebook.com/v23.0/${decision.campaign_id}`, {
+                  method: "POST", headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ daily_budget: Math.round(newBudget * 100), access_token: accessToken }),
+                });
+                const data = await resp.json();
+                await sb.from("emergency_logs").insert({
+                  profile_id: profile.id, user_id: profile.user_id, action_type: "hourly_daypart",
+                  details: { campaign_id: decision.campaign_id, campaign_name: campaign.name, old_budget: currentBudget, new_budget: newBudget, daypart: currentDaypart, multiplier, reason: decision.reason, hour: currentHour, success: data.success || false },
+                });
+                profileResult.actions.push({ ...decision, campaign_name: campaign.name, old_budget: currentBudget, new_budget: newBudget, daypart: currentDaypart, status: data.success ? "ADJUSTED" : "FAILED" });
 
               } else if (decision.action === "scale" || decision.action === "reduce") {
                 const currentBudget = campaign.daily_budget;

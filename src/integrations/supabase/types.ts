@@ -171,6 +171,7 @@ export type Database = {
           cpa_max_toleravel: number
           cpa_meta: number
           created_at: string
+          daypart_config: Json
           gemini_api_key: string | null
           hourly_optimizer_enabled: boolean
           id: string
@@ -203,6 +204,7 @@ export type Database = {
           cpa_max_toleravel?: number
           cpa_meta?: number
           created_at?: string
+          daypart_config?: Json
           gemini_api_key?: string | null
           hourly_optimizer_enabled?: boolean
           id?: string
@@ -235,6 +237,7 @@ export type Database = {
           cpa_max_toleravel?: number
           cpa_meta?: number
           created_at?: string
+          daypart_config?: Json
           gemini_api_key?: string | null
           hourly_optimizer_enabled?: boolean
           id?: string

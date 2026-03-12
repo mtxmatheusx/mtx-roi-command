@@ -37,14 +37,23 @@ export default function AgenteAutonomo() {
   const [hourlyEnabled, setHourlyEnabled] = useState(false);
   const [businessStart, setBusinessStart] = useState(8);
   const [businessEnd, setBusinessEnd] = useState(23);
+  const [daypartConfig, setDaypartConfig] = useState({
+    enabled: false,
+    morning: { enabled: true, multiplier: 1.0 },
+    afternoon: { enabled: true, multiplier: 1.0 },
+    evening: { enabled: true, multiplier: 1.0 },
+    latenight: { enabled: true, multiplier: 1.0 },
+    auto_learn: true,
+  });
 
   useEffect(() => {
     if (!user?.id || !activeProfile?.id) return;
     loadLogs();
-    // Load hourly optimizer settings from profile
     setHourlyEnabled(!!(activeProfile as any)?.hourly_optimizer_enabled);
     setBusinessStart((activeProfile as any)?.business_hours_start ?? 8);
     setBusinessEnd((activeProfile as any)?.business_hours_end ?? 23);
+    const dc = (activeProfile as any)?.daypart_config;
+    if (dc) setDaypartConfig({ ...daypartConfig, ...dc });
   }, [user?.id, activeProfile?.id]);
 
   const loadLogs = async () => {
@@ -54,7 +63,7 @@ export default function AgenteAutonomo() {
       .select("*")
       .eq("user_id", user!.id)
       .eq("profile_id", activeProfile!.id)
-      .in("action_type", ["agent_pause", "agent_scale", "agent_duplicate", "guardian", "auto_scale", "kill_switch", "hourly_pause", "hourly_resume", "hourly_scale", "hourly_reduce"])
+      .in("action_type", ["agent_pause", "agent_scale", "agent_duplicate", "guardian", "auto_scale", "kill_switch", "hourly_pause", "hourly_resume", "hourly_scale", "hourly_reduce", "hourly_daypart"])
       .order("created_at", { ascending: false })
       .limit(50);
     if (data) {
@@ -125,6 +134,22 @@ export default function AgenteAutonomo() {
     toast({ title: "Horário comercial atualizado" });
   };
 
+  const handleSaveDaypart = async () => {
+    if (!activeProfile?.id) return;
+    await supabase
+      .from("client_profiles")
+      .update({ daypart_config: daypartConfig } as any)
+      .eq("id", activeProfile.id);
+    toast({ title: "Configuração de Dayparting salva" });
+  };
+
+  const updateDaypartPeriod = (period: string, field: string, value: any) => {
+    setDaypartConfig((prev: any) => ({
+      ...prev,
+      [period]: { ...prev[period], [field]: value },
+    }));
+  };
+
   const getActionIcon = (type: string) => {
     switch (type) {
       case "agent_pause":
@@ -137,6 +162,7 @@ export default function AgenteAutonomo() {
       case "kill_switch": return <AlertTriangle className="w-4 h-4 text-amber-500" />;
       case "hourly_resume": return <Play className="w-4 h-4 text-success" />;
       case "hourly_reduce": return <TrendingUp className="w-4 h-4 text-warning" />;
+      case "hourly_daypart": return <Timer className="w-4 h-4 text-warning" />;
       default: return <Activity className="w-4 h-4" />;
     }
   };
@@ -153,6 +179,7 @@ export default function AgenteAutonomo() {
       case "kill_switch": return <Badge className="bg-amber-500/15 text-amber-500 border-amber-500/30">KILL SWITCH</Badge>;
       case "hourly_resume": return <Badge className="bg-success/15 text-success border-success/30">REATIVADO</Badge>;
       case "hourly_reduce": return <Badge className="bg-warning/15 text-warning border-warning/30">REDUZIDO</Badge>;
+      case "hourly_daypart": return <Badge className="bg-warning/15 text-warning border-warning/30">DAYPART</Badge>;
       default: return <Badge variant="outline">{type}</Badge>;
     }
   };
@@ -381,6 +408,90 @@ export default function AgenteAutonomo() {
                 </div>
               )}
             </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* ─── Daypart Configuration ─── */}
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
+          <Card className={daypartConfig.enabled ? "border-warning/30 bg-warning/5" : "border-border"}>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Moon className="w-5 h-5 text-warning" />
+                  Dayparting — Orçamento por Período
+                </CardTitle>
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="daypart-toggle" className="text-xs">Ativar</Label>
+                  <Switch
+                    id="daypart-toggle"
+                    checked={daypartConfig.enabled}
+                    onCheckedChange={(v) => setDaypartConfig(prev => ({ ...prev, enabled: v }))}
+                  />
+                </div>
+              </div>
+              <CardDescription>
+                Ajuste automático de orçamento baseado no período do dia. Multiplicador 1.0 = budget original, 1.5 = +50%, 0.5 = -50%, 0 = pausar.
+              </CardDescription>
+            </CardHeader>
+            {daypartConfig.enabled && (
+              <CardContent className="space-y-4">
+                {/* Period configs */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                  {([
+                    { key: "morning", label: "☀️ Manhã", sub: "6h - 12h" },
+                    { key: "afternoon", label: "🌤 Tarde", sub: "12h - 18h" },
+                    { key: "evening", label: "🌙 Noite", sub: "18h - 0h" },
+                    { key: "latenight", label: "🌑 Madrugada", sub: "0h - 6h" },
+                  ] as const).map(period => {
+                    const config = (daypartConfig as any)[period.key];
+                    return (
+                      <div key={period.key} className={`rounded-lg border p-3 space-y-2 ${config.enabled ? "bg-card" : "bg-muted/50 opacity-60"}`}>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium">{period.label}</p>
+                            <p className="text-[10px] text-muted-foreground">{period.sub}</p>
+                          </div>
+                          <Switch
+                            checked={config.enabled}
+                            onCheckedChange={(v) => updateDaypartPeriod(period.key, "enabled", v)}
+                          />
+                        </div>
+                        {config.enabled && (
+                          <div className="flex items-center gap-2">
+                            <Label className="text-[10px] whitespace-nowrap">Multiplicador:</Label>
+                            <Input
+                              type="number" min={0} max={3} step={0.1}
+                              value={config.multiplier}
+                              onChange={(e) => updateDaypartPeriod(period.key, "multiplier", parseFloat(e.target.value) || 0)}
+                              className="w-16 h-7 text-center text-sm"
+                            />
+                            <span className="text-[10px] text-muted-foreground">
+                              {config.multiplier === 1 ? "100%" : config.multiplier > 1 ? `+${((config.multiplier - 1) * 100).toFixed(0)}%` : `-${((1 - config.multiplier) * 100).toFixed(0)}%`}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Auto-learn toggle */}
+                <div className="flex items-center justify-between pt-2 border-t">
+                  <div>
+                    <p className="text-sm font-medium">📈 Aprendizado Automático</p>
+                    <p className="text-[10px] text-muted-foreground">Usa dados dos últimos 7 dias para validar decisões de daypart</p>
+                  </div>
+                  <Switch
+                    checked={daypartConfig.auto_learn}
+                    onCheckedChange={(v) => setDaypartConfig(prev => ({ ...prev, auto_learn: v }))}
+                  />
+                </div>
+
+                <Button variant="outline" size="sm" onClick={handleSaveDaypart} className="w-full">
+                  Salvar Configuração de Dayparting
+                </Button>
+              </CardContent>
+            )}
           </Card>
         </motion.div>
 
