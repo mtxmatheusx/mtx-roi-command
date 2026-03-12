@@ -29,9 +29,14 @@ export default function AgenteAutonomo() {
   const { toast } = useToast();
   const [logs, setLogs] = useState<AgentLog[]>([]);
   const [isRunning, setIsRunning] = useState(false);
+  const [isHourlyRunning, setIsHourlyRunning] = useState(false);
   const [lastRun, setLastRun] = useState<string | null>(null);
   const [runResult, setRunResult] = useState<any>(null);
+  const [hourlyResult, setHourlyResult] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [hourlyEnabled, setHourlyEnabled] = useState(false);
+  const [businessStart, setBusinessStart] = useState(8);
+  const [businessEnd, setBusinessEnd] = useState(23);
 
   useEffect(() => {
     if (!user?.id || !activeProfile?.id) return;
