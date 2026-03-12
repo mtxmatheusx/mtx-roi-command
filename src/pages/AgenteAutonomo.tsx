@@ -46,7 +46,6 @@ export default function AgenteAutonomo() {
     setBusinessStart((activeProfile as any)?.business_hours_start ?? 8);
     setBusinessEnd((activeProfile as any)?.business_hours_end ?? 23);
   }, [user?.id, activeProfile?.id]);
-  }, [user?.id, activeProfile?.id]);
 
   const loadLogs = async () => {
     setIsLoading(true);
