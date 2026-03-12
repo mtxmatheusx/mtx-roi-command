@@ -409,6 +409,90 @@ export default function AgenteAutonomo() {
           </Card>
         </motion.div>
 
+        {/* ─── Daypart Configuration ─── */}
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
+          <Card className={daypartConfig.enabled ? "border-warning/30 bg-warning/5" : "border-border"}>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Moon className="w-5 h-5 text-warning" />
+                  Dayparting — Orçamento por Período
+                </CardTitle>
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="daypart-toggle" className="text-xs">Ativar</Label>
+                  <Switch
+                    id="daypart-toggle"
+                    checked={daypartConfig.enabled}
+                    onCheckedChange={(v) => setDaypartConfig(prev => ({ ...prev, enabled: v }))}
+                  />
+                </div>
+              </div>
+              <CardDescription>
+                Ajuste automático de orçamento baseado no período do dia. Multiplicador 1.0 = budget original, 1.5 = +50%, 0.5 = -50%, 0 = pausar.
+              </CardDescription>
+            </CardHeader>
+            {daypartConfig.enabled && (
+              <CardContent className="space-y-4">
+                {/* Period configs */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                  {([
+                    { key: "morning", label: "☀️ Manhã", sub: "6h - 12h" },
+                    { key: "afternoon", label: "🌤 Tarde", sub: "12h - 18h" },
+                    { key: "evening", label: "🌙 Noite", sub: "18h - 0h" },
+                    { key: "latenight", label: "🌑 Madrugada", sub: "0h - 6h" },
+                  ] as const).map(period => {
+                    const config = (daypartConfig as any)[period.key];
+                    return (
+                      <div key={period.key} className={`rounded-lg border p-3 space-y-2 ${config.enabled ? "bg-card" : "bg-muted/50 opacity-60"}`}>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium">{period.label}</p>
+                            <p className="text-[10px] text-muted-foreground">{period.sub}</p>
+                          </div>
+                          <Switch
+                            checked={config.enabled}
+                            onCheckedChange={(v) => updateDaypartPeriod(period.key, "enabled", v)}
+                          />
+                        </div>
+                        {config.enabled && (
+                          <div className="flex items-center gap-2">
+                            <Label className="text-[10px] whitespace-nowrap">Multiplicador:</Label>
+                            <Input
+                              type="number" min={0} max={3} step={0.1}
+                              value={config.multiplier}
+                              onChange={(e) => updateDaypartPeriod(period.key, "multiplier", parseFloat(e.target.value) || 0)}
+                              className="w-16 h-7 text-center text-sm"
+                            />
+                            <span className="text-[10px] text-muted-foreground">
+                              {config.multiplier === 1 ? "100%" : config.multiplier > 1 ? `+${((config.multiplier - 1) * 100).toFixed(0)}%` : `-${((1 - config.multiplier) * 100).toFixed(0)}%`}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Auto-learn toggle */}
+                <div className="flex items-center justify-between pt-2 border-t">
+                  <div>
+                    <p className="text-sm font-medium">📈 Aprendizado Automático</p>
+                    <p className="text-[10px] text-muted-foreground">Usa dados dos últimos 7 dias para validar decisões de daypart</p>
+                  </div>
+                  <Switch
+                    checked={daypartConfig.auto_learn}
+                    onCheckedChange={(v) => setDaypartConfig(prev => ({ ...prev, auto_learn: v }))}
+                  />
+                </div>
+
+                <Button variant="outline" size="sm" onClick={handleSaveDaypart} className="w-full">
+                  Salvar Configuração de Dayparting
+                </Button>
+              </CardContent>
+            )}
+          </Card>
+        </motion.div>
+
         {/* AI Summary from last run */}
         {runResult?.results && (() => {
           const activeResult = runResult.results.find((r: any) => r.profile_id === activeProfile?.id) || runResult.results[0];
