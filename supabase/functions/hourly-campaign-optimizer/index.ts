@@ -451,6 +451,26 @@ serve(async (req) => {
                 });
                 profileResult.actions.push({ ...decision, campaign_name: campaign.name, status: data.success ? "RESUMED" : "FAILED" });
 
+              } else if (decision.action === "daypart_adjust") {
+                const currentBudget = campaign.daily_budget;
+                const multiplier = (daypart as any)[currentDaypart]?.multiplier ?? 1.0;
+                const newBudget = decision.new_budget || currentBudget * multiplier;
+                const teto = profile.teto_diario_escala || 0;
+                if (teto > 0 && newBudget > teto) {
+                  profileResult.actions.push({ ...decision, status: "ABORTED_CEILING" });
+                  continue;
+                }
+                const resp = await fetch(`https://graph.facebook.com/v23.0/${decision.campaign_id}`, {
+                  method: "POST", headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ daily_budget: Math.round(newBudget * 100), access_token: accessToken }),
+                });
+                const data = await resp.json();
+                await sb.from("emergency_logs").insert({
+                  profile_id: profile.id, user_id: profile.user_id, action_type: "hourly_daypart",
+                  details: { campaign_id: decision.campaign_id, campaign_name: campaign.name, old_budget: currentBudget, new_budget: newBudget, daypart: currentDaypart, multiplier, reason: decision.reason, hour: currentHour, success: data.success || false },
+                });
+                profileResult.actions.push({ ...decision, campaign_name: campaign.name, old_budget: currentBudget, new_budget: newBudget, daypart: currentDaypart, status: data.success ? "ADJUSTED" : "FAILED" });
+
               } else if (decision.action === "scale" || decision.action === "reduce") {
                 const currentBudget = campaign.daily_budget;
                 const newBudget = decision.new_budget || (decision.action === "scale"
