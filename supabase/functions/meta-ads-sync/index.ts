@@ -6,17 +6,29 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+function isRateLimitError(message: string): boolean {
+  return message.includes("Application request limit reached") || message.toLowerCase().includes("rate limit");
+}
+
+function isTokenExpiredError(message: string): boolean {
+  return (
+    message.includes("Session has expired") ||
+    message.includes("Error validating access token") ||
+    message.includes("invalid or has expired")
+  );
+}
+
 function buildUrl(adAccountId: string, fields: string, accessToken: string, opts: {
   since?: string; until?: string; datePreset?: string; level?: string;
 }) {
   const base = `https://graph.facebook.com/v21.0/${adAccountId}/insights?fields=${fields}&limit=50&access_token=${accessToken}`;
   const level = opts.level || "campaign";
   let url = `${base}&level=${level}`;
-  url += `&action_attribution_windows=[\"7d_click\",\"1d_view\"]`;
+  url += `&action_attribution_windows=["7d_click","1d_view"]`;
   url += `&time_zone=America/Sao_Paulo`;
 
   if (opts.since && opts.until) {
-    url += `&time_range={\"since\":\"${opts.since}\",\"until\":\"${opts.until}\"}`;
+    url += `&time_range={"since":"${opts.since}","until":"${opts.until}"}`;
     if (level === "account") {
       url += `&time_increment=1`;
     }
@@ -156,10 +168,19 @@ Deno.serve(async (req) => {
       const testData = await testRes.json();
       if (testData?.error) {
         const msg = testData.error.message || "";
-        const isRateLimit = msg.includes("Application request limit reached");
+        const isRateLimit = isRateLimitError(msg);
+        const isTokenExpired = isTokenExpiredError(msg);
         return new Response(
-          JSON.stringify({ error: isRateLimit ? "Limite de requisições da Meta atingido. Aguarde alguns minutos." : msg }),
-          { status: isRateLimit ? 429 : 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          JSON.stringify({
+            error: isRateLimit
+              ? "Limite de requisições da Meta atingido. Aguarde alguns minutos."
+              : isTokenExpired
+                ? "Token da Meta expirado. Atualize o token do perfil para voltar a sincronizar."
+                : msg,
+            type: testData.error?.type,
+            errorCode: isTokenExpired ? "TOKEN_EXPIRED" : undefined,
+          }),
+          { status: isRateLimit ? 429 : isTokenExpired ? 401 : 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
@@ -238,12 +259,30 @@ Deno.serve(async (req) => {
     for (const result of results) {
       if (result?.error) {
         const msg = typeof result.error === "string" ? result.error : result.error?.message || "";
-        if (typeof msg === "string" && msg.includes("Application request limit reached")) {
-          return new Response(
-            JSON.stringify({ error: "Limite de requisições da Meta atingido. Aguarde alguns minutos e tente novamente.", type: "RateLimitError" }),
-            { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
+        if (typeof msg === "string") {
+          if (isRateLimitError(msg)) {
+            return new Response(
+              JSON.stringify({ error: "Limite de requisições da Meta atingido. Aguarde alguns minutos e tente novamente.", type: "RateLimitError" }),
+              { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+
+          if (isTokenExpiredError(msg)) {
+            return new Response(
+              JSON.stringify({
+                error: "Token da Meta expirado. Atualize o token do perfil para voltar a sincronizar.",
+                type: result.error?.type || "OAuthException",
+                errorCode: "TOKEN_EXPIRED",
+              }),
+              { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
         }
+
+        return new Response(
+          JSON.stringify({ error: msg || "Erro ao buscar dados na Meta.", type: result.error?.type }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
       }
     }
 

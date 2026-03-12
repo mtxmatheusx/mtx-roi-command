@@ -174,6 +174,15 @@ function isShortRange(dateRange?: DateRange): boolean {
   return diffDays <= 1;
 }
 
+function isMetaTokenExpired(message: string, errorCode?: string): boolean {
+  if (errorCode === "TOKEN_EXPIRED") return true;
+  return (
+    message.includes("Session has expired") ||
+    message.includes("Error validating access token") ||
+    message.includes("invalid or has expired")
+  );
+}
+
 export function useMetaAds(dateRange?: DateRange, profileConfig?: { adAccountId?: string; cpaMeta?: number; ticketMedio?: number; accessToken?: string | null }) {
   const adAccountId = profileConfig?.adAccountId;
   const cpaMeta = profileConfig?.cpaMeta || 200;
@@ -184,6 +193,7 @@ export function useMetaAds(dateRange?: DateRange, profileConfig?: { adAccountId?
   const [dataVerified, setDataVerified] = useState(false);
   const [isRateLimited, setIsRateLimited] = useState(false);
   const [isPermissionError, setIsPermissionError] = useState(false);
+  const [isTokenExpired, setIsTokenExpired] = useState(false);
   const [isCached, setIsCached] = useState(false);
 
   const shortRange = isShortRange(dateRange);
@@ -217,7 +227,21 @@ export function useMetaAds(dateRange?: DateRange, profileConfig?: { adAccountId?
 
       const { data, error } = await supabase.functions.invoke("meta-ads-sync", { body });
 
-      const errorMsg = data?.error || (error as Error)?.message || "";
+      let errorMsg = data?.error || "";
+      let errorCode: string | undefined = data?.errorCode;
+
+      if (error) {
+        const context = (error as Error & { context?: Response }).context;
+        if (context) {
+          const parsedError = await context.clone().json().catch(() => null) as { error?: string; errorCode?: string } | null;
+          if (parsedError?.error) errorMsg = parsedError.error;
+          if (parsedError?.errorCode) errorCode = parsedError.errorCode;
+        }
+        if (!errorMsg) {
+          errorMsg = (error as Error).message || "";
+        }
+      }
+
       const isRateLimit = typeof errorMsg === "string" && (
         errorMsg.includes("Limite de requisições") ||
         errorMsg.includes("Application request limit reached") ||
@@ -229,11 +253,13 @@ export function useMetaAds(dateRange?: DateRange, profileConfig?: { adAccountId?
         errorMsg.includes("Unsupported get request") ||
         (errorMsg.includes("permission") && !isRateLimit)
       );
+      const isTokenExpired = typeof errorMsg === "string" && isMetaTokenExpired(errorMsg, errorCode);
 
-      // On rate limit or permission error, try cache first
-      if (isRateLimit || isPermission) {
+      // On known Meta errors, try cache first
+      if (isRateLimit || isPermission || isTokenExpired) {
         setIsRateLimited(isRateLimit);
         setIsPermissionError(isPermission);
+        setIsTokenExpired(isTokenExpired);
         const cached = loadFromCache(adAccountId);
         if (cached) {
           setIsCached(true);
@@ -244,6 +270,7 @@ export function useMetaAds(dateRange?: DateRange, profileConfig?: { adAccountId?
       }
       setIsRateLimited(false);
       setIsPermissionError(false);
+      setIsTokenExpired(false);
       setIsCached(false);
 
       if (error) throw error;
@@ -288,7 +315,16 @@ export function useMetaAds(dateRange?: DateRange, profileConfig?: { adAccountId?
     staleTime: shortRange ? 0 : 5 * 60 * 1000,
     retry: (failureCount, error) => {
       const msg = (error as Error)?.message || "";
-      if (msg.includes("rate limit") || msg.includes("Limite") || msg.includes("permission") || msg.includes("(#10)") || msg.includes("ads_read") || msg.includes("Unsupported get request")) return false;
+      if (
+        msg.includes("rate limit") ||
+        msg.includes("Limite") ||
+        msg.includes("permission") ||
+        msg.includes("(#10)") ||
+        msg.includes("ads_read") ||
+        msg.includes("Unsupported get request") ||
+        msg.includes("Session has expired") ||
+        msg.includes("Error validating access token")
+      ) return false;
       return failureCount < 1;
     },
   });
@@ -321,6 +357,7 @@ export function useMetaAds(dateRange?: DateRange, profileConfig?: { adAccountId?
     dataVerified,
     isRateLimited,
     isPermissionError,
+    isTokenExpired,
     isCached,
   };
 }

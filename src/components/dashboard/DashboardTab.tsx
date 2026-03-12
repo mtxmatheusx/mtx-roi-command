@@ -21,6 +21,7 @@ interface DashboardTabProps {
   isUsingMock: boolean;
   isRateLimited: boolean;
   isPermissionError: boolean;
+  isTokenExpired: boolean;
   isCached: boolean;
   dataVerified: boolean;
   fetchedAt: string | null;
@@ -64,7 +65,7 @@ const AlertBanner = ({ children, variant = "warning" }: { children: React.ReactN
 
 export default function DashboardTab(props: DashboardTabProps) {
   const {
-    campaigns, daily, previous, isLoading, isUsingMock, isRateLimited, isPermissionError, isCached,
+    campaigns, daily, previous, isLoading, isUsingMock, isRateLimited, isPermissionError, isTokenExpired, isCached,
     dataVerified, fetchedAt, budgetMaximo, budgetFrequency, cpaMeta,
     totalSpend, totalRevenue, totalProfit, totalPurchases, avgCPA, roas, avgCPM, avgCTR, calcTicketMedio,
     deltaProfit, deltaSpend, deltaCPA, deltaROAS, deltaPurchases, deltaCPM, deltaCTR, deltaTM, logs,
@@ -78,15 +79,20 @@ export default function DashboardTab(props: DashboardTabProps) {
           Conecte seu Token com permissão <strong className="mx-1">ads_read</strong> na Meta para visualizar dados reais.
         </AlertBanner>
       )}
+      {isTokenExpired && (
+        <AlertBanner variant="error">
+          Token da Meta expirado. Atualize o token nas <strong className="mx-1">Configurações</strong> para voltar a sincronizar dados reais.
+        </AlertBanner>
+      )}
       {isCached && (
         <AlertBanner variant="info">
           Exibindo dados do cache local (última sync: {fetchedAt ? new Date(fetchedAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) : "—"}).
         </AlertBanner>
       )}
-      {isRateLimited && !isCached && (
+      {isRateLimited && !isCached && !isTokenExpired && (
         <AlertBanner>Limite de requisições da Meta atingido. Exibindo dados de demonstração.</AlertBanner>
       )}
-      {isUsingMock && !isRateLimited && !isPermissionError && !isCached && (
+      {isUsingMock && !isRateLimited && !isPermissionError && !isCached && !isTokenExpired && (
         <AlertBanner>Exibindo dados de demonstração. Configure o Ad Account ID em <strong className="mx-1">Configurações</strong>.</AlertBanner>
       )}
 
