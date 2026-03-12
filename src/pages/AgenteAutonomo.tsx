@@ -654,7 +654,7 @@ export default function AgenteAutonomo() {
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: i * 0.03 }}
-                    className="flex items-start gap-3 p-3 rounded-lg border bg-card hover:bg-secondary/30 transition-colors"
+                    className={`flex items-start gap-3 p-3 rounded-lg border transition-colors ${log.action_type === "agent_self_heal" || log.details?.recovered ? "bg-primary/5 border-primary/30 hover:bg-primary/10" : "bg-card hover:bg-secondary/30"}`}
                   >
                     <div className="mt-0.5">{getActionIcon(log.action_type)}</div>
                     <div className="flex-1 min-w-0">
