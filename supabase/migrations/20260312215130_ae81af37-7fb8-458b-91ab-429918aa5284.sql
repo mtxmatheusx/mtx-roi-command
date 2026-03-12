@@ -1,0 +1,2 @@
+ALTER TABLE public.client_profiles 
+ADD COLUMN IF NOT EXISTS daypart_config jsonb NOT NULL DEFAULT '{"enabled": false, "morning": {"enabled": true, "multiplier": 1.0}, "afternoon": {"enabled": true, "multiplier": 1.0}, "evening": {"enabled": true, "multiplier": 1.0}, "latenight": {"enabled": true, "multiplier": 1.0}, "auto_learn": true}'::jsonb;
