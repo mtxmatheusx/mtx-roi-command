@@ -357,6 +357,7 @@ export function useMetaAds(dateRange?: DateRange, profileConfig?: { adAccountId?
     dataVerified,
     isRateLimited,
     isPermissionError,
+    isTokenExpired,
     isCached,
   };
 }
