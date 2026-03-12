@@ -83,14 +83,60 @@ export default function AgenteAutonomo() {
     }
   };
 
+  const handleHourlyRun = async () => {
+    setIsHourlyRunning(true);
+    setHourlyResult(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("hourly-campaign-optimizer", {
+        body: { profile_id: activeProfile?.id },
+      });
+      if (error) throw error;
+      setHourlyResult(data);
+      const result = data?.results?.[0];
+      toast({ title: "⏱ Otimizador Horário executado", description: result?.ai_summary || `${result?.campaigns_analyzed || 0} campanhas analisadas.` });
+      loadLogs();
+    } catch (e: any) {
+      toast({ title: "Erro", description: e.message, variant: "destructive" });
+    } finally {
+      setIsHourlyRunning(false);
+    }
+  };
+
+  const handleToggleHourly = async (enabled: boolean) => {
+    setHourlyEnabled(enabled);
+    if (!activeProfile?.id) return;
+    await supabase
+      .from("client_profiles")
+      .update({
+        hourly_optimizer_enabled: enabled,
+        business_hours_start: businessStart,
+        business_hours_end: businessEnd,
+      } as any)
+      .eq("id", activeProfile.id);
+    toast({ title: enabled ? "⏱ Otimizador Horário ativado" : "Otimizador Horário desativado" });
+  };
+
+  const handleSaveBusinessHours = async () => {
+    if (!activeProfile?.id) return;
+    await supabase
+      .from("client_profiles")
+      .update({ business_hours_start: businessStart, business_hours_end: businessEnd } as any)
+      .eq("id", activeProfile.id);
+    toast({ title: "Horário comercial atualizado" });
+  };
+
   const getActionIcon = (type: string) => {
     switch (type) {
       case "agent_pause":
-      case "guardian": return <Pause className="w-4 h-4 text-destructive" />;
+      case "guardian":
+      case "hourly_pause": return <Pause className="w-4 h-4 text-destructive" />;
       case "agent_scale":
-      case "auto_scale": return <TrendingUp className="w-4 h-4 text-success" />;
+      case "auto_scale":
+      case "hourly_scale": return <TrendingUp className="w-4 h-4 text-success" />;
       case "agent_duplicate": return <Zap className="w-4 h-4 text-primary" />;
       case "kill_switch": return <AlertTriangle className="w-4 h-4 text-amber-500" />;
+      case "hourly_resume": return <Play className="w-4 h-4 text-success" />;
+      case "hourly_reduce": return <TrendingUp className="w-4 h-4 text-warning" />;
       default: return <Activity className="w-4 h-4" />;
     }
   };
@@ -98,11 +144,15 @@ export default function AgenteAutonomo() {
   const getActionBadge = (type: string) => {
     switch (type) {
       case "agent_pause":
-      case "guardian": return <Badge className="bg-destructive/15 text-destructive border-destructive/30">PAUSADO</Badge>;
+      case "guardian":
+      case "hourly_pause": return <Badge className="bg-destructive/15 text-destructive border-destructive/30">PAUSADO</Badge>;
       case "agent_scale":
-      case "auto_scale": return <Badge className="bg-success/15 text-success border-success/30">ESCALADO</Badge>;
+      case "auto_scale":
+      case "hourly_scale": return <Badge className="bg-success/15 text-success border-success/30">ESCALADO</Badge>;
       case "agent_duplicate": return <Badge className="bg-primary/15 text-primary border-primary/30">DUPLICADO</Badge>;
       case "kill_switch": return <Badge className="bg-amber-500/15 text-amber-500 border-amber-500/30">KILL SWITCH</Badge>;
+      case "hourly_resume": return <Badge className="bg-success/15 text-success border-success/30">REATIVADO</Badge>;
+      case "hourly_reduce": return <Badge className="bg-warning/15 text-warning border-warning/30">REDUZIDO</Badge>;
       default: return <Badge variant="outline">{type}</Badge>;
     }
   };
