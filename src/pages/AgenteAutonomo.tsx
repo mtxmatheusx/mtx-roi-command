@@ -161,7 +161,8 @@ export default function AgenteAutonomo() {
   const hasScaleEnabled = (activeProfile?.roas_min_escala || 0) > 0;
   const duplicateCount = logs.filter(l => l.action_type === "agent_duplicate").length;
   const scaleCount = logs.filter(l => l.action_type === "agent_scale" || l.action_type === "auto_scale").length;
-  const pauseCount = logs.filter(l => l.action_type === "agent_pause" || l.action_type === "guardian").length;
+  const pauseCount = logs.filter(l => l.action_type === "agent_pause" || l.action_type === "guardian" || l.action_type === "hourly_pause").length;
+  const hourlyActionCount = logs.filter(l => l.action_type.startsWith("hourly_")).length;
 
   return (
     <AppLayout>
