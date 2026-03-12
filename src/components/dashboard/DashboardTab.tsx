@@ -23,7 +23,7 @@ interface DashboardTabProps {
   isPermissionError: boolean;
   isTokenExpired: boolean;
   isCached: boolean;
-  fetchedAt: string | null;
+  dataVerified: boolean;
   budgetMaximo: number;
   budgetFrequency: string;
   cpaMeta: number;
