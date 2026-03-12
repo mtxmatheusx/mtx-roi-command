@@ -174,6 +174,15 @@ function isShortRange(dateRange?: DateRange): boolean {
   return diffDays <= 1;
 }
 
+function isMetaTokenExpired(message: string, errorCode?: string): boolean {
+  if (errorCode === "TOKEN_EXPIRED") return true;
+  return (
+    message.includes("Session has expired") ||
+    message.includes("Error validating access token") ||
+    message.includes("invalid or has expired")
+  );
+}
+
 export function useMetaAds(dateRange?: DateRange, profileConfig?: { adAccountId?: string; cpaMeta?: number; ticketMedio?: number; accessToken?: string | null }) {
   const adAccountId = profileConfig?.adAccountId;
   const cpaMeta = profileConfig?.cpaMeta || 200;
