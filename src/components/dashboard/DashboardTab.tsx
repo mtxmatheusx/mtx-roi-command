@@ -49,17 +49,26 @@ interface DashboardTabProps {
   logs: LogEntry[];
 }
 
-const AlertBanner = ({ children, variant = "warning" }: { children: React.ReactNode; variant?: "warning" | "info" | "error" }) => {
+const AlertBanner = ({ children, variant = "warning", onDismiss }: { children: React.ReactNode; variant?: "warning" | "info" | "error"; onDismiss?: () => void }) => {
   const styles = {
     warning: "bg-warning/5 border-warning/15 text-warning",
     info: "bg-primary/5 border-primary/15 text-primary",
     error: "bg-destructive/5 border-destructive/15 text-destructive",
   };
   return (
-    <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
+    <motion.div
+      initial={{ opacity: 0, y: -4, height: "auto" }}
+      animate={{ opacity: 1, y: 0, height: "auto" }}
+      exit={{ opacity: 0, height: 0, marginBottom: 0, paddingTop: 0, paddingBottom: 0 }}
+      transition={{ duration: 0.2 }}
       className={`mb-4 flex items-center gap-2.5 p-3.5 rounded-xl border text-sm ${styles[variant]}`}>
       <AlertTriangle className="w-4 h-4 shrink-0" />
-      {children}
+      <span className="flex-1">{children}</span>
+      {onDismiss && (
+        <button onClick={onDismiss} className="shrink-0 p-1 rounded-md hover:bg-foreground/10 transition-colors">
+          <X className="w-3.5 h-3.5" />
+        </button>
+      )}
     </motion.div>
   );
 };
