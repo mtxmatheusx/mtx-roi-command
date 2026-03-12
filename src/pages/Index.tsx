@@ -175,6 +175,7 @@ export default function Dashboard() {
             budgetMaximo={budgetMaximo}
             budgetFrequency={budgetFrequency}
             cpaMeta={cpaMeta}
+            totalSpend={totalSpend}
             totalRevenue={totalRevenue}
             totalProfit={totalProfit}
             totalPurchases={totalPurchases}
