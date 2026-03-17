@@ -82,6 +82,7 @@ export default function DashboardTab(props: DashboardTabProps) {
     deltaProfit, deltaSpend, deltaCPA, deltaROAS, deltaPurchases, deltaCPM, deltaCTR, deltaTM, logs,
   } = props;
 
+  const { alerts: tokenAlerts } = useTokenHealth();
   const [dismissed, setDismissed] = useState<Record<string, boolean>>({});
   const dismiss = (key: string) => setDismissed((prev) => ({ ...prev, [key]: true }));
 
