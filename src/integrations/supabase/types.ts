@@ -432,6 +432,65 @@ export type Database = {
         }
         Relationships: []
       }
+      platform_connections: {
+        Row: {
+          created_at: string
+          credentials: Json
+          display_name: string
+          id: string
+          is_active: boolean
+          last_synced_at: string | null
+          platform: Database["public"]["Enums"]["ad_platform"]
+          platform_account_id: string | null
+          profile_id: string
+          status: string
+          sync_error: string | null
+          token_expires_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          credentials?: Json
+          display_name?: string
+          id?: string
+          is_active?: boolean
+          last_synced_at?: string | null
+          platform: Database["public"]["Enums"]["ad_platform"]
+          platform_account_id?: string | null
+          profile_id: string
+          status?: string
+          sync_error?: string | null
+          token_expires_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          credentials?: Json
+          display_name?: string
+          id?: string
+          is_active?: boolean
+          last_synced_at?: string | null
+          platform?: Database["public"]["Enums"]["ad_platform"]
+          platform_account_id?: string | null
+          profile_id?: string
+          status?: string
+          sync_error?: string | null
+          token_expires_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_connections_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "client_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ugc_characters: {
         Row: {
           created_at: string
@@ -466,6 +525,93 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "ugc_characters_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "client_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      unified_metrics: {
+        Row: {
+          campaign_id: string | null
+          campaign_name: string | null
+          clicks: number
+          connection_id: string
+          conversion_value: number
+          conversions: number
+          cpa: number
+          cpc: number
+          cpm: number
+          created_at: string
+          ctr: number
+          date: string
+          extra_metrics: Json | null
+          id: string
+          impressions: number
+          platform: Database["public"]["Enums"]["ad_platform"]
+          profile_id: string
+          roas: number
+          spend: number
+          synced_at: string
+          user_id: string
+        }
+        Insert: {
+          campaign_id?: string | null
+          campaign_name?: string | null
+          clicks?: number
+          connection_id: string
+          conversion_value?: number
+          conversions?: number
+          cpa?: number
+          cpc?: number
+          cpm?: number
+          created_at?: string
+          ctr?: number
+          date: string
+          extra_metrics?: Json | null
+          id?: string
+          impressions?: number
+          platform: Database["public"]["Enums"]["ad_platform"]
+          profile_id: string
+          roas?: number
+          spend?: number
+          synced_at?: string
+          user_id: string
+        }
+        Update: {
+          campaign_id?: string | null
+          campaign_name?: string | null
+          clicks?: number
+          connection_id?: string
+          conversion_value?: number
+          conversions?: number
+          cpa?: number
+          cpc?: number
+          cpm?: number
+          created_at?: string
+          ctr?: number
+          date?: string
+          extra_metrics?: Json | null
+          id?: string
+          impressions?: number
+          platform?: Database["public"]["Enums"]["ad_platform"]
+          profile_id?: string
+          roas?: number
+          spend?: number
+          synced_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "unified_metrics_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "platform_connections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "unified_metrics_profile_id_fkey"
             columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "client_profiles"
@@ -528,7 +674,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      ad_platform: "meta" | "google" | "tiktok" | "linkedin" | "pinterest"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -655,6 +801,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      ad_platform: ["meta", "google", "tiktok", "linkedin", "pinterest"],
+    },
   },
 } as const
