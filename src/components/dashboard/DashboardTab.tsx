@@ -112,6 +112,42 @@ export default function DashboardTab(props: DashboardTabProps) {
           <AlertBanner key="mock" onDismiss={() => dismiss("mock")}>Exibindo dados de demonstração. Configure o Ad Account ID em <strong className="mx-1">Configurações</strong>.</AlertBanner>
         )}
       </AnimatePresence>
+
+      {/* Token Expiration Alerts */}
+      <AnimatePresence>
+        {tokenAlerts.map((alert) => {
+          const key = `token-${alert.profileName}`;
+          if (dismissed[key]) return null;
+          return (
+            <motion.div
+              key={key}
+              initial={{ opacity: 0, y: -4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.2 }}
+              className={`mb-4 flex items-center gap-2.5 p-3.5 rounded-xl border text-sm ${
+                alert.status === "expired" || alert.status === "invalid"
+                  ? "bg-destructive/5 border-destructive/15 text-destructive"
+                  : "bg-warning/5 border-warning/15 text-warning"
+              }`}
+            >
+              <KeyRound className="w-4 h-4 shrink-0" />
+              <span className="flex-1">
+                {alert.status === "expired"
+                  ? <>Token do perfil <strong>{alert.profileName}</strong> expirou. Atualize em <strong>Configurações</strong>.</>
+                  : alert.status === "invalid"
+                  ? <>Token do perfil <strong>{alert.profileName}</strong> é inválido. Reconfigure em <strong>Configurações</strong>.</>
+                  : <>Token do perfil <strong>{alert.profileName}</strong> expira em <strong>{alert.daysLeft} dia{alert.daysLeft !== 1 ? "s" : ""}</strong>. Renove em <strong>Configurações</strong>.</>
+                }
+              </span>
+              <button onClick={() => dismiss(key)} className="shrink-0 p-1 rounded-md hover:bg-foreground/10 transition-colors">
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </motion.div>
+          );
+        })}
+      </AnimatePresence>
+
       {budgetMaximo > 0 && !isLoading && (() => {
         const freqLabels: Record<string, string> = { daily: "Diário", weekly: "Semanal", monthly: "Mensal" };
         const today = new Date().toISOString().slice(0, 10);
