@@ -245,7 +245,51 @@ export default function Configuracoes() {
     }
   };
 
-  const handleAbsorbContext = async () => {
+  const handleCheckTokenHealth = async () => {
+    if (!activeProfile?.id) return;
+    setTokenHealthLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("refresh-meta-token", {
+        body: { profileId: activeProfile.id, action: "debug" },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      setTokenHealth(data);
+    } catch (err) {
+      toast({ title: "Erro ao verificar token", description: (err as Error).message, variant: "destructive" });
+      setTokenHealth(null);
+    } finally {
+      setTokenHealthLoading(false);
+    }
+  };
+
+  const handleExchangeToken = async () => {
+    if (!activeProfile?.id) return;
+    setTokenExchangeLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("refresh-meta-token", {
+        body: { profileId: activeProfile.id, action: "exchange" },
+      });
+      if (error) throw error;
+      if (data?.error) {
+        if (data.needs_secrets) {
+          toast({ title: "⚠️ Configuração necessária", description: "META_APP_ID e META_APP_SECRET precisam ser configurados para renovação automática.", variant: "destructive" });
+        } else {
+          throw new Error(data.error);
+        }
+        return;
+      }
+      toast({ title: "✅ Token Renovado", description: data.message });
+      setTokenHealth(null); // Reset to re-check
+      handleCheckTokenHealth();
+    } catch (err) {
+      toast({ title: "Erro ao renovar token", description: (err as Error).message, variant: "destructive" });
+    } finally {
+      setTokenExchangeLoading(false);
+    }
+  };
+
+
     if (!productUrl || !activeProfile) return;
     try { new URL(productUrl); } catch { toast({ title: "URL inválida", description: "Insira uma URL válida.", variant: "destructive" }); return; }
     setIsAbsorbing(true); setAbsorbResult(null); setShowManualInput(false);
