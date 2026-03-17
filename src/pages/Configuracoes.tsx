@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Switch } from "@/components/ui/switch";
-import { Shield, Save, Loader2, CheckCircle, KeyRound, Globe, Brain, X, ExternalLink, Trash2, Upload, FileText, Target } from "lucide-react";
+import { Shield, Save, Loader2, CheckCircle, KeyRound, Globe, Brain, X, ExternalLink, Trash2, Upload, FileText, Target, RefreshCw, Clock, AlertTriangle, Zap } from "lucide-react";
 import { z } from "zod";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -61,6 +61,15 @@ export default function Configuracoes() {
   const [saving, setSaving] = useState(false);
   const [testResult, setTestResult] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [tokenPermissions, setTokenPermissions] = useState<string[] | null>(null);
+
+  // Token health state
+  const [tokenHealth, setTokenHealth] = useState<{
+    type?: string; is_valid?: boolean; expiry_label?: string; days_remaining?: number | null;
+    is_expired?: boolean; is_system_user?: boolean; is_long_lived?: boolean;
+    can_exchange?: boolean; scopes?: string[];
+  } | null>(null);
+  const [tokenHealthLoading, setTokenHealthLoading] = useState(false);
+  const [tokenExchangeLoading, setTokenExchangeLoading] = useState(false);
 
   // Product context state
   const [productUrl, setProductUrl] = useState("");
@@ -233,6 +242,50 @@ export default function Configuracoes() {
     } catch (err) {
       setTestResult("error"); setTokenPermissions(null);
       toast({ title: "❌ Falha na conexão", description: (err as Error).message, variant: "destructive" });
+    }
+  };
+
+  const handleCheckTokenHealth = async () => {
+    if (!activeProfile?.id) return;
+    setTokenHealthLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("refresh-meta-token", {
+        body: { profileId: activeProfile.id, action: "debug" },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      setTokenHealth(data);
+    } catch (err) {
+      toast({ title: "Erro ao verificar token", description: (err as Error).message, variant: "destructive" });
+      setTokenHealth(null);
+    } finally {
+      setTokenHealthLoading(false);
+    }
+  };
+
+  const handleExchangeToken = async () => {
+    if (!activeProfile?.id) return;
+    setTokenExchangeLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("refresh-meta-token", {
+        body: { profileId: activeProfile.id, action: "exchange" },
+      });
+      if (error) throw error;
+      if (data?.error) {
+        if (data.needs_secrets) {
+          toast({ title: "⚠️ Configuração necessária", description: "META_APP_ID e META_APP_SECRET precisam ser configurados para renovação automática.", variant: "destructive" });
+        } else {
+          throw new Error(data.error);
+        }
+        return;
+      }
+      toast({ title: "✅ Token Renovado", description: data.message });
+      setTokenHealth(null); // Reset to re-check
+      handleCheckTokenHealth();
+    } catch (err) {
+      toast({ title: "Erro ao renovar token", description: (err as Error).message, variant: "destructive" });
+    } finally {
+      setTokenExchangeLoading(false);
     }
   };
 
@@ -506,6 +559,89 @@ export default function Configuracoes() {
                 )}
               </div>
             )}
+
+            {/* Token Health Check */}
+            <Separator className="my-2" />
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-sm font-medium">Saúde do Token</span>
+                </div>
+                <Button variant="outline" size="sm" onClick={handleCheckTokenHealth} disabled={tokenHealthLoading} className="gap-2">
+                  {tokenHealthLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                  Verificar
+                </Button>
+              </div>
+
+              {tokenHealth && (
+                <div className="space-y-2">
+                  <div className={`flex items-center gap-3 p-3 rounded-lg border ${
+                    tokenHealth.is_expired ? "bg-destructive/10 border-destructive/30" :
+                    tokenHealth.is_system_user ? "bg-emerald-500/10 border-emerald-500/20" :
+                    (tokenHealth.days_remaining !== null && tokenHealth.days_remaining !== undefined && tokenHealth.days_remaining <= 7) ? "bg-amber-500/10 border-amber-500/20" :
+                    "bg-emerald-500/10 border-emerald-500/20"
+                  }`}>
+                    <div className="flex-1 space-y-1">
+                      <div className="flex items-center gap-2">
+                        {tokenHealth.is_expired ? (
+                          <AlertTriangle className="w-4 h-4 text-destructive" />
+                        ) : tokenHealth.is_system_user ? (
+                          <Zap className="w-4 h-4 text-emerald-400" />
+                        ) : (
+                          <Clock className="w-4 h-4 text-amber-400" />
+                        )}
+                        <span className={`text-sm font-semibold ${
+                          tokenHealth.is_expired ? "text-destructive" :
+                          tokenHealth.is_system_user ? "text-emerald-400" :
+                          "text-amber-400"
+                        }`}>
+                          {tokenHealth.expiry_label}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                        <span>Tipo: <strong>{tokenHealth.type}</strong></span>
+                        <span>Status: <strong>{tokenHealth.is_valid ? "Válido" : "Inválido"}</strong></span>
+                        {tokenHealth.is_system_user && <span className="text-emerald-400 font-semibold">🔒 System User (Permanente)</span>}
+                      </div>
+                    </div>
+                  </div>
+
+                  {tokenHealth.can_exchange && (
+                    <div className="flex items-center gap-3 p-3 rounded-lg bg-primary/5 border border-primary/20">
+                      <div className="flex-1">
+                        <p className="text-sm font-medium">Renovar para Token de Longa Duração</p>
+                        <p className="text-xs text-muted-foreground">Troca automática para um token válido por 60 dias.</p>
+                      </div>
+                      <Button size="sm" onClick={handleExchangeToken} disabled={tokenExchangeLoading} className="gap-2">
+                        {tokenExchangeLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                        Renovar
+                      </Button>
+                    </div>
+                  )}
+
+                  {tokenHealth.is_expired && (
+                    <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/30">
+                      <p className="text-sm text-destructive font-medium">⚠️ Token expirado</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Recomendação: Use um <strong>System User Token</strong> permanente gerado no Meta Business Suite com permissões 
+                        <code className="mx-1 px-1 py-0.5 rounded bg-muted text-xs">ads_management</code> e
+                        <code className="mx-1 px-1 py-0.5 rounded bg-muted text-xs">pages_manage_ads</code>.
+                      </p>
+                    </div>
+                  )}
+
+                  {!tokenHealth.is_system_user && !tokenHealth.is_expired && (
+                    <p className="text-xs text-muted-foreground">
+                      💡 <strong>Dica:</strong> Para evitar expirações, gere um System User Token permanente no{" "}
+                      <a href="https://business.facebook.com/settings/system-users" target="_blank" rel="noopener noreferrer" className="text-primary underline">
+                        Meta Business Suite
+                      </a>.
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
 
