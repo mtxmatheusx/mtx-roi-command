@@ -289,7 +289,7 @@ export default function Configuracoes() {
     }
   };
 
-
+  const handleAbsorbContext = async () => {
     if (!productUrl || !activeProfile) return;
     try { new URL(productUrl); } catch { toast({ title: "URL inválida", description: "Insira uma URL válida.", variant: "destructive" }); return; }
     setIsAbsorbing(true); setAbsorbResult(null); setShowManualInput(false);
