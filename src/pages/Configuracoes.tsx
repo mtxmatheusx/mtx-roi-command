@@ -62,6 +62,15 @@ export default function Configuracoes() {
   const [testResult, setTestResult] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [tokenPermissions, setTokenPermissions] = useState<string[] | null>(null);
 
+  // Token health state
+  const [tokenHealth, setTokenHealth] = useState<{
+    type?: string; is_valid?: boolean; expiry_label?: string; days_remaining?: number | null;
+    is_expired?: boolean; is_system_user?: boolean; is_long_lived?: boolean;
+    can_exchange?: boolean; scopes?: string[];
+  } | null>(null);
+  const [tokenHealthLoading, setTokenHealthLoading] = useState(false);
+  const [tokenExchangeLoading, setTokenExchangeLoading] = useState(false);
+
   // Product context state
   const [productUrl, setProductUrl] = useState("");
   const [isAbsorbing, setIsAbsorbing] = useState(false);
