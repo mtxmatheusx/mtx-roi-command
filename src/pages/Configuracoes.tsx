@@ -645,6 +645,9 @@ export default function Configuracoes() {
           </CardContent>
         </Card>
 
+        {/* Multi-Platform Connections */}
+        <PlatformConnectionsManager />
+
         {/* API Externa */}
         <Card>
           <CardHeader>
