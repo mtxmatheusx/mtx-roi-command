@@ -21,6 +21,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import ReactMarkdown from "react-markdown";
 import { useAuth } from "@/hooks/useAuth";
+import PlatformConnectionsManager from "@/components/PlatformConnectionsManager";
 
 const configSchema = z.object({
   name: z.string().min(1, "Nome do cliente é obrigatório"),
