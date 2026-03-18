@@ -267,7 +267,7 @@ export default function AppSidebar() {
           <button
             onClick={signOut}
             aria-label={t("nav.logout")}
-            className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors w-full text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+            className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 w-full text-muted-foreground hover:text-destructive hover:bg-destructive/8 active:scale-[0.97]"
           >
             <LogOut className="w-4 h-4" />
             {t("nav.logout")}
