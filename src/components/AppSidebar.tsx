@@ -70,11 +70,11 @@ export default function AppSidebar() {
         aria-label={label}
         className={({ isActive }) =>
           cn(
-            "group relative flex items-center gap-2.5 rounded-lg text-sm font-medium transition-all duration-150",
-            !showLabels ? "justify-center px-2 py-2.5" : "px-3 py-2",
+            "group relative flex items-center gap-2.5 rounded-lg text-sm font-medium transition-all duration-200 ease-out active:scale-[0.97]",
+            !showLabels ? "justify-center px-2 py-2.5" : "px-3 py-2.5",
             isActive
-              ? "bg-primary/10 text-primary shadow-sm"
-              : "text-muted-foreground hover:text-foreground hover:bg-accent/80"
+              ? "bg-primary/8 text-primary shadow-sm"
+              : "text-muted-foreground hover:text-foreground hover:bg-accent/70"
           )
         }
       >
