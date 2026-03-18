@@ -194,28 +194,32 @@ export default function DashboardTab(props: DashboardTabProps) {
             initial={{ opacity: 0, scale: 0.97 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
-            className="glass-card p-8 text-center"
+            className="glass-card p-8 sm:p-10 text-center relative overflow-hidden"
           >
-            <p className="text-xs font-medium text-muted-foreground tracking-wider uppercase mb-3">Lucro Líquido Total</p>
-            <p className={`text-3xl sm:text-5xl font-bold tracking-tighter hero-number ${totalProfit >= 0 ? "text-success" : "text-destructive"}`}>{formatCurrency(totalProfit)}</p>
-            <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4 mt-4">
-              <span className="text-sm text-muted-foreground">
-                Receita <span className="font-semibold text-foreground">{formatCurrency(totalRevenue)}</span>
-              </span>
-              <span className="w-1 h-1 rounded-full bg-border" />
-              <span className="text-sm text-muted-foreground">
-                Investimento <span className="font-semibold text-foreground">{formatCurrency(totalSpend)}</span>
-              </span>
-              {deltaProfit !== null && isFinite(deltaProfit) && (
-                <>
-                  <span className="w-1 h-1 rounded-full bg-border" />
-                  <span className={`inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full
-                    ${deltaProfit >= 0 ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"}`}>
-                    {deltaProfit >= 0 ? <TrendingUp className="w-3 h-3" /> : null}
-                    {deltaProfit > 0 ? "+" : ""}{deltaProfit.toFixed(1)}%
-                  </span>
-                </>
-              )}
+            {/* Subtle gradient accent */}
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.02] via-transparent to-success/[0.02] pointer-events-none" />
+            <div className="relative">
+              <p className="text-[11px] font-semibold text-muted-foreground tracking-[0.2em] uppercase mb-4">Lucro Líquido Total</p>
+              <p className={`text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tighter hero-number ${totalProfit >= 0 ? "text-success" : "text-destructive"}`}>{formatCurrency(totalProfit)}</p>
+              <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-5 mt-5">
+                <span className="text-sm text-muted-foreground">
+                  Receita <span className="font-semibold text-foreground">{formatCurrency(totalRevenue)}</span>
+                </span>
+                <span className="w-1 h-1 rounded-full bg-border" />
+                <span className="text-sm text-muted-foreground">
+                  Investimento <span className="font-semibold text-foreground">{formatCurrency(totalSpend)}</span>
+                </span>
+                {deltaProfit !== null && isFinite(deltaProfit) && (
+                  <>
+                    <span className="w-1 h-1 rounded-full bg-border" />
+                    <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full transition-colors
+                      ${deltaProfit >= 0 ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"}`}>
+                      {deltaProfit >= 0 ? <TrendingUp className="w-3 h-3" /> : null}
+                      {deltaProfit > 0 ? "+" : ""}{deltaProfit.toFixed(1)}%
+                    </span>
+                  </>
+                )}
+              </div>
             </div>
           </motion.div>
 
