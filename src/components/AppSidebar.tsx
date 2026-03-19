@@ -50,6 +50,10 @@ export default function AppSidebar() {
         { to: "/auditoria-meta", label: t("nav.auditMeta"), icon: Shield },
         { to: "/agente-autonomo", label: "Agente Autônomo", icon: Bot },
         { to: "/feedback-copy", label: "Feedbacks de Copy", icon: MessageSquare },
+        { to: "/brand-identity", label: "Briefing & ID Visual", icon: Palette },
+        { to: "/feed-preview", label: "Preview do Feed", icon: Grid3X3 },
+        { to: "/google-drive", label: "Pastas Google Drive", icon: FolderPlus },
+        { to: "/kanban", label: "Quadro de Tarefas", icon: KanbanSquare },
       ],
     },
   ];
