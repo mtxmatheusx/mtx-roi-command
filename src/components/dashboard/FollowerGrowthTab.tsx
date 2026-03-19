@@ -125,10 +125,20 @@ export default function FollowerGrowthTab() {
       if (data?.error) throw new Error(data.error);
       if (data?.data) setCurrent(data.data);
       await fetchHistory();
-      toast.success("Dados sincronizados com sucesso!");
+      if (data?.warning) {
+        toast.warning(data.warning);
+      } else {
+        toast.success("Dados sincronizados com sucesso!");
+      }
     } catch (e: any) {
-      setError(e.message);
-      toast.error("Erro ao sincronizar");
+      // Don't show error if we already have data from DB
+      await fetchHistory();
+      if (snapshots.length > 0) {
+        toast.warning("APIs temporariamente indisponíveis. Exibindo dados salvos.");
+      } else {
+        setError(e.message);
+        toast.error("Erro ao sincronizar");
+      }
     } finally {
       setIsSyncing(false);
     }
