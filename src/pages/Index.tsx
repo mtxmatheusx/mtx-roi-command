@@ -209,6 +209,10 @@ export default function Dashboard() {
         <TabsContent value="campaign-manager">
           <CampaignManagerTab campaigns={campaigns} isLoading={isLoading} />
         </TabsContent>
+
+        <TabsContent value="followers">
+          <FollowerGrowthTab />
+        </TabsContent>
       </Tabs>
     </AppLayout>
   );
