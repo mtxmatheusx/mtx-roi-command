@@ -360,6 +360,55 @@ export default function FollowerGrowthTab() {
           </CardContent>
         </Card>
       )}
+
+      {/* Sync History Table */}
+      {snapshots.length > 0 && (
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">Histórico de Sincronizações</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b border-border">
+                      <th className="text-left py-2 px-3 font-medium text-muted-foreground">Data</th>
+                      <th className="text-right py-2 px-3 font-medium text-muted-foreground">Seguidores</th>
+                      <th className="text-right py-2 px-3 font-medium text-muted-foreground">Seguindo</th>
+                      <th className="text-right py-2 px-3 font-medium text-muted-foreground">Posts</th>
+                      <th className="text-right py-2 px-3 font-medium text-muted-foreground">Curtidas</th>
+                      <th className="text-right py-2 px-3 font-medium text-muted-foreground">Comentários</th>
+                      <th className="text-right py-2 px-3 font-medium text-muted-foreground">Eng. Rate</th>
+                      <th className="text-right py-2 px-3 font-medium text-muted-foreground">Δ Seg.</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[...snapshots].reverse().map((s, i, arr) => {
+                      const prev = arr[i + 1];
+                      const delta = prev ? s.followers_count - prev.followers_count : null;
+                      return (
+                        <tr key={s.snapshot_date} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
+                          <td className="py-2 px-3">{format(parseISO(s.snapshot_date), "dd/MM/yyyy", { locale: ptBR })}</td>
+                          <td className="text-right py-2 px-3 font-medium">{s.followers_count.toLocaleString("pt-BR")}</td>
+                          <td className="text-right py-2 px-3">{s.following_count.toLocaleString("pt-BR")}</td>
+                          <td className="text-right py-2 px-3">{s.media_count.toLocaleString("pt-BR")}</td>
+                          <td className="text-right py-2 px-3">{s.likes_count.toLocaleString("pt-BR")}</td>
+                          <td className="text-right py-2 px-3">{s.comments_count.toLocaleString("pt-BR")}</td>
+                          <td className="text-right py-2 px-3">{s.engagement_rate.toFixed(2)}%</td>
+                          <td className={`text-right py-2 px-3 font-medium ${delta === null ? "text-muted-foreground" : delta > 0 ? "text-green-500" : delta < 0 ? "text-destructive" : "text-muted-foreground"}`}>
+                            {delta === null ? "—" : `${delta > 0 ? "+" : ""}${delta.toLocaleString("pt-BR")}`}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
     </motion.div>
   );
 }
