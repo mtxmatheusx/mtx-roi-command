@@ -393,6 +393,47 @@ export type Database = {
           },
         ]
       }
+      follower_snapshots: {
+        Row: {
+          created_at: string
+          followers_count: number
+          following_count: number
+          id: string
+          media_count: number
+          profile_id: string
+          snapshot_date: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          followers_count?: number
+          following_count?: number
+          id?: string
+          media_count?: number
+          profile_id: string
+          snapshot_date?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          followers_count?: number
+          following_count?: number
+          id?: string
+          media_count?: number
+          profile_id?: string
+          snapshot_date?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "follower_snapshots_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "client_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       knowledge_base: {
         Row: {
           created_at: string
