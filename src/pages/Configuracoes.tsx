@@ -51,7 +51,7 @@ export default function Configuracoes() {
 
   // --- Existing form state ---
   const [form, setForm] = useState({
-    name: "", adAccountId: "act_", pixelId: "", pageId: "", instagramAccountId: "",
+    name: "", adAccountId: "act_", pixelId: "", pageId: "", instagramAccountId: "", instagramUsername: "",
     cpaMeta: "45", ticketMedio: "697", limiteEscala: "15",
     budgetMaximo: "0", budgetFrequency: "monthly" as "daily" | "weekly" | "monthly",
     metaAccessToken: "", geminiApiKey: "", apiBaseUrl: "",
