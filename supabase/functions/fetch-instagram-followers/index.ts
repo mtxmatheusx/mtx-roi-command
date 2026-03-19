@@ -6,7 +6,7 @@ const corsHeaders = {
 };
 
 async function discoverIgAccountId(pageId: string, accessToken: string): Promise<string | null> {
-  // Try to get IG business account from the Facebook Page using older API versions
+  // Try multiple API versions for instagram_business_account discovery
   for (const version of ["v19.0", "v18.0", "v17.0"]) {
     try {
       const res = await fetch(
@@ -20,11 +20,28 @@ async function discoverIgAccountId(pageId: string, accessToken: string): Promise
       continue;
     }
   }
+
+  // Fallback: try /me/accounts to find the page and its IG account
+  try {
+    const res = await fetch(
+      `https://graph.facebook.com/v19.0/me/accounts?fields=id,instagram_business_account&access_token=${accessToken}`
+    );
+    const data = await res.json();
+    if (data?.data) {
+      for (const page of data.data) {
+        if (page.id === pageId && page.instagram_business_account?.id) {
+          return page.instagram_business_account.id;
+        }
+      }
+    }
+  } catch {
+    // ignore
+  }
+
   return null;
 }
 
 async function fetchIgData(igAccountId: string, accessToken: string) {
-  // Try fetching IG user data from multiple API versions
   for (const version of ["v21.0", "v20.0", "v19.0", "v18.0"]) {
     try {
       const res = await fetch(
@@ -34,15 +51,35 @@ async function fetchIgData(igAccountId: string, accessToken: string) {
       if (!data.error && (data.followers_count !== undefined || data.username)) {
         return data;
       }
-      // If this specific error, try next version
       if (data.error?.code === 36106) continue;
-      // For other errors, return them
       if (data.error) return data;
     } catch {
       continue;
     }
   }
   return null;
+}
+
+async function fetchRecentEngagement(igAccountId: string, accessToken: string) {
+  // Fetch recent media and sum likes+comments
+  try {
+    const res = await fetch(
+      `https://graph.facebook.com/v19.0/${igAccountId}/media?fields=like_count,comments_count,timestamp&limit=25&access_token=${accessToken}`
+    );
+    const data = await res.json();
+    if (data?.data && Array.isArray(data.data)) {
+      let totalLikes = 0;
+      let totalComments = 0;
+      for (const post of data.data) {
+        totalLikes += post.like_count || 0;
+        totalComments += post.comments_count || 0;
+      }
+      return { likes: totalLikes, comments: totalComments, posts: data.data.length };
+    }
+  } catch (e) {
+    console.error("Engagement fetch error:", e);
+  }
+  return { likes: 0, comments: 0, posts: 0 };
 }
 
 Deno.serve(async (req) => {
@@ -87,12 +124,9 @@ Deno.serve(async (req) => {
 
     let igAccountId = profile.instagram_account_id;
 
-    // If no IG account ID stored, try to discover it from page_id
     if (!igAccountId && profile.page_id) {
       console.log("Attempting to discover IG account from page:", profile.page_id);
       igAccountId = await discoverIgAccountId(profile.page_id, accessToken);
-      
-      // Save discovered ID for future use
       if (igAccountId) {
         console.log("Discovered IG account ID:", igAccountId);
         await supabase
@@ -103,7 +137,7 @@ Deno.serve(async (req) => {
     }
 
     if (!igAccountId) {
-      return new Response(JSON.stringify({ 
+      return new Response(JSON.stringify({
         error: "Instagram Account ID não encontrado. Configure o Instagram Account ID nas Configurações do perfil, ou verifique se a Page tem uma conta Business do Instagram vinculada."
       }), {
         status: 400,
@@ -111,8 +145,11 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Fetch IG data
-    const igData = await fetchIgData(igAccountId, accessToken);
+    // Fetch IG data + engagement in parallel
+    const [igData, engagement] = await Promise.all([
+      fetchIgData(igAccountId, accessToken),
+      fetchRecentEngagement(igAccountId, accessToken),
+    ]);
 
     if (!igData || igData.error) {
       const errorMsg = igData?.error?.message || "Failed to fetch Instagram data";
@@ -122,16 +159,23 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Upsert snapshot
+    const followers = igData.followers_count || 0;
+    const engagementRate = followers > 0 && engagement.posts > 0
+      ? ((engagement.likes + engagement.comments) / engagement.posts / followers) * 100
+      : 0;
+
     const today = new Date().toISOString().split("T")[0];
     const { error: upsertError } = await supabase
       .from("follower_snapshots")
       .upsert({
         profile_id,
         user_id: profile.user_id,
-        followers_count: igData.followers_count || 0,
+        followers_count: followers,
         following_count: igData.follows_count || 0,
         media_count: igData.media_count || 0,
+        likes_count: engagement.likes,
+        comments_count: engagement.comments,
+        engagement_rate: Math.round(engagementRate * 100) / 100,
         snapshot_date: today,
       }, { onConflict: "profile_id,snapshot_date" });
 
@@ -144,9 +188,12 @@ Deno.serve(async (req) => {
       data: {
         username: igData.username || igData.name,
         profile_picture_url: igData.profile_picture_url,
-        followers_count: igData.followers_count || 0,
+        followers_count: followers,
         following_count: igData.follows_count || 0,
         media_count: igData.media_count || 0,
+        likes_count: engagement.likes,
+        comments_count: engagement.comments,
+        engagement_rate: Math.round(engagementRate * 100) / 100,
         snapshot_date: today,
       },
     }), {
