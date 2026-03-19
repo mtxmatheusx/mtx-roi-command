@@ -574,6 +574,18 @@ export default function Configuracoes() {
               </div>
               <Input id="instagramAccountId" placeholder="17841400000000000" value={form.instagramAccountId} onChange={(e) => handleChange("instagramAccountId", e.target.value)} className="font-mono text-sm" />
             </div>
+            <div className="space-y-2 max-w-md">
+              <div className="flex items-center gap-2">
+                <Label htmlFor="instagramUsername">Instagram Username (RapidAPI)</Label>
+                <span className="relative group">
+                  <span className="text-muted-foreground cursor-help text-xs border border-border rounded-full w-4 h-4 inline-flex items-center justify-center">?</span>
+                  <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 text-xs bg-popover text-popover-foreground border rounded-md shadow-md w-64 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                    Username do Instagram (sem @). Usado pela RapidAPI para buscar dados de seguidores e engagement sem depender da Meta Business API.
+                  </span>
+                </span>
+              </div>
+              <Input id="instagramUsername" placeholder="seuusuario" value={form.instagramUsername} onChange={(e) => handleChange("instagramUsername", e.target.value.replace("@", ""))} className="font-mono text-sm" />
+            </div>
             <div className="flex items-center gap-3">
               <Button variant="outline" onClick={handleTestConnection} disabled={testResult === "loading"} className="gap-2">
                 {testResult === "loading" ? <Loader2 className="w-4 h-4 animate-spin" /> : null}Testar Conexão
