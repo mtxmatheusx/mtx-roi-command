@@ -26,13 +26,13 @@ const chartData = (daily: DailyDataPoint[]) =>
 const CustomTooltip = ({ active, payload, label, formatter }: any) => {
   if (!active || !payload?.length) return null;
   return (
-    <div className="rounded-xl bg-card border border-border px-4 py-3 text-xs"
+    <div className="rounded-xl bg-card border border-border px-4 py-3 text-xs backdrop-blur-sm"
          style={{ boxShadow: "var(--shadow-elevated)" }}>
-      <p className="font-medium text-foreground mb-1.5">{label}</p>
+      <p className="font-semibold text-foreground mb-1.5 text-[11px] tracking-wide uppercase">{label}</p>
       {payload.map((entry: any, i: number) => (
-        <div key={i} className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.stroke || entry.color }} />
-          <span className="text-muted-foreground">{formatter ? formatter(entry.value) : entry.value}</span>
+        <div key={i} className="flex items-center gap-2 mt-1">
+          <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: entry.stroke || entry.color }} />
+          <span className="text-foreground font-medium">{formatter ? formatter(entry.value) : entry.value}</span>
         </div>
       ))}
     </div>
@@ -41,11 +41,11 @@ const CustomTooltip = ({ active, payload, label, formatter }: any) => {
 
 const axisStyle = {
   fontSize: 11,
-  fill: "hsl(0 0% 45%)",
+  fill: "hsl(220 8% 46%)",
   fontFamily: "Inter, system-ui, sans-serif",
 };
 
-const gridStyle = "hsl(0 0% 93%)";
+const gridStyle = "hsl(220 13% 93%)";
 
 export default function DashboardCharts({ daily, cpaMeta = 200 }: DashboardChartsProps) {
   const data = chartData(daily);
@@ -58,8 +58,8 @@ export default function DashboardCharts({ daily, cpaMeta = 200 }: DashboardChart
         <LineChart data={data}>
           <defs>
             <linearGradient id="cpaGlow" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="hsl(36 100% 50%)" stopOpacity={0.2} />
-              <stop offset="100%" stopColor="hsl(36 100% 50%)" stopOpacity={0} />
+              <stop offset="0%" stopColor="hsl(38 92% 50%)" stopOpacity={0.15} />
+              <stop offset="100%" stopColor="hsl(38 92% 50%)" stopOpacity={0} />
             </linearGradient>
           </defs>
           <CartesianGrid stroke={gridStyle} strokeDasharray="0" vertical={false} />
@@ -68,8 +68,8 @@ export default function DashboardCharts({ daily, cpaMeta = 200 }: DashboardChart
           <Tooltip content={<CustomTooltip formatter={(v: number) => `R$ ${v.toFixed(2)}`} />} />
           <ReferenceLine y={cpaMeta} stroke="hsl(0 72% 51%)" strokeDasharray="6 4" strokeWidth={1.5}
             label={{ value: `Meta R$ ${cpaMeta}`, fill: "hsl(0 72% 51%)", fontSize: 10, position: "right" }} />
-          <Line type="monotone" dataKey="cpa" stroke="hsl(36 100% 50%)" strokeWidth={2.5}
-            dot={false} activeDot={{ r: 5, strokeWidth: 2, fill: "hsl(0 0% 100%)", stroke: "hsl(36 100% 50%)" }} />
+          <Line type="monotone" dataKey="cpa" stroke="hsl(38 92% 50%)" strokeWidth={2.5}
+            dot={false} activeDot={{ r: 5, strokeWidth: 2, fill: "hsl(0 0% 100%)", stroke: "hsl(38 92% 50%)" }} />
         </LineChart>
       ),
     },
@@ -96,7 +96,7 @@ export default function DashboardCharts({ daily, cpaMeta = 200 }: DashboardChart
         <AreaChart data={data}>
           <defs>
             <linearGradient id="profitFill" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="hsl(211 100% 50%)" stopOpacity={0.12} />
+              <stop offset="0%" stopColor="hsl(211 100% 50%)" stopOpacity={0.1} />
               <stop offset="100%" stopColor="hsl(211 100% 50%)" stopOpacity={0} />
             </linearGradient>
           </defs>
@@ -113,29 +113,24 @@ export default function DashboardCharts({ daily, cpaMeta = 200 }: DashboardChart
   ];
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay: 0.15, ease: [0.25, 0.46, 0.45, 0.94] }}
-      className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-8"
-    >
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
       {charts.map((chart, i) => (
         <motion.div
           key={chart.title}
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.1 + i * 0.08, ease: [0.25, 0.46, 0.45, 0.94] }}
+          transition={{ duration: 0.4, delay: 0.08 + i * 0.06, ease: [0.22, 1, 0.36, 1] }}
           className="chart-container group"
         >
-          <div className="mb-5">
+          <div className="mb-4">
             <p className="text-sm font-semibold text-foreground tracking-tight">{chart.title}</p>
-            <p className="text-xs text-muted-foreground mt-0.5">{chart.subtitle}</p>
+            <p className="text-[11px] text-muted-foreground mt-0.5">{chart.subtitle}</p>
           </div>
-          <ResponsiveContainer width="100%" height={200}>
+          <ResponsiveContainer width="100%" height={190}>
             {chart.content}
           </ResponsiveContainer>
         </motion.div>
       ))}
-    </motion.div>
+    </div>
   );
 }
