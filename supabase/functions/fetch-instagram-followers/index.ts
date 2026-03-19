@@ -245,6 +245,33 @@ Deno.serve(async (req) => {
     }
 
     if (source === "none") {
+      // Try to return cached data from DB instead of failing
+      const { data: cached } = await supabase
+        .from("follower_snapshots")
+        .select("*")
+        .eq("profile_id", profile_id)
+        .order("snapshot_date", { ascending: false })
+        .limit(1)
+        .single();
+
+      if (cached) {
+        return new Response(JSON.stringify({
+          success: true, source: "cache",
+          warning: "APIs temporariamente indisponíveis. Exibindo último dado salvo.",
+          data: {
+            username: igUsername || "",
+            profile_picture_url: "",
+            followers_count: cached.followers_count,
+            following_count: cached.following_count,
+            media_count: cached.media_count,
+            likes_count: cached.likes_count,
+            comments_count: cached.comments_count,
+            engagement_rate: cached.engagement_rate,
+            snapshot_date: cached.snapshot_date,
+          },
+        }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
       return new Response(JSON.stringify({
         error: "Não foi possível buscar dados. Verifique se o username está correto e se o perfil é público."
       }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
