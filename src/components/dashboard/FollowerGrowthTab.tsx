@@ -6,8 +6,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Users, UserPlus, Image, RefreshCw, TrendingUp, TrendingDown, Minus, AlertTriangle } from "lucide-react";
-import { format, parseISO, subDays } from "date-fns";
+import { Users, UserPlus, Image, RefreshCw, TrendingUp, TrendingDown, Minus, AlertTriangle, Heart, MessageCircle, Activity } from "lucide-react";
+import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   ResponsiveContainer,
@@ -17,6 +17,8 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
+  LineChart,
+  Line,
 } from "recharts";
 
 interface Snapshot {
@@ -24,6 +26,9 @@ interface Snapshot {
   followers_count: number;
   following_count: number;
   media_count: number;
+  likes_count: number;
+  comments_count: number;
+  engagement_rate: number;
 }
 
 interface CurrentData {
@@ -32,6 +37,20 @@ interface CurrentData {
   followers_count: number;
   following_count: number;
   media_count: number;
+  likes_count: number;
+  comments_count: number;
+  engagement_rate: number;
+}
+
+interface Alert {
+  id: string;
+  alert_type: string;
+  previous_count: number;
+  current_count: number;
+  change_pct: number;
+  snapshot_date: string;
+  acknowledged: boolean;
+  created_at: string;
 }
 
 export default function FollowerGrowthTab() {
@@ -39,22 +58,31 @@ export default function FollowerGrowthTab() {
   const { user } = useAuth();
   const [snapshots, setSnapshots] = useState<Snapshot[]>([]);
   const [current, setCurrent] = useState<CurrentData | null>(null);
+  const [alerts, setAlerts] = useState<Alert[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchHistory = async () => {
     if (!activeProfile?.id || !user?.id) return;
-    const { data, error: dbErr } = await supabase
-      .from("follower_snapshots")
-      .select("snapshot_date, followers_count, following_count, media_count")
-      .eq("profile_id", activeProfile.id)
-      .order("snapshot_date", { ascending: true })
-      .limit(90);
+    const [snapRes, alertRes] = await Promise.all([
+      supabase
+        .from("follower_snapshots")
+        .select("snapshot_date, followers_count, following_count, media_count, likes_count, comments_count, engagement_rate")
+        .eq("profile_id", activeProfile.id)
+        .order("snapshot_date", { ascending: true })
+        .limit(90),
+      supabase
+        .from("follower_alerts")
+        .select("*")
+        .eq("profile_id", activeProfile.id)
+        .eq("acknowledged", false)
+        .order("created_at", { ascending: false })
+        .limit(5),
+    ]);
 
-    if (!dbErr && data) {
-      setSnapshots(data as Snapshot[]);
-    }
+    if (!snapRes.error && snapRes.data) setSnapshots(snapRes.data as Snapshot[]);
+    if (!alertRes.error && alertRes.data) setAlerts(alertRes.data as Alert[]);
   };
 
   const syncNow = async () => {
@@ -67,15 +95,18 @@ export default function FollowerGrowthTab() {
       });
       if (fnErr) throw new Error(fnErr.message);
       if (data?.error) throw new Error(data.error);
-      if (data?.data) {
-        setCurrent(data.data);
-      }
+      if (data?.data) setCurrent(data.data);
       await fetchHistory();
     } catch (e: any) {
       setError(e.message);
     } finally {
       setIsSyncing(false);
     }
+  };
+
+  const acknowledgeAlert = async (alertId: string) => {
+    await supabase.from("follower_alerts").update({ acknowledged: true }).eq("id", alertId);
+    setAlerts((prev) => prev.filter((a) => a.id !== alertId));
   };
 
   useEffect(() => {
@@ -94,21 +125,23 @@ export default function FollowerGrowthTab() {
   const followers = current?.followers_count ?? latestSnapshot?.followers_count ?? 0;
   const following = current?.following_count ?? latestSnapshot?.following_count ?? 0;
   const media = current?.media_count ?? latestSnapshot?.media_count ?? 0;
+  const engRate = current?.engagement_rate ?? latestSnapshot?.engagement_rate ?? 0;
+  const likes = current?.likes_count ?? latestSnapshot?.likes_count ?? 0;
+  const comments = current?.comments_count ?? latestSnapshot?.comments_count ?? 0;
 
   const followersDelta = prevSnapshot ? followers - prevSnapshot.followers_count : null;
 
   const chartData = snapshots.map((s) => ({
     date: format(parseISO(s.snapshot_date), "dd MMM", { locale: ptBR }),
     seguidores: s.followers_count,
+    engagement: s.engagement_rate,
   }));
 
   if (isLoading) {
     return (
       <div className="space-y-6">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {[1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-28 rounded-xl" />
-          ))}
+          {[1, 2, 3].map((i) => <Skeleton key={i} className="h-28 rounded-xl" />)}
         </div>
         <Skeleton className="h-72 rounded-xl" />
       </div>
@@ -116,21 +149,12 @@ export default function FollowerGrowthTab() {
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4 }}
-      className="space-y-6"
-    >
+    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-3">
           {current?.profile_picture_url && (
-            <img
-              src={current.profile_picture_url}
-              alt="Profile"
-              className="w-10 h-10 rounded-full border-2 border-primary/20"
-            />
+            <img src={current.profile_picture_url} alt="Profile" className="w-10 h-10 rounded-full border-2 border-primary/20" />
           )}
           <div>
             <h2 className="text-lg font-semibold tracking-tight">
@@ -141,115 +165,97 @@ export default function FollowerGrowthTab() {
             </p>
           </div>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={syncNow}
-          disabled={isSyncing}
-          className="gap-2"
-        >
+        <Button variant="outline" size="sm" onClick={syncNow} disabled={isSyncing} className="gap-2">
           <RefreshCw className={`w-4 h-4 ${isSyncing ? "animate-spin" : ""}`} />
           Sincronizar Agora
         </Button>
       </div>
 
       {error && (
-        <motion.div
-          initial={{ opacity: 0, height: 0 }}
-          animate={{ opacity: 1, height: "auto" }}
-          className="flex items-start gap-3 p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-sm text-destructive"
-        >
+        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}
+          className="flex items-start gap-3 p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-sm text-destructive">
           <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
           <span>{error}</span>
         </motion.div>
       )}
 
+      {/* Drop Alerts */}
+      {alerts.length > 0 && (
+        <div className="space-y-2">
+          {alerts.map((alert) => (
+            <motion.div key={alert.id} initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }}
+              className="flex items-center justify-between gap-3 p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-sm">
+              <div className="flex items-center gap-2">
+                <TrendingDown className="w-4 h-4 text-destructive shrink-0" />
+                <span className="text-destructive font-medium">
+                  Queda de {Math.abs(alert.change_pct).toFixed(1)}% — {alert.previous_count.toLocaleString("pt-BR")} → {alert.current_count.toLocaleString("pt-BR")} seguidores ({alert.snapshot_date})
+                </span>
+              </div>
+              <Button variant="ghost" size="sm" onClick={() => acknowledgeAlert(alert.id)} className="text-xs shrink-0">
+                Dispensar
+              </Button>
+            </motion.div>
+          ))}
+        </div>
+      )}
+
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
-          <Card className="glass-card-interactive">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-medium text-muted-foreground">Seguidores</span>
-                <Users className="w-4 h-4 text-primary" />
-              </div>
-              <p className="text-2xl font-bold tracking-tight">{followers.toLocaleString("pt-BR")}</p>
-              {followersDelta !== null && (
-                <div className={`flex items-center gap-1 text-xs mt-1 ${followersDelta > 0 ? "text-success" : followersDelta < 0 ? "text-destructive" : "text-muted-foreground"}`}>
-                  {followersDelta > 0 ? <TrendingUp className="w-3 h-3" /> : followersDelta < 0 ? <TrendingDown className="w-3 h-3" /> : <Minus className="w-3 h-3" />}
-                  {followersDelta > 0 ? "+" : ""}{followersDelta.toLocaleString("pt-BR")} vs dia anterior
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-          <Card className="glass-card-interactive">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-medium text-muted-foreground">Seguindo</span>
-                <UserPlus className="w-4 h-4 text-primary" />
-              </div>
-              <p className="text-2xl font-bold tracking-tight">{following.toLocaleString("pt-BR")}</p>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
-          <Card className="glass-card-interactive">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-medium text-muted-foreground">Publicações</span>
-                <Image className="w-4 h-4 text-primary" />
-              </div>
-              <p className="text-2xl font-bold tracking-tight">{media.toLocaleString("pt-BR")}</p>
-            </CardContent>
-          </Card>
-        </motion.div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+        <KpiCard label="Seguidores" value={followers.toLocaleString("pt-BR")} icon={<Users className="w-4 h-4 text-primary" />} delta={followersDelta} delay={0.05} />
+        <KpiCard label="Seguindo" value={following.toLocaleString("pt-BR")} icon={<UserPlus className="w-4 h-4 text-primary" />} delay={0.1} />
+        <KpiCard label="Publicações" value={media.toLocaleString("pt-BR")} icon={<Image className="w-4 h-4 text-primary" />} delay={0.15} />
+        <KpiCard label="Curtidas (25 posts)" value={likes.toLocaleString("pt-BR")} icon={<Heart className="w-4 h-4 text-primary" />} delay={0.2} />
+        <KpiCard label="Comentários (25 posts)" value={comments.toLocaleString("pt-BR")} icon={<MessageCircle className="w-4 h-4 text-primary" />} delay={0.25} />
+        <KpiCard label="Engagement Rate" value={`${engRate.toFixed(2)}%`} icon={<Activity className="w-4 h-4 text-primary" />} delay={0.3} />
       </div>
 
-      {/* Chart */}
+      {/* Charts */}
       {chartData.length > 1 ? (
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Evolução de Seguidores</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={chartData}>
-                    <defs>
-                      <linearGradient id="followerGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
-                        <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.4} />
-                    <XAxis dataKey="date" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
-                    <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
-                    <Tooltip
-                      contentStyle={{
-                        background: "hsl(var(--card))",
-                        border: "1px solid hsl(var(--border))",
-                        borderRadius: "8px",
-                        fontSize: "12px",
-                      }}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="seguidores"
-                      stroke="hsl(var(--primary))"
-                      strokeWidth={2}
-                      fill="url(#followerGrad)"
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+            <Card>
+              <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Evolução de Seguidores</CardTitle></CardHeader>
+              <CardContent>
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={chartData}>
+                      <defs>
+                        <linearGradient id="followerGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
+                          <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.4} />
+                      <XAxis dataKey="date" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
+                      <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
+                      <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px", fontSize: "12px" }} />
+                      <Area type="monotone" dataKey="seguidores" stroke="hsl(var(--primary))" strokeWidth={2} fill="url(#followerGrad)" />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+            <Card>
+              <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Engagement Rate (%)</CardTitle></CardHeader>
+              <CardContent>
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={chartData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.4} />
+                      <XAxis dataKey="date" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
+                      <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
+                      <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px", fontSize: "12px" }} />
+                      <Line type="monotone" dataKey="engagement" stroke="hsl(var(--chart-2))" strokeWidth={2} dot={{ r: 3 }} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </div>
       ) : (
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
@@ -261,6 +267,28 @@ export default function FollowerGrowthTab() {
           </CardContent>
         </Card>
       )}
+    </motion.div>
+  );
+}
+
+function KpiCard({ label, value, icon, delta, delay = 0 }: { label: string; value: string; icon: React.ReactNode; delta?: number | null; delay?: number }) {
+  return (
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay }}>
+      <Card className="glass-card-interactive">
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-medium text-muted-foreground">{label}</span>
+            {icon}
+          </div>
+          <p className="text-2xl font-bold tracking-tight">{value}</p>
+          {delta !== undefined && delta !== null && (
+            <div className={`flex items-center gap-1 text-xs mt-1 ${delta > 0 ? "text-success" : delta < 0 ? "text-destructive" : "text-muted-foreground"}`}>
+              {delta > 0 ? <TrendingUp className="w-3 h-3" /> : delta < 0 ? <TrendingDown className="w-3 h-3" /> : <Minus className="w-3 h-3" />}
+              {delta > 0 ? "+" : ""}{delta.toLocaleString("pt-BR")} vs dia anterior
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </motion.div>
   );
 }
