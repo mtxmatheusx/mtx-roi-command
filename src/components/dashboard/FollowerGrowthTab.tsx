@@ -55,6 +55,17 @@ interface Alert {
   created_at: string;
 }
 
+function extractUsername(input: string): string | null {
+  const trimmed = input.trim().replace(/\/+$/, "");
+  // Match instagram.com/username patterns
+  const urlMatch = trimmed.match(/(?:instagram\.com|instagr\.am)\/([A-Za-z0-9_.]+)/i);
+  if (urlMatch) return urlMatch[1];
+  // Plain @username or username
+  const plain = trimmed.replace(/^@/, "");
+  if (/^[A-Za-z0-9_.]{1,30}$/.test(plain)) return plain;
+  return null;
+}
+
 export default function FollowerGrowthTab() {
   const { activeProfile } = useClientProfiles();
   const { user } = useAuth();
@@ -64,6 +75,8 @@ export default function FollowerGrowthTab() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [igInput, setIgInput] = useState("");
+  const [isSavingUsername, setIsSavingUsername] = useState(false);
 
   const fetchHistory = async () => {
     if (!activeProfile?.id || !user?.id) return;
