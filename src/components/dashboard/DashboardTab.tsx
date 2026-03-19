@@ -191,13 +191,12 @@ export default function DashboardTab(props: DashboardTabProps) {
         <>
           {/* Hero Profit Section */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.97 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
-            className="glass-card p-8 sm:p-10 text-center relative overflow-hidden"
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+            className="glass-card p-6 sm:p-10 text-center relative overflow-hidden"
           >
-            {/* Subtle gradient accent */}
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.02] via-transparent to-success/[0.02] pointer-events-none" />
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.015] via-transparent to-success/[0.015] pointer-events-none" />
             <div className="relative">
               <p className="text-[11px] font-semibold text-muted-foreground tracking-[0.2em] uppercase mb-4">Lucro Líquido Total</p>
               <p className={`text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tighter hero-number ${totalProfit >= 0 ? "text-success" : "text-destructive"}`}>{formatCurrency(totalProfit)}</p>
@@ -224,18 +223,18 @@ export default function DashboardTab(props: DashboardTabProps) {
           </motion.div>
 
           {/* Primary KPIs */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <MetricCard title="Investimento" value={formatCurrency(totalSpend)} icon={<DollarSign className="w-4 h-4" />} delta={deltaSpend} invertDelta />
-            <MetricCard title="CPA" value={formatCurrency(avgCPA)} subtitle={`Meta: ${formatCurrency(cpaMeta)}`} variant={avgCPA > cpaMeta * 1.2 ? "danger" : "default"} icon={<Target className="w-4 h-4" />} delta={deltaCPA} invertDelta />
-            <MetricCard title="ROAS" value={`${roas.toFixed(2)}x`} variant={roas > 3 ? "profit" : "default"} icon={<TrendingUp className="w-4 h-4" />} delta={deltaROAS} />
-            <MetricCard title="Compras" value={String(totalPurchases)} icon={<BarChart3 className="w-4 h-4" />} delta={deltaPurchases} />
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            <MetricCard title="Investimento" value={formatCurrency(totalSpend)} icon={<DollarSign className="w-4 h-4" />} delta={deltaSpend} invertDelta index={0} />
+            <MetricCard title="CPA" value={formatCurrency(avgCPA)} subtitle={`Meta: ${formatCurrency(cpaMeta)}`} variant={avgCPA > cpaMeta * 1.2 ? "danger" : "default"} icon={<Target className="w-4 h-4" />} delta={deltaCPA} invertDelta index={1} />
+            <MetricCard title="ROAS" value={`${roas.toFixed(2)}x`} variant={roas > 3 ? "profit" : "default"} icon={<TrendingUp className="w-4 h-4" />} delta={deltaROAS} index={2} />
+            <MetricCard title="Compras" value={String(totalPurchases)} icon={<BarChart3 className="w-4 h-4" />} delta={deltaPurchases} index={3} />
           </div>
 
           {/* Secondary KPIs */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <MetricCard title="CPM" value={formatCurrency(avgCPM)} icon={<Eye className="w-4 h-4" />} delta={deltaCPM} invertDelta />
-            <MetricCard title="CTR" value={`${avgCTR.toFixed(2)}%`} variant={avgCTR < 1 ? "danger" : "default"} icon={<MousePointerClick className="w-4 h-4" />} delta={deltaCTR} />
-            <MetricCard title="Ticket Médio" value={formatCurrency(calcTicketMedio)} icon={<ShoppingBag className="w-4 h-4" />} delta={deltaTM} />
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
+            <MetricCard title="CPM" value={formatCurrency(avgCPM)} icon={<Eye className="w-4 h-4" />} delta={deltaCPM} invertDelta index={4} />
+            <MetricCard title="CTR" value={`${avgCTR.toFixed(2)}%`} variant={avgCTR < 1 ? "danger" : "default"} icon={<MousePointerClick className="w-4 h-4" />} delta={deltaCTR} index={5} />
+            <MetricCard title="Ticket Médio" value={formatCurrency(calcTicketMedio)} icon={<ShoppingBag className="w-4 h-4" />} delta={deltaTM} index={6} />
           </div>
 
           {/* Charts */}
