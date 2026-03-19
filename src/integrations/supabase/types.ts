@@ -437,32 +437,88 @@ export type Database = {
           },
         ]
       }
+      follower_alerts: {
+        Row: {
+          acknowledged: boolean
+          alert_type: string
+          change_pct: number
+          created_at: string
+          current_count: number
+          id: string
+          previous_count: number
+          profile_id: string
+          snapshot_date: string
+          user_id: string
+        }
+        Insert: {
+          acknowledged?: boolean
+          alert_type?: string
+          change_pct?: number
+          created_at?: string
+          current_count?: number
+          id?: string
+          previous_count?: number
+          profile_id: string
+          snapshot_date?: string
+          user_id: string
+        }
+        Update: {
+          acknowledged?: boolean
+          alert_type?: string
+          change_pct?: number
+          created_at?: string
+          current_count?: number
+          id?: string
+          previous_count?: number
+          profile_id?: string
+          snapshot_date?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "follower_alerts_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "client_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       follower_snapshots: {
         Row: {
+          comments_count: number
           created_at: string
+          engagement_rate: number
           followers_count: number
           following_count: number
           id: string
+          likes_count: number
           media_count: number
           profile_id: string
           snapshot_date: string
           user_id: string
         }
         Insert: {
+          comments_count?: number
           created_at?: string
+          engagement_rate?: number
           followers_count?: number
           following_count?: number
           id?: string
+          likes_count?: number
           media_count?: number
           profile_id: string
           snapshot_date?: string
           user_id: string
         }
         Update: {
+          comments_count?: number
           created_at?: string
+          engagement_rate?: number
           followers_count?: number
           following_count?: number
           id?: string
+          likes_count?: number
           media_count?: number
           profile_id?: string
           snapshot_date?: string
