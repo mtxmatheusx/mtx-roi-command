@@ -37,14 +37,23 @@ Deno.serve(async (req) => {
       let likes = 0, comments = 0, engPosts = 0;
       let source = "none";
 
-      // Strategy 1: RapidAPI
+      // Strategy 1: RapidAPI (POST /account_data)
       if (rapidApiKey && profile.instagram_username) {
         try {
           const res = await fetch(
-            `https://instagram-scraper-stable-api.p.rapidapi.com/user_data?username=${encodeURIComponent(profile.instagram_username)}`,
-            { headers: { "X-RapidAPI-Key": rapidApiKey, "X-RapidAPI-Host": "instagram-scraper-stable-api.p.rapidapi.com" } }
+            `https://instagram-scraper-stable-api.p.rapidapi.com/account_data`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "X-RapidAPI-Key": rapidApiKey,
+                "X-RapidAPI-Host": "instagram-scraper-stable-api.p.rapidapi.com",
+              },
+              body: JSON.stringify({ username_or_url: profile.instagram_username }),
+            }
           );
-          const data = await res.json();
+          const raw = await res.json();
+          const data = raw.data || raw;
           if (res.ok && (data.follower_count !== undefined || data.followers_count !== undefined || data.edge_followed_by)) {
             followers = data.follower_count || data.followers_count || data.edge_followed_by?.count || 0;
             following = data.following_count || data.follows_count || data.edge_follow?.count || 0;
@@ -54,16 +63,15 @@ Deno.serve(async (req) => {
             // Engagement from posts
             try {
               const pRes = await fetch(
-                `https://instagram-scraper-stable-api.p.rapidapi.com/user_posts?username=${encodeURIComponent(profile.instagram_username)}&amount=25`,
+                `https://instagram-scraper-stable-api.p.rapidapi.com/basic_user_posts?username_or_url=${encodeURIComponent(profile.instagram_username)}`,
                 { headers: { "X-RapidAPI-Key": rapidApiKey, "X-RapidAPI-Host": "instagram-scraper-stable-api.p.rapidapi.com" } }
               );
-              const pData = await pRes.json();
-              if (pRes.ok && pData?.items) {
-                engPosts = pData.items.length;
-                for (const p of pData.items) {
-                  likes += p.like_count || p.likes?.count || 0;
-                  comments += p.comment_count || p.comments?.count || 0;
-                }
+              const pRaw = await pRes.json();
+              const items = Array.isArray(pRaw) ? pRaw : (pRaw?.items || pRaw?.data || []);
+              engPosts = Math.min(items.length, 25);
+              for (const p of items.slice(0, 25)) {
+                likes += p.like_count || p.likes?.count || 0;
+                comments += p.comment_count || p.comments?.count || 0;
               }
             } catch {}
           }
