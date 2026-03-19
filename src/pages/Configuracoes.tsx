@@ -57,6 +57,7 @@ export default function Configuracoes() {
     metaAccessToken: "", geminiApiKey: "", apiBaseUrl: "",
   });
   const [tokenEditing, setTokenEditing] = useState(false);
+  const [applyTokenToAll, setApplyTokenToAll] = useState(true);
   const [geminiEditing, setGeminiEditing] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
@@ -196,7 +197,19 @@ export default function Configuracoes() {
       if (geminiEditing && form.geminiApiKey) updateData.gemini_api_key = form.geminiApiKey;
       else if (geminiEditing && !form.geminiApiKey) updateData.gemini_api_key = null;
       await updateProfile(updateData as any);
-      toast({ title: "✅ Configurações salvas", description: "Parâmetros atualizados com sucesso." });
+
+      // Sync token to all other profiles if enabled
+      if (tokenEditing && applyTokenToAll && form.metaAccessToken && profiles.length > 1) {
+        const otherProfiles = profiles.filter((p) => p.id !== activeProfile.id);
+        await Promise.all(
+          otherProfiles.map((p) =>
+            supabase.from("client_profiles").update({ meta_access_token: form.metaAccessToken }).eq("id", p.id)
+          )
+        );
+        toast({ title: "✅ Configurações salvas", description: `Token aplicado a todos os ${profiles.length} perfis.` });
+      } else {
+        toast({ title: "✅ Configurações salvas", description: "Parâmetros atualizados com sucesso." });
+      }
       setTokenEditing(false); setGeminiEditing(false);
     } catch (err) {
       toast({ title: "Erro ao salvar", description: (err as Error).message, variant: "destructive" });
@@ -509,9 +522,17 @@ export default function Configuracoes() {
                   <Button variant="outline" size="sm" onClick={() => setTokenEditing(true)}>{hasProfileToken ? "Alterar" : "Adicionar"}</Button>
                 </div>
               ) : (
-                <div className="space-y-1">
+                <div className="space-y-3">
                   <Input type="password" value={form.metaAccessToken} onChange={(e) => handleChange("metaAccessToken", e.target.value)} placeholder="Cole aqui o Access Token" className="font-mono text-sm" />
-                  <p className="text-xs text-muted-foreground">Deixe vazio e salve para usar o token global.</p>
+                  {profiles.length > 1 && (
+                    <div className="flex items-center gap-2 p-2.5 rounded-lg bg-muted/50 border border-border">
+                      <Switch checked={applyTokenToAll} onCheckedChange={setApplyTokenToAll} id="apply-all" />
+                      <Label htmlFor="apply-all" className="text-xs text-muted-foreground cursor-pointer">
+                        Aplicar este token a todos os {profiles.length} perfis
+                      </Label>
+                    </div>
+                  )}
+                  <p className="text-xs text-muted-foreground">Deixe vazio e salve para remover o token.</p>
                 </div>
               )}
             </div>
