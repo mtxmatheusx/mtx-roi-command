@@ -7,28 +7,79 @@ const corsHeaders = {
 
 const RAPID_HOST = "instagram-scraper-stable-api.p.rapidapi.com";
 
-// RapidAPI: POST /account_data with body { username_or_url }
+// Try multiple known endpoint paths for user data
 async function fetchViaRapidApi(username: string, rapidApiKey: string) {
-  try {
-    const res = await fetch(`https://${RAPID_HOST}/account_data`, {
+  const headers = {
+    "X-RapidAPI-Key": rapidApiKey,
+    "X-RapidAPI-Host": RAPID_HOST,
+  };
+
+  // Try multiple endpoint variations
+  const attempts = [
+    // POST form-data style
+    {
+      url: `https://${RAPID_HOST}/get_ig_account_data.php`,
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-RapidAPI-Key": rapidApiKey,
-        "X-RapidAPI-Host": RAPID_HOST,
-      },
+      headers: { ...headers, "Content-Type": "application/x-www-form-urlencoded" },
+      body: `username_or_url=${encodeURIComponent(username)}`,
+    },
+    // POST JSON /account_data
+    {
+      url: `https://${RAPID_HOST}/account_data`,
+      method: "POST",
+      headers: { ...headers, "Content-Type": "application/json" },
       body: JSON.stringify({ username_or_url: username }),
-    });
-    const data = await res.json();
-    console.log("RapidAPI /account_data status:", res.status);
-    if (!res.ok) {
-      return { error: `RapidAPI error ${res.status}: ${JSON.stringify(data)}` };
+    },
+    // GET with query param
+    {
+      url: `https://${RAPID_HOST}/account_data?username_or_url=${encodeURIComponent(username)}`,
+      method: "GET",
+      headers,
+    },
+    // POST JSON basic_user_info
+    {
+      url: `https://${RAPID_HOST}/basic_user_info`,
+      method: "POST",
+      headers: { ...headers, "Content-Type": "application/json" },
+      body: JSON.stringify({ username_or_url: username }),
+    },
+    // GET user_info
+    {
+      url: `https://${RAPID_HOST}/user_info?username_or_url=${encodeURIComponent(username)}`,
+      method: "GET",
+      headers,
+    },
+  ];
+
+  for (const attempt of attempts) {
+    try {
+      const fetchOpts: RequestInit = { method: attempt.method, headers: attempt.headers };
+      if (attempt.body) fetchOpts.body = attempt.body;
+      
+      const res = await fetch(attempt.url, fetchOpts);
+      const data = await res.json();
+      
+      console.log(`[RapidAPI] ${attempt.method} ${attempt.url} → ${res.status}`);
+      
+      if (res.ok && !data.message?.includes("does not exist")) {
+        // Check if the response has user data
+        const d = data.data || data;
+        if (d.follower_count !== undefined || d.followers_count !== undefined) {
+          console.log(`[RapidAPI] ✅ Found working endpoint: ${attempt.url}`);
+          return d;
+        }
+      }
+      
+      // 403 = not subscribed, stop trying
+      if (res.status === 403) {
+        return { error: `Não inscrito na API. Acesse https://rapidapi.com/thetechguy32744/api/instagram-scraper-stable-api e assine o plano gratuito.`, code: 403 };
+      }
+    } catch (e) {
+      console.log(`[RapidAPI] Error on ${attempt.url}: ${e.message}`);
     }
-    return data;
-  } catch (e) {
-    console.error("RapidAPI fetch error:", e);
-    return { error: e.message };
   }
+  
+  return { error: "Nenhum endpoint da API funcionou. Verifique se a RAPIDAPI_KEY está correta e se está inscrito na API." };
 }
 
 // Fallback: Meta Graph API
@@ -47,33 +98,58 @@ async function fetchViaMeta(igAccountId: string, accessToken: string) {
   return null;
 }
 
-// RapidAPI: GET /basic_user_posts for engagement
+// Fetch engagement from posts via RapidAPI
 async function fetchEngagementRapidApi(username: string, rapidApiKey: string) {
-  try {
-    const res = await fetch(
-      `https://${RAPID_HOST}/basic_user_posts?username_or_url=${encodeURIComponent(username)}`,
-      {
-        method: "GET",
-        headers: {
-          "X-RapidAPI-Key": rapidApiKey,
-          "X-RapidAPI-Host": RAPID_HOST,
-        },
-      }
-    );
-    const data = await res.json();
-    if (!res.ok) return { likes: 0, comments: 0, posts: 0 };
+  const headers = {
+    "X-RapidAPI-Key": rapidApiKey,
+    "X-RapidAPI-Host": RAPID_HOST,
+  };
 
-    // The response may have items at data.items or data directly as array
-    const items = Array.isArray(data) ? data : (data?.items || data?.data || []);
-    let totalLikes = 0, totalComments = 0;
-    for (const post of items.slice(0, 25)) {
-      totalLikes += post.like_count || post.likes?.count || post.edge_media_preview_like?.count || 0;
-      totalComments += post.comment_count || post.comments?.count || post.edge_media_to_comment?.count || 0;
-    }
-    return { likes: totalLikes, comments: totalComments, posts: Math.min(items.length, 25) };
-  } catch {
-    return { likes: 0, comments: 0, posts: 0 };
+  const attempts = [
+    {
+      url: `https://${RAPID_HOST}/get_ig_user_posts.php`,
+      method: "POST",
+      headers: { ...headers, "Content-Type": "application/x-www-form-urlencoded" },
+      body: `username_or_url=${encodeURIComponent(username)}&amount=25`,
+    },
+    {
+      url: `https://${RAPID_HOST}/basic_user_posts?username_or_url=${encodeURIComponent(username)}`,
+      method: "GET",
+      headers,
+    },
+    {
+      url: `https://${RAPID_HOST}/user_posts`,
+      method: "POST",
+      headers: { ...headers, "Content-Type": "application/json" },
+      body: JSON.stringify({ username_or_url: username, amount: "25" }),
+    },
+  ];
+
+  for (const attempt of attempts) {
+    try {
+      const fetchOpts: RequestInit = { method: attempt.method, headers: attempt.headers };
+      if (attempt.body) fetchOpts.body = attempt.body;
+      
+      const res = await fetch(attempt.url, fetchOpts);
+      if (!res.ok) continue;
+      
+      const raw = await res.json();
+      const items = Array.isArray(raw) ? raw : (raw?.items || raw?.data || raw?.edges || []);
+      
+      if (items.length > 0) {
+        let totalLikes = 0, totalComments = 0;
+        const slice = items.slice(0, 25);
+        for (const post of slice) {
+          const node = post.node || post;
+          totalLikes += node.like_count || node.likes?.count || node.edge_media_preview_like?.count || 0;
+          totalComments += node.comment_count || node.comments?.count || node.edge_media_to_comment?.count || 0;
+        }
+        console.log(`[RapidAPI] ✅ Engagement from ${slice.length} posts: ${totalLikes}L/${totalComments}C`);
+        return { likes: totalLikes, comments: totalComments, posts: slice.length };
+      }
+    } catch {}
   }
+  return { likes: 0, comments: 0, posts: 0 };
 }
 
 // Meta API engagement
@@ -145,24 +221,21 @@ Deno.serve(async (req) => {
       const rapidData = await fetchViaRapidApi(igUsername, rapidApiKey);
 
       if (!rapidData.error) {
-        // Handle various response structures
-        const d = rapidData.data || rapidData;
-        followers = d.follower_count ?? d.followers_count ?? d.edge_followed_by?.count ?? 0;
-        following = d.following_count ?? d.follows_count ?? d.edge_follow?.count ?? 0;
-        mediaCount = d.media_count ?? d.edge_owner_to_timeline_media?.count ?? 0;
-        username = d.username || igUsername;
-        profilePicUrl = d.profile_pic_url_hd || d.profile_pic_url || d.hd_profile_pic_url_info?.url || "";
+        followers = rapidData.follower_count ?? rapidData.followers_count ?? 0;
+        following = rapidData.following_count ?? rapidData.follows_count ?? 0;
+        mediaCount = rapidData.media_count ?? 0;
+        username = rapidData.username || igUsername;
+        profilePicUrl = rapidData.hd_profile_pic_url_info?.url || rapidData.profile_pic_url_hd || rapidData.profile_pic_url || "";
         source = "rapidapi";
 
-        // Fetch engagement
         const eng = await fetchEngagementRapidApi(igUsername, rapidApiKey);
         likes = eng.likes;
         comments = eng.comments;
         engPosts = eng.posts;
 
-        console.log(`[RapidAPI] Success: ${followers} followers, ${mediaCount} media, eng=${likes}L/${comments}C from ${engPosts} posts`);
+        console.log(`[RapidAPI] ✅ ${followers} followers, ${mediaCount} media, eng=${likes}L/${comments}C from ${engPosts} posts`);
       } else {
-        console.log("[RapidAPI] Failed:", rapidData.error);
+        console.log("[RapidAPI] ❌ Failed:", rapidData.error);
       }
     }
 
@@ -184,14 +257,18 @@ Deno.serve(async (req) => {
         comments = eng.comments;
         engPosts = eng.posts;
       } else {
-        console.log("[Meta API] Failed:", metaData?.error?.message || "No data");
+        console.log("[Meta API] ❌ Failed:", metaData?.error?.message || "No data");
       }
     }
 
     if (source === "none") {
-      return new Response(JSON.stringify({
-        error: "Não foi possível buscar dados do Instagram. Verifique se você está inscrito na API do RapidAPI (Instagram Scraper Stable API) e se a RAPIDAPI_KEY está configurada corretamente."
-      }), {
+      const msg = !rapidApiKey 
+        ? "RAPIDAPI_KEY não configurada. Adicione sua chave nas configurações do projeto."
+        : !igUsername
+        ? "Instagram Username não configurado. Preencha o campo acima e salve."
+        : "Nenhuma API funcionou. Verifique se você está inscrito na 'Instagram Scraper Stable API' no RapidAPI (plano Free ou superior): https://rapidapi.com/thetechguy32744/api/instagram-scraper-stable-api/pricing";
+      
+      return new Response(JSON.stringify({ error: msg }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
