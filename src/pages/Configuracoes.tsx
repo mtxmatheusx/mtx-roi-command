@@ -197,7 +197,19 @@ export default function Configuracoes() {
       if (geminiEditing && form.geminiApiKey) updateData.gemini_api_key = form.geminiApiKey;
       else if (geminiEditing && !form.geminiApiKey) updateData.gemini_api_key = null;
       await updateProfile(updateData as any);
-      toast({ title: "✅ Configurações salvas", description: "Parâmetros atualizados com sucesso." });
+
+      // Sync token to all other profiles if enabled
+      if (tokenEditing && applyTokenToAll && form.metaAccessToken && profiles.length > 1) {
+        const otherProfiles = profiles.filter((p) => p.id !== activeProfile.id);
+        await Promise.all(
+          otherProfiles.map((p) =>
+            supabase.from("client_profiles").update({ meta_access_token: form.metaAccessToken }).eq("id", p.id)
+          )
+        );
+        toast({ title: "✅ Configurações salvas", description: `Token aplicado a todos os ${profiles.length} perfis.` });
+      } else {
+        toast({ title: "✅ Configurações salvas", description: "Parâmetros atualizados com sucesso." });
+      }
       setTokenEditing(false); setGeminiEditing(false);
     } catch (err) {
       toast({ title: "Erro ao salvar", description: (err as Error).message, variant: "destructive" });
