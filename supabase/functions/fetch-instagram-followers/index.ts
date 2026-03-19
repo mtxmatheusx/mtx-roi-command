@@ -7,82 +7,79 @@ const corsHeaders = {
 
 const RAPID_HOST = "instagram-scraper-stable-api.p.rapidapi.com";
 
-// Try multiple known endpoint paths for user data
+async function tryEndpoint(url: string, method: string, headers: Record<string, string>, body?: string): Promise<{ ok: boolean; status: number; data: any }> {
+  try {
+    const opts: RequestInit = { method, headers };
+    if (body) opts.body = body;
+    const res = await fetch(url, opts);
+    const text = await res.text();
+    let data;
+    try { data = JSON.parse(text); } catch { data = text; }
+    return { ok: res.ok, status: res.status, data };
+  } catch (e) {
+    return { ok: false, status: 0, data: e.message };
+  }
+}
+
 async function fetchViaRapidApi(username: string, rapidApiKey: string) {
   const headers = {
     "X-RapidAPI-Key": rapidApiKey,
     "X-RapidAPI-Host": RAPID_HOST,
+    "Content-Type": "application/x-www-form-urlencoded",
+  };
+  const jsonHeaders = {
+    "X-RapidAPI-Key": rapidApiKey,
+    "X-RapidAPI-Host": RAPID_HOST,
+    "Content-Type": "application/json",
+  };
+  const getHeaders = {
+    "X-RapidAPI-Key": rapidApiKey,
+    "X-RapidAPI-Host": RAPID_HOST,
   };
 
-  // Try multiple endpoint variations
+  // Comprehensive list of endpoint patterns to try
   const attempts = [
-    // POST form-data style
-    {
-      url: `https://${RAPID_HOST}/get_ig_account_data.php`,
-      method: "POST",
-      headers: { ...headers, "Content-Type": "application/x-www-form-urlencoded" },
-      body: `username_or_url=${encodeURIComponent(username)}`,
-    },
-    // POST JSON /account_data
-    {
-      url: `https://${RAPID_HOST}/account_data`,
-      method: "POST",
-      headers: { ...headers, "Content-Type": "application/json" },
-      body: JSON.stringify({ username_or_url: username }),
-    },
-    // GET with query param
-    {
-      url: `https://${RAPID_HOST}/account_data?username_or_url=${encodeURIComponent(username)}`,
-      method: "GET",
-      headers,
-    },
-    // POST JSON basic_user_info
-    {
-      url: `https://${RAPID_HOST}/basic_user_info`,
-      method: "POST",
-      headers: { ...headers, "Content-Type": "application/json" },
-      body: JSON.stringify({ username_or_url: username }),
-    },
-    // GET user_info
-    {
-      url: `https://${RAPID_HOST}/user_info?username_or_url=${encodeURIComponent(username)}`,
-      method: "GET",
-      headers,
-    },
+    // .php endpoints (seen in playground for posts)
+    { url: `https://${RAPID_HOST}/get_ig_user_data.php`, method: "POST", headers, body: `username_or_url=${encodeURIComponent(username)}` },
+    { url: `https://${RAPID_HOST}/get_user_data.php`, method: "POST", headers, body: `username_or_url=${encodeURIComponent(username)}` },
+    { url: `https://${RAPID_HOST}/get_ig_account_data.php`, method: "POST", headers, body: `username_or_url=${encodeURIComponent(username)}` },
+    // JSON POST endpoints
+    { url: `https://${RAPID_HOST}/account_data`, method: "POST", headers: jsonHeaders, body: JSON.stringify({ username_or_url: username }) },
+    { url: `https://${RAPID_HOST}/account_data_v2`, method: "POST", headers: jsonHeaders, body: JSON.stringify({ username_or_url: username }) },
+    { url: `https://${RAPID_HOST}/user_data`, method: "POST", headers: jsonHeaders, body: JSON.stringify({ username_or_url: username }) },
+    // GET endpoints
+    { url: `https://${RAPID_HOST}/account_data?username_or_url=${encodeURIComponent(username)}`, method: "GET", headers: getHeaders },
+    { url: `https://${RAPID_HOST}/user_data?username_or_url=${encodeURIComponent(username)}`, method: "GET", headers: getHeaders },
+    { url: `https://${RAPID_HOST}/user_info?username_or_url=${encodeURIComponent(username)}`, method: "GET", headers: getHeaders },
+    { url: `https://${RAPID_HOST}/basic_user_info?username_or_url=${encodeURIComponent(username)}`, method: "GET", headers: getHeaders },
+    { url: `https://${RAPID_HOST}/user_about?username_or_url=${encodeURIComponent(username)}`, method: "GET", headers: getHeaders },
+    // With /v1 prefix
+    { url: `https://${RAPID_HOST}/v1/info?username_or_url=${encodeURIComponent(username)}`, method: "GET", headers: getHeaders },
   ];
 
   for (const attempt of attempts) {
-    try {
-      const fetchOpts: RequestInit = { method: attempt.method, headers: attempt.headers };
-      if (attempt.body) fetchOpts.body = attempt.body;
-      
-      const res = await fetch(attempt.url, fetchOpts);
-      const data = await res.json();
-      
-      console.log(`[RapidAPI] ${attempt.method} ${attempt.url} → ${res.status}`);
-      
-      if (res.ok && !data.message?.includes("does not exist")) {
-        // Check if the response has user data
-        const d = data.data || data;
-        if (d.follower_count !== undefined || d.followers_count !== undefined) {
-          console.log(`[RapidAPI] ✅ Found working endpoint: ${attempt.url}`);
-          return d;
-        }
+    const result = await tryEndpoint(attempt.url, attempt.method, attempt.headers, attempt.body);
+    const path = new URL(attempt.url).pathname;
+    console.log(`[API] ${attempt.method} ${path} → ${result.status} ${result.ok ? "✅" : "❌"}`);
+    
+    if (result.status === 403) {
+      return { error: `Não inscrito na API (403). Acesse https://rapidapi.com/thetechguy32744/api/instagram-scraper-stable-api/pricing e assine.`, code: 403 };
+    }
+    
+    if (result.ok && typeof result.data === "object") {
+      const d = result.data?.data || result.data;
+      if (d?.follower_count !== undefined || d?.followers_count !== undefined || d?.edge_followed_by || d?.pk) {
+        console.log(`[API] ✅ Working endpoint found: ${path}`);
+        return d;
       }
-      
-      // 403 = not subscribed, stop trying
-      if (res.status === 403) {
-        return { error: `Não inscrito na API. Acesse https://rapidapi.com/thetechguy32744/api/instagram-scraper-stable-api e assine o plano gratuito.`, code: 403 };
-      }
-    } catch (e) {
-      console.log(`[RapidAPI] Error on ${attempt.url}: ${e.message}`);
+      // Log the actual response keys to help debug
+      console.log(`[API] Response keys: ${Object.keys(result.data).join(", ")}`);
     }
   }
   
-  return { error: "Nenhum endpoint da API funcionou. Verifique se a RAPIDAPI_KEY está correta e se está inscrito na API." };
+  return { error: "Nenhum endpoint funcionou. A API pode ter mudado seus endpoints. Tente usar outra API como 'Real-Time Instagram Scraper API'." };
 }
 
-// Fallback: Meta Graph API
 async function fetchViaMeta(igAccountId: string, accessToken: string) {
   for (const version of ["v21.0", "v20.0", "v19.0"]) {
     try {
@@ -98,61 +95,34 @@ async function fetchViaMeta(igAccountId: string, accessToken: string) {
   return null;
 }
 
-// Fetch engagement from posts via RapidAPI
 async function fetchEngagementRapidApi(username: string, rapidApiKey: string) {
-  const headers = {
-    "X-RapidAPI-Key": rapidApiKey,
-    "X-RapidAPI-Host": RAPID_HOST,
-  };
-
+  const headers = { "X-RapidAPI-Key": rapidApiKey, "X-RapidAPI-Host": RAPID_HOST };
+  const formHeaders = { ...headers, "Content-Type": "application/x-www-form-urlencoded" };
+  
   const attempts = [
-    {
-      url: `https://${RAPID_HOST}/get_ig_user_posts.php`,
-      method: "POST",
-      headers: { ...headers, "Content-Type": "application/x-www-form-urlencoded" },
-      body: `username_or_url=${encodeURIComponent(username)}&amount=25`,
-    },
-    {
-      url: `https://${RAPID_HOST}/basic_user_posts?username_or_url=${encodeURIComponent(username)}`,
-      method: "GET",
-      headers,
-    },
-    {
-      url: `https://${RAPID_HOST}/user_posts`,
-      method: "POST",
-      headers: { ...headers, "Content-Type": "application/json" },
-      body: JSON.stringify({ username_or_url: username, amount: "25" }),
-    },
+    { url: `https://${RAPID_HOST}/get_ig_user_posts.php`, method: "POST", headers: formHeaders, body: `username_or_url=${encodeURIComponent(username)}&amount=25` },
+    { url: `https://${RAPID_HOST}/user_posts?username_or_url=${encodeURIComponent(username)}&amount=25`, method: "GET", headers },
+    { url: `https://${RAPID_HOST}/basic_user_posts?username_or_url=${encodeURIComponent(username)}`, method: "GET", headers },
   ];
 
   for (const attempt of attempts) {
-    try {
-      const fetchOpts: RequestInit = { method: attempt.method, headers: attempt.headers };
-      if (attempt.body) fetchOpts.body = attempt.body;
-      
-      const res = await fetch(attempt.url, fetchOpts);
-      if (!res.ok) continue;
-      
-      const raw = await res.json();
-      const items = Array.isArray(raw) ? raw : (raw?.items || raw?.data || raw?.edges || []);
-      
-      if (items.length > 0) {
-        let totalLikes = 0, totalComments = 0;
-        const slice = items.slice(0, 25);
-        for (const post of slice) {
-          const node = post.node || post;
-          totalLikes += node.like_count || node.likes?.count || node.edge_media_preview_like?.count || 0;
-          totalComments += node.comment_count || node.comments?.count || node.edge_media_to_comment?.count || 0;
-        }
-        console.log(`[RapidAPI] ✅ Engagement from ${slice.length} posts: ${totalLikes}L/${totalComments}C`);
-        return { likes: totalLikes, comments: totalComments, posts: slice.length };
+    const result = await tryEndpoint(attempt.url, attempt.method, attempt.headers, attempt.body);
+    if (!result.ok) continue;
+    const items = Array.isArray(result.data) ? result.data : (result.data?.items || result.data?.data || []);
+    if (items.length > 0) {
+      let totalLikes = 0, totalComments = 0;
+      const slice = items.slice(0, 25);
+      for (const post of slice) {
+        const node = post.node || post;
+        totalLikes += node.like_count || node.likes?.count || node.edge_media_preview_like?.count || 0;
+        totalComments += node.comment_count || node.comments?.count || node.edge_media_to_comment?.count || 0;
       }
-    } catch {}
+      return { likes: totalLikes, comments: totalComments, posts: slice.length };
+    }
   }
   return { likes: 0, comments: 0, posts: 0 };
 }
 
-// Meta API engagement
 async function fetchEngagementMeta(igAccountId: string, accessToken: string) {
   try {
     const res = await fetch(
@@ -161,10 +131,7 @@ async function fetchEngagementMeta(igAccountId: string, accessToken: string) {
     const data = await res.json();
     if (data?.data && Array.isArray(data.data)) {
       let likes = 0, comments = 0;
-      for (const p of data.data) {
-        likes += p.like_count || 0;
-        comments += p.comments_count || 0;
-      }
+      for (const p of data.data) { likes += p.like_count || 0; comments += p.comments_count || 0; }
       return { likes, comments, posts: data.data.length };
     }
   } catch {}
@@ -172,24 +139,17 @@ async function fetchEngagementMeta(igAccountId: string, accessToken: string) {
 }
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
     const { profile_id } = await req.json();
     if (!profile_id) {
       return new Response(JSON.stringify({ error: "profile_id is required" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
-
+    const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
     const rapidApiKey = Deno.env.get("RAPIDAPI_KEY");
 
     const { data: profile, error: profileError } = await supabase
@@ -200,8 +160,7 @@ Deno.serve(async (req) => {
 
     if (profileError || !profile) {
       return new Response(JSON.stringify({ error: "Profile not found" }), {
-        status: 404,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
@@ -215,9 +174,9 @@ Deno.serve(async (req) => {
     let likes = 0, comments = 0, engPosts = 0;
     let source = "none";
 
-    // Strategy 1: RapidAPI (preferred)
+    // Strategy 1: RapidAPI
     if (rapidApiKey && igUsername) {
-      console.log(`[RapidAPI] Fetching data for @${igUsername}`);
+      console.log(`[Scraper] Starting for @${igUsername}`);
       const rapidData = await fetchViaRapidApi(igUsername, rapidApiKey);
 
       if (!rapidData.error) {
@@ -229,21 +188,17 @@ Deno.serve(async (req) => {
         source = "rapidapi";
 
         const eng = await fetchEngagementRapidApi(igUsername, rapidApiKey);
-        likes = eng.likes;
-        comments = eng.comments;
-        engPosts = eng.posts;
-
-        console.log(`[RapidAPI] ✅ ${followers} followers, ${mediaCount} media, eng=${likes}L/${comments}C from ${engPosts} posts`);
+        likes = eng.likes; comments = eng.comments; engPosts = eng.posts;
+        console.log(`[Scraper] ✅ ${followers} followers, ${mediaCount} media`);
       } else {
-        console.log("[RapidAPI] ❌ Failed:", rapidData.error);
+        console.log("[Scraper] RapidAPI failed:", rapidData.error);
       }
     }
 
-    // Strategy 2: Meta Graph API (fallback)
+    // Strategy 2: Meta Graph API
     if (source === "none" && igAccountId && accessToken) {
-      console.log(`[Meta API] Fetching data for IG account: ${igAccountId}`);
+      console.log(`[Meta] Trying IG account: ${igAccountId}`);
       const metaData = await fetchViaMeta(igAccountId, accessToken);
-
       if (metaData && !metaData.error) {
         followers = metaData.followers_count || 0;
         following = metaData.follows_count || 0;
@@ -251,72 +206,41 @@ Deno.serve(async (req) => {
         username = metaData.username || metaData.name || "";
         profilePicUrl = metaData.profile_picture_url || "";
         source = "meta";
-
         const eng = await fetchEngagementMeta(igAccountId, accessToken);
-        likes = eng.likes;
-        comments = eng.comments;
-        engPosts = eng.posts;
-      } else {
-        console.log("[Meta API] ❌ Failed:", metaData?.error?.message || "No data");
+        likes = eng.likes; comments = eng.comments; engPosts = eng.posts;
       }
     }
 
     if (source === "none") {
-      const msg = !rapidApiKey 
-        ? "RAPIDAPI_KEY não configurada. Adicione sua chave nas configurações do projeto."
-        : !igUsername
-        ? "Instagram Username não configurado. Preencha o campo acima e salve."
-        : "Nenhuma API funcionou. Verifique se você está inscrito na 'Instagram Scraper Stable API' no RapidAPI (plano Free ou superior): https://rapidapi.com/thetechguy32744/api/instagram-scraper-stable-api/pricing";
-      
-      return new Response(JSON.stringify({ error: msg }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(JSON.stringify({
+        error: "Nenhuma API funcionou. Verifique: 1) Você está inscrito na 'Instagram Scraper Stable API' no RapidAPI (plano BASIC gratuito)? 2) Sua RAPIDAPI_KEY está correta? Acesse: https://rapidapi.com/thetechguy32744/api/instagram-scraper-stable-api/pricing"
+      }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const engagementRate = followers > 0 && engPosts > 0
-      ? ((likes + comments) / engPosts / followers) * 100
-      : 0;
-
+    const engagementRate = followers > 0 && engPosts > 0 ? ((likes + comments) / engPosts / followers) * 100 : 0;
     const today = new Date().toISOString().split("T")[0];
-    const { error: upsertError } = await supabase
-      .from("follower_snapshots")
-      .upsert({
-        profile_id,
-        user_id: profile.user_id,
-        followers_count: followers,
-        following_count: following,
-        media_count: mediaCount,
-        likes_count: likes,
-        comments_count: comments,
-        engagement_rate: Math.round(engagementRate * 100) / 100,
-        snapshot_date: today,
-      }, { onConflict: "profile_id,snapshot_date" });
 
-    if (upsertError) console.error("Upsert error:", upsertError);
+    await supabase.from("follower_snapshots").upsert({
+      profile_id, user_id: profile.user_id,
+      followers_count: followers, following_count: following, media_count: mediaCount,
+      likes_count: likes, comments_count: comments,
+      engagement_rate: Math.round(engagementRate * 100) / 100,
+      snapshot_date: today,
+    }, { onConflict: "profile_id,snapshot_date" });
 
     return new Response(JSON.stringify({
-      success: true,
-      source,
+      success: true, source,
       data: {
-        username,
-        profile_picture_url: profilePicUrl,
-        followers_count: followers,
-        following_count: following,
-        media_count: mediaCount,
-        likes_count: likes,
-        comments_count: comments,
-        engagement_rate: Math.round(engagementRate * 100) / 100,
-        snapshot_date: today,
+        username, profile_picture_url: profilePicUrl,
+        followers_count: followers, following_count: following, media_count: mediaCount,
+        likes_count: likes, comments_count: comments,
+        engagement_rate: Math.round(engagementRate * 100) / 100, snapshot_date: today,
       },
-    }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (err) {
     console.error("Error:", err);
     return new Response(JSON.stringify({ error: err.message }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 });
