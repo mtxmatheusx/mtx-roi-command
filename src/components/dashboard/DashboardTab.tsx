@@ -182,12 +182,7 @@ export default function DashboardTab(props: DashboardTabProps) {
       })()}
 
       {isLoading ? (
-        <div className="flex flex-col items-center justify-center py-24 gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center">
-            <Loader2 className="w-6 h-6 animate-spin text-primary" />
-          </div>
-          <p className="text-sm text-muted-foreground font-medium">Sincronizando dados…</p>
-        </div>
+        <DashboardSkeleton />
       ) : (
         <>
           {/* Hero Profit Section */}
