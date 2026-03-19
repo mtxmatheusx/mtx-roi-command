@@ -5,9 +5,11 @@ import { useClientProfiles } from "@/hooks/useClientProfiles";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Users, UserPlus, Image, RefreshCw, TrendingUp, TrendingDown, Minus, AlertTriangle, Heart, MessageCircle, Activity } from "lucide-react";
+import { Users, UserPlus, Image, RefreshCw, TrendingUp, TrendingDown, Minus, AlertTriangle, Heart, MessageCircle, Activity, Link, Check } from "lucide-react";
 import { format, parseISO } from "date-fns";
+import { toast } from "sonner";
 import { ptBR } from "date-fns/locale";
 import {
   ResponsiveContainer,
@@ -53,6 +55,17 @@ interface Alert {
   created_at: string;
 }
 
+function extractUsername(input: string): string | null {
+  const trimmed = input.trim().replace(/\/+$/, "");
+  // Match instagram.com/username patterns
+  const urlMatch = trimmed.match(/(?:instagram\.com|instagr\.am)\/([A-Za-z0-9_.]+)/i);
+  if (urlMatch) return urlMatch[1];
+  // Plain @username or username
+  const plain = trimmed.replace(/^@/, "");
+  if (/^[A-Za-z0-9_.]{1,30}$/.test(plain)) return plain;
+  return null;
+}
+
 export default function FollowerGrowthTab() {
   const { activeProfile } = useClientProfiles();
   const { user } = useAuth();
@@ -62,6 +75,8 @@ export default function FollowerGrowthTab() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [igInput, setIgInput] = useState("");
+  const [isSavingUsername, setIsSavingUsername] = useState(false);
 
   const fetchHistory = async () => {
     if (!activeProfile?.id || !user?.id) return;
@@ -119,6 +134,33 @@ export default function FollowerGrowthTab() {
     init();
   }, [activeProfile?.id, user?.id]);
 
+  useEffect(() => {
+    if (activeProfile?.instagram_username) {
+      setIgInput(activeProfile.instagram_username);
+    }
+  }, [activeProfile?.instagram_username]);
+
+  const saveUsername = async () => {
+    if (!activeProfile?.id) return;
+    const username = extractUsername(igInput);
+    if (!username) {
+      toast.error("Username inválido. Cole o link do perfil ou digite o @username.");
+      return;
+    }
+    setIsSavingUsername(true);
+    const { error: upErr } = await supabase
+      .from("client_profiles")
+      .update({ instagram_username: username })
+      .eq("id", activeProfile.id);
+    setIsSavingUsername(false);
+    if (upErr) {
+      toast.error("Erro ao salvar username");
+    } else {
+      toast.success(`Username @${username} salvo! Clique em Sincronizar para buscar dados.`);
+      setIgInput(username);
+    }
+  };
+
   const latestSnapshot = snapshots[snapshots.length - 1];
   const prevSnapshot = snapshots.length >= 2 ? snapshots[snapshots.length - 2] : null;
 
@@ -170,6 +212,33 @@ export default function FollowerGrowthTab() {
           Sincronizar Agora
         </Button>
       </div>
+
+      {/* Instagram Username Input */}
+      {!activeProfile?.instagram_username && (
+        <Card className="border-dashed border-primary/30">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Link className="w-4 h-4 text-primary" />
+              <span className="text-sm font-medium">Conectar Instagram</span>
+            </div>
+            <p className="text-xs text-muted-foreground mb-3">
+              Cole o link do perfil (ex: https://instagram.com/seuperfil) ou digite o @username
+            </p>
+            <div className="flex gap-2">
+              <Input
+                placeholder="https://instagram.com/seuperfil ou @seuperfil"
+                value={igInput}
+                onChange={(e) => setIgInput(e.target.value)}
+                className="flex-1"
+              />
+              <Button size="sm" onClick={saveUsername} disabled={isSavingUsername || !igInput.trim()} className="gap-1.5">
+                <Check className="w-4 h-4" />
+                Salvar
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {error && (
         <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}
