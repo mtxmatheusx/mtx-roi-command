@@ -30,11 +30,11 @@ function AppLayoutInner({ children }: { children: ReactNode }) {
           isMobile ? "ml-0" : collapsed ? "ml-[56px]" : "ml-60"
         )}
       >
-        <header className="sticky top-0 z-30 flex items-center justify-between px-4 sm:px-8 h-14 border-b border-border bg-card/80 backdrop-blur-xl backdrop-saturate-150">
+        <header className="sticky top-0 z-30 flex items-center justify-between px-4 sm:px-8 h-14 border-b border-border/80 bg-card/70 backdrop-blur-xl backdrop-saturate-150">
           {isMobile && (
             <button
               onClick={() => setMobileOpen(true)}
-              className="p-2 -ml-2 rounded-lg hover:bg-accent text-muted-foreground transition-colors duration-150 active:scale-95"
+              className="p-2 -ml-2 rounded-lg hover:bg-accent text-muted-foreground transition-all duration-150 active:scale-95"
               aria-label="Abrir menu"
             >
               <Menu className="w-5 h-5" />

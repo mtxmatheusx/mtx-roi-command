@@ -135,7 +135,7 @@ export default function AppSidebar() {
       role="navigation"
       aria-label="Menu principal"
       className={cn(
-        "fixed left-0 top-0 h-screen bg-card/95 backdrop-blur-xl border-r border-border flex flex-col transition-all duration-200 ease-out",
+        "fixed left-0 top-0 h-screen bg-card/80 backdrop-blur-2xl border-r border-border/80 flex flex-col transition-all duration-200 ease-out",
         isMobile ? "w-64 z-50 shadow-2xl" : collapsed ? "w-[56px] z-50" : "w-60 z-50"
       )}
     >
