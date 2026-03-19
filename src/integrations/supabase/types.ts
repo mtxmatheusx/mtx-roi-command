@@ -216,6 +216,7 @@ export type Database = {
           gemini_api_key: string | null
           hourly_optimizer_enabled: boolean
           id: string
+          instagram_account_id: string | null
           is_active: boolean
           limite_escala: number
           meta_access_token: string | null
@@ -249,6 +250,7 @@ export type Database = {
           gemini_api_key?: string | null
           hourly_optimizer_enabled?: boolean
           id?: string
+          instagram_account_id?: string | null
           is_active?: boolean
           limite_escala?: number
           meta_access_token?: string | null
@@ -282,6 +284,7 @@ export type Database = {
           gemini_api_key?: string | null
           hourly_optimizer_enabled?: boolean
           id?: string
+          instagram_account_id?: string | null
           is_active?: boolean
           limite_escala?: number
           meta_access_token?: string | null
