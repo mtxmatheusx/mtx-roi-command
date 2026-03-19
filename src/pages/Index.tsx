@@ -16,7 +16,8 @@ import { useToast } from "@/hooks/use-toast";
 import { metaApi } from "@/lib/metaApiClient";
 import DashboardTab from "@/components/dashboard/DashboardTab";
 import CampaignManagerTab from "@/components/dashboard/CampaignManagerTab";
-import { DollarSign, TrendingUp, Target, BarChart3, Loader2, AlertTriangle, RefreshCw, Eye, MousePointerClick, ShoppingBag, ShieldCheck, OctagonAlert, Activity, Briefcase } from "lucide-react";
+import FollowerGrowthTab from "@/components/dashboard/FollowerGrowthTab";
+import { DollarSign, TrendingUp, Target, BarChart3, Loader2, AlertTriangle, RefreshCw, Eye, MousePointerClick, ShoppingBag, ShieldCheck, OctagonAlert, Activity, Briefcase, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface LogEntry {
