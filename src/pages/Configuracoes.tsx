@@ -522,9 +522,17 @@ export default function Configuracoes() {
                   <Button variant="outline" size="sm" onClick={() => setTokenEditing(true)}>{hasProfileToken ? "Alterar" : "Adicionar"}</Button>
                 </div>
               ) : (
-                <div className="space-y-1">
+                <div className="space-y-3">
                   <Input type="password" value={form.metaAccessToken} onChange={(e) => handleChange("metaAccessToken", e.target.value)} placeholder="Cole aqui o Access Token" className="font-mono text-sm" />
-                  <p className="text-xs text-muted-foreground">Deixe vazio e salve para usar o token global.</p>
+                  {profiles.length > 1 && (
+                    <div className="flex items-center gap-2 p-2.5 rounded-lg bg-muted/50 border border-border">
+                      <Switch checked={applyTokenToAll} onCheckedChange={setApplyTokenToAll} id="apply-all" />
+                      <Label htmlFor="apply-all" className="text-xs text-muted-foreground cursor-pointer">
+                        Aplicar este token a todos os {profiles.length} perfis
+                      </Label>
+                    </div>
+                  )}
+                  <p className="text-xs text-muted-foreground">Deixe vazio e salve para remover o token.</p>
                 </div>
               )}
             </div>
