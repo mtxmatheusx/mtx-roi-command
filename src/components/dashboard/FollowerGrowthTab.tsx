@@ -134,6 +134,33 @@ export default function FollowerGrowthTab() {
     init();
   }, [activeProfile?.id, user?.id]);
 
+  useEffect(() => {
+    if (activeProfile?.instagram_username) {
+      setIgInput(activeProfile.instagram_username);
+    }
+  }, [activeProfile?.instagram_username]);
+
+  const saveUsername = async () => {
+    if (!activeProfile?.id) return;
+    const username = extractUsername(igInput);
+    if (!username) {
+      toast.error("Username inválido. Cole o link do perfil ou digite o @username.");
+      return;
+    }
+    setIsSavingUsername(true);
+    const { error: upErr } = await supabase
+      .from("client_profiles")
+      .update({ instagram_username: username })
+      .eq("id", activeProfile.id);
+    setIsSavingUsername(false);
+    if (upErr) {
+      toast.error("Erro ao salvar username");
+    } else {
+      toast.success(`Username @${username} salvo! Clique em Sincronizar para buscar dados.`);
+      setIgInput(username);
+    }
+  };
+
   const latestSnapshot = snapshots[snapshots.length - 1];
   const prevSnapshot = snapshots.length >= 2 ? snapshots[snapshots.length - 2] : null;
 
