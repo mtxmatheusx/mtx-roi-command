@@ -5,9 +5,10 @@ import { formatCurrency } from "@/lib/mockData";
 import MetricCard from "@/components/MetricCard";
 import CampaignsTable from "@/components/CampaignsTable";
 import DashboardCharts from "@/components/DashboardCharts";
+import { DashboardSkeleton } from "@/components/dashboard/DashboardSkeleton";
 import { Progress } from "@/components/ui/progress";
 import { useTokenHealth } from "@/hooks/useTokenHealth";
-import { DollarSign, TrendingUp, Target, BarChart3, Loader2, AlertTriangle, Eye, MousePointerClick, ShoppingBag, ShieldCheck, OctagonAlert, Activity, X, KeyRound } from "lucide-react";
+import { DollarSign, TrendingUp, Target, BarChart3, AlertTriangle, Eye, MousePointerClick, ShoppingBag, ShieldCheck, OctagonAlert, Activity, X, KeyRound } from "lucide-react";
 
 interface LogEntry {
   time: string;
