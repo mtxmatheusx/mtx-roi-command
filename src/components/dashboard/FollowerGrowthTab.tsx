@@ -5,9 +5,11 @@ import { useClientProfiles } from "@/hooks/useClientProfiles";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Users, UserPlus, Image, RefreshCw, TrendingUp, TrendingDown, Minus, AlertTriangle, Heart, MessageCircle, Activity } from "lucide-react";
+import { Users, UserPlus, Image, RefreshCw, TrendingUp, TrendingDown, Minus, AlertTriangle, Heart, MessageCircle, Activity, Link, Check } from "lucide-react";
 import { format, parseISO } from "date-fns";
+import { toast } from "sonner";
 import { ptBR } from "date-fns/locale";
 import {
   ResponsiveContainer,
