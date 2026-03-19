@@ -213,6 +213,33 @@ export default function FollowerGrowthTab() {
         </Button>
       </div>
 
+      {/* Instagram Username Input */}
+      {!activeProfile?.instagram_username && (
+        <Card className="border-dashed border-primary/30">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Link className="w-4 h-4 text-primary" />
+              <span className="text-sm font-medium">Conectar Instagram</span>
+            </div>
+            <p className="text-xs text-muted-foreground mb-3">
+              Cole o link do perfil (ex: https://instagram.com/seuperfil) ou digite o @username
+            </p>
+            <div className="flex gap-2">
+              <Input
+                placeholder="https://instagram.com/seuperfil ou @seuperfil"
+                value={igInput}
+                onChange={(e) => setIgInput(e.target.value)}
+                className="flex-1"
+              />
+              <Button size="sm" onClick={saveUsername} disabled={isSavingUsername || !igInput.trim()} className="gap-1.5">
+                <Check className="w-4 h-4" />
+                Salvar
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {error && (
         <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}
           className="flex items-start gap-3 p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-sm text-destructive">
