@@ -24,10 +24,9 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Get profile to find page_id and access token
     const { data: profile, error: profileError } = await supabase
       .from("client_profiles")
-      .select("page_id, meta_access_token, name")
+      .select("page_id, meta_access_token, name, user_id")
       .eq("id", profile_id)
       .single();
 
@@ -48,61 +47,97 @@ Deno.serve(async (req) => {
 
     const pageId = profile.page_id;
     if (!pageId) {
-      return new Response(JSON.stringify({ error: "No page_id configured for this profile. Configure the Facebook Page ID in settings." }), {
+      return new Response(JSON.stringify({ error: "No page_id configured for this profile." }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Step 1: Get Instagram Business Account ID from the Facebook Page
-    const pageRes = await fetch(
-      `https://graph.facebook.com/v21.0/${pageId}?fields=instagram_business_account&access_token=${accessToken}`
-    );
-    const pageData = await pageRes.json();
+    // Try multiple API versions to find the IG Business Account
+    const apiVersions = ["v19.0", "v18.0", "v17.0"];
+    let igAccountId: string | null = null;
+    let lastError = "";
 
-    if (pageData.error) {
-      return new Response(JSON.stringify({ error: `Meta API error: ${pageData.error.message}` }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    for (const version of apiVersions) {
+      try {
+        const pageRes = await fetch(
+          `https://graph.facebook.com/${version}/${pageId}?fields=instagram_business_account&access_token=${accessToken}`
+        );
+        const pageData = await pageRes.json();
+        
+        if (pageData?.instagram_business_account?.id) {
+          igAccountId = pageData.instagram_business_account.id;
+          break;
+        }
+        if (pageData.error) {
+          lastError = pageData.error.message;
+          continue;
+        }
+      } catch {
+        continue;
+      }
     }
 
-    const igAccountId = pageData?.instagram_business_account?.id;
+    // If page lookup failed, try using page ID directly as IG user
+    // Some setups have the IG user ID stored as page_id
     if (!igAccountId) {
-      return new Response(JSON.stringify({ error: "No Instagram Business Account linked to this Facebook Page." }), {
+      // Try fetching directly with the page_id as an IG user ID
+      for (const version of ["v19.0", "v18.0"]) {
+        try {
+          const directRes = await fetch(
+            `https://graph.facebook.com/${version}/${pageId}?fields=id,name&access_token=${accessToken}`
+          );
+          const directData = await directRes.json();
+          if (directData?.id && !directData.error) {
+            igAccountId = pageId;
+            break;
+          }
+        } catch {
+          continue;
+        }
+      }
+    }
+
+    if (!igAccountId) {
+      return new Response(JSON.stringify({ 
+        error: `Could not find Instagram Business Account. Last error: ${lastError || "No IG account linked to this page"}. Ensure the Facebook Page has an Instagram Business Account connected.`
+      }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Step 2: Get follower count
-    const igRes = await fetch(
-      `https://graph.facebook.com/v21.0/${igAccountId}?fields=followers_count,follows_count,media_count,username,profile_picture_url&access_token=${accessToken}`
-    );
-    const igData = await igRes.json();
+    // Fetch IG account data using a compatible API version
+    let igData: any = null;
+    for (const version of ["v19.0", "v18.0"]) {
+      try {
+        const igRes = await fetch(
+          `https://graph.facebook.com/${version}/${igAccountId}?fields=followers_count,follows_count,media_count,username,profile_picture_url&access_token=${accessToken}`
+        );
+        const data = await igRes.json();
+        if (!data.error) {
+          igData = data;
+          break;
+        }
+      } catch {
+        continue;
+      }
+    }
 
-    if (igData.error) {
-      return new Response(JSON.stringify({ error: `Instagram API error: ${igData.error.message}` }), {
+    if (!igData) {
+      return new Response(JSON.stringify({ error: "Failed to fetch Instagram data from all API versions." }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Step 3: Upsert snapshot for today
+    // Upsert snapshot
     const today = new Date().toISOString().split("T")[0];
-
-    // Get user_id from profile
-    const { data: fullProfile } = await supabase
-      .from("client_profiles")
-      .select("user_id")
-      .eq("id", profile_id)
-      .single();
-
     const { error: upsertError } = await supabase
       .from("follower_snapshots")
       .upsert({
         profile_id,
-        user_id: fullProfile!.user_id,
+        user_id: profile.user_id,
         followers_count: igData.followers_count || 0,
         following_count: igData.follows_count || 0,
         media_count: igData.media_count || 0,
