@@ -32,6 +32,10 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 const AgenteAutonomo = lazy(() => import("./pages/AgenteAutonomo"));
 const FeedbackAdmin = lazy(() => import("./pages/FeedbackAdmin"));
 const PublicarCampanha = lazy(() => import("./pages/PublicarCampanha"));
+const BrandIdentity = lazy(() => import("./pages/BrandIdentity"));
+const FeedPreview = lazy(() => import("./pages/FeedPreview"));
+const GoogleDriveFolders = lazy(() => import("./pages/GoogleDriveFolders"));
+const KanbanBoard = lazy(() => import("./pages/KanbanBoard"));
 
 const queryClient = new QueryClient();
 
