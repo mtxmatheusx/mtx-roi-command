@@ -5,6 +5,46 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+async function discoverIgAccountId(pageId: string, accessToken: string): Promise<string | null> {
+  // Try to get IG business account from the Facebook Page using older API versions
+  for (const version of ["v19.0", "v18.0", "v17.0"]) {
+    try {
+      const res = await fetch(
+        `https://graph.facebook.com/${version}/${pageId}?fields=instagram_business_account&access_token=${accessToken}`
+      );
+      const data = await res.json();
+      if (data?.instagram_business_account?.id) {
+        return data.instagram_business_account.id;
+      }
+    } catch {
+      continue;
+    }
+  }
+  return null;
+}
+
+async function fetchIgData(igAccountId: string, accessToken: string) {
+  // Try fetching IG user data from multiple API versions
+  for (const version of ["v21.0", "v20.0", "v19.0", "v18.0"]) {
+    try {
+      const res = await fetch(
+        `https://graph.facebook.com/${version}/${igAccountId}?fields=followers_count,follows_count,media_count,username,profile_picture_url,name&access_token=${accessToken}`
+      );
+      const data = await res.json();
+      if (!data.error && (data.followers_count !== undefined || data.username)) {
+        return data;
+      }
+      // If this specific error, try next version
+      if (data.error?.code === 36106) continue;
+      // For other errors, return them
+      if (data.error) return data;
+    } catch {
+      continue;
+    }
+  }
+  return null;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -24,10 +64,9 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Get profile to find page_id and access token
     const { data: profile, error: profileError } = await supabase
       .from("client_profiles")
-      .select("page_id, meta_access_token, name")
+      .select("page_id, meta_access_token, name, user_id, instagram_account_id")
       .eq("id", profile_id)
       .single();
 
@@ -46,63 +85,50 @@ Deno.serve(async (req) => {
       });
     }
 
-    const pageId = profile.page_id;
-    if (!pageId) {
-      return new Response(JSON.stringify({ error: "No page_id configured for this profile. Configure the Facebook Page ID in settings." }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    let igAccountId = profile.instagram_account_id;
+
+    // If no IG account ID stored, try to discover it from page_id
+    if (!igAccountId && profile.page_id) {
+      console.log("Attempting to discover IG account from page:", profile.page_id);
+      igAccountId = await discoverIgAccountId(profile.page_id, accessToken);
+      
+      // Save discovered ID for future use
+      if (igAccountId) {
+        console.log("Discovered IG account ID:", igAccountId);
+        await supabase
+          .from("client_profiles")
+          .update({ instagram_account_id: igAccountId })
+          .eq("id", profile_id);
+      }
     }
 
-    // Step 1: Get Instagram Business Account ID from the Facebook Page
-    const pageRes = await fetch(
-      `https://graph.facebook.com/v21.0/${pageId}?fields=instagram_business_account&access_token=${accessToken}`
-    );
-    const pageData = await pageRes.json();
-
-    if (pageData.error) {
-      return new Response(JSON.stringify({ error: `Meta API error: ${pageData.error.message}` }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const igAccountId = pageData?.instagram_business_account?.id;
     if (!igAccountId) {
-      return new Response(JSON.stringify({ error: "No Instagram Business Account linked to this Facebook Page." }), {
+      return new Response(JSON.stringify({ 
+        error: "Instagram Account ID não encontrado. Configure o Instagram Account ID nas Configurações do perfil, ou verifique se a Page tem uma conta Business do Instagram vinculada."
+      }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Step 2: Get follower count
-    const igRes = await fetch(
-      `https://graph.facebook.com/v21.0/${igAccountId}?fields=followers_count,follows_count,media_count,username,profile_picture_url&access_token=${accessToken}`
-    );
-    const igData = await igRes.json();
+    // Fetch IG data
+    const igData = await fetchIgData(igAccountId, accessToken);
 
-    if (igData.error) {
-      return new Response(JSON.stringify({ error: `Instagram API error: ${igData.error.message}` }), {
+    if (!igData || igData.error) {
+      const errorMsg = igData?.error?.message || "Failed to fetch Instagram data";
+      return new Response(JSON.stringify({ error: `Instagram API: ${errorMsg}` }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Step 3: Upsert snapshot for today
+    // Upsert snapshot
     const today = new Date().toISOString().split("T")[0];
-
-    // Get user_id from profile
-    const { data: fullProfile } = await supabase
-      .from("client_profiles")
-      .select("user_id")
-      .eq("id", profile_id)
-      .single();
-
     const { error: upsertError } = await supabase
       .from("follower_snapshots")
       .upsert({
         profile_id,
-        user_id: fullProfile!.user_id,
+        user_id: profile.user_id,
         followers_count: igData.followers_count || 0,
         following_count: igData.follows_count || 0,
         media_count: igData.media_count || 0,
@@ -116,7 +142,7 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({
       success: true,
       data: {
-        username: igData.username,
+        username: igData.username || igData.name,
         profile_picture_url: igData.profile_picture_url,
         followers_count: igData.followers_count || 0,
         following_count: igData.follows_count || 0,

@@ -1,0 +1,1 @@
+ALTER TABLE public.client_profiles ADD COLUMN instagram_account_id text DEFAULT NULL;
