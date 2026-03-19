@@ -79,3 +79,6 @@ verify_jwt = false
 
 [functions.daily-email-report]
 verify_jwt = false
+
+[functions.fetch-instagram-followers]
+verify_jwt = false
