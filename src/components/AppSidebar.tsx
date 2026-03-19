@@ -2,7 +2,7 @@ import { NavLink as RouterNavLink } from "react-router-dom";
 import {
   BarChart3, Zap, Target, ImageIcon, Settings, LogOut, Brain, Rocket,
   Shield, Building2, Users, Beaker, Wand2, Bot, MessageSquare,
-  PanelLeftClose, PanelLeft, X
+  PanelLeftClose, PanelLeft, X, Palette, Grid3X3, FolderPlus, KanbanSquare
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useTranslation } from "react-i18next";
@@ -50,6 +50,10 @@ export default function AppSidebar() {
         { to: "/auditoria-meta", label: t("nav.auditMeta"), icon: Shield },
         { to: "/agente-autonomo", label: "Agente Autônomo", icon: Bot },
         { to: "/feedback-copy", label: "Feedbacks de Copy", icon: MessageSquare },
+        { to: "/brand-identity", label: "Briefing & ID Visual", icon: Palette },
+        { to: "/feed-preview", label: "Preview do Feed", icon: Grid3X3 },
+        { to: "/google-drive", label: "Pastas Google Drive", icon: FolderPlus },
+        { to: "/kanban", label: "Quadro de Tarefas", icon: KanbanSquare },
       ],
     },
   ];

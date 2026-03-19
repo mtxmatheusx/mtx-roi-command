@@ -32,6 +32,10 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 const AgenteAutonomo = lazy(() => import("./pages/AgenteAutonomo"));
 const FeedbackAdmin = lazy(() => import("./pages/FeedbackAdmin"));
 const PublicarCampanha = lazy(() => import("./pages/PublicarCampanha"));
+const BrandIdentity = lazy(() => import("./pages/BrandIdentity"));
+const FeedPreview = lazy(() => import("./pages/FeedPreview"));
+const GoogleDriveFolders = lazy(() => import("./pages/GoogleDriveFolders"));
+const KanbanBoard = lazy(() => import("./pages/KanbanBoard"));
 
 const queryClient = new QueryClient();
 
@@ -72,6 +76,10 @@ const App = () => (
               <Route path="/laboratorio-visual" element={<ProtectedRoute><LaboratorioVisual /></ProtectedRoute>} />
               <Route path="/legacy" element={<LegacyLanding />} />
               <Route path="/metodo-ric" element={<MetodoRIC />} />
+              <Route path="/brand-identity" element={<ProtectedRoute><BrandIdentity /></ProtectedRoute>} />
+              <Route path="/feed-preview" element={<ProtectedRoute><FeedPreview /></ProtectedRoute>} />
+              <Route path="/google-drive" element={<ProtectedRoute><GoogleDriveFolders /></ProtectedRoute>} />
+              <Route path="/kanban" element={<ProtectedRoute><KanbanBoard /></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
