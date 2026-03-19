@@ -14,6 +14,47 @@ export type Database = {
   }
   public: {
     Tables: {
+      brand_manuals: {
+        Row: {
+          created_at: string
+          generated_at: string
+          id: string
+          instagram_username: string | null
+          profile_id: string
+          updated_at: string
+          user_id: string
+          visual_dna: Json | null
+        }
+        Insert: {
+          created_at?: string
+          generated_at?: string
+          id?: string
+          instagram_username?: string | null
+          profile_id: string
+          updated_at?: string
+          user_id: string
+          visual_dna?: Json | null
+        }
+        Update: {
+          created_at?: string
+          generated_at?: string
+          id?: string
+          instagram_username?: string | null
+          profile_id?: string
+          updated_at?: string
+          user_id?: string
+          visual_dna?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brand_manuals_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "client_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       campaign_drafts: {
         Row: {
           ai_reasoning: string | null
@@ -525,6 +566,56 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "platform_connections_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "client_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      team_tasks: {
+        Row: {
+          assigned_to: string | null
+          created_at: string
+          description: string | null
+          due_date: string | null
+          id: string
+          priority: string
+          profile_id: string | null
+          status: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          priority?: string
+          profile_id?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          assigned_to?: string | null
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          priority?: string
+          profile_id?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_tasks_profile_id_fkey"
             columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "client_profiles"
