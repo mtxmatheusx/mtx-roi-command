@@ -156,9 +156,9 @@ export default function Dashboard() {
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <div className="flex items-center gap-2 flex-wrap">
           <TabsList className="bg-card border border-border flex-wrap h-auto gap-1 p-1">
-            <TabsTrigger value="dashboard" className="gap-2 text-xs sm:text-sm"><BarChart3 className="w-4 h-4" /><span className="hidden sm:inline">Dashboard</span></TabsTrigger>
-            <TabsTrigger value="campaign-manager" className="gap-2 text-xs sm:text-sm"><Briefcase className="w-4 h-4" /><span className="hidden sm:inline">Gestão</span></TabsTrigger>
-            <TabsTrigger value="followers" className="gap-2 text-xs sm:text-sm"><Users className="w-4 h-4" /><span className="hidden sm:inline">Seguidores</span></TabsTrigger>
+            <TabsTrigger value="dashboard" className="gap-2 text-xs sm:text-sm"><BarChart3 className="w-4 h-4" />Dashboard</TabsTrigger>
+            <TabsTrigger value="campaign-manager" className="gap-2 text-xs sm:text-sm"><Briefcase className="w-4 h-4" />Gestão</TabsTrigger>
+            <TabsTrigger value="followers" className="gap-2 text-xs sm:text-sm"><Users className="w-4 h-4" />Seguidores</TabsTrigger>
           </TabsList>
           <a href="https://developers.facebook.com/tools/explorer/" target="_blank" rel="noopener noreferrer">
             <Button variant="outline" size="sm" className="gap-2 h-8 text-xs sm:text-sm">
