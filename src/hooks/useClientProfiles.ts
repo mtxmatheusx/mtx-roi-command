@@ -29,6 +29,12 @@ export interface ClientProfile {
   rollback_enabled: boolean;
   rollback_roas_threshold: number;
   is_active: boolean;
+  instagram_username: string | null;
+  instagram_account_id: string | null;
+  hourly_optimizer_enabled: boolean;
+  business_hours_start: number;
+  business_hours_end: number;
+  daypart_config: any;
   created_at: string;
   updated_at: string;
 }
