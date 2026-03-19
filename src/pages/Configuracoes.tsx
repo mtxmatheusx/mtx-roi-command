@@ -189,7 +189,7 @@ export default function Configuracoes() {
     try {
       const updateData: Record<string, unknown> = {
         id: activeProfile.id, name: parsed.data.name, ad_account_id: parsed.data.adAccountId,
-        pixel_id: parsed.data.pixelId || "", page_id: form.pageId || null, instagram_account_id: form.instagramAccountId.trim() || null,
+        pixel_id: parsed.data.pixelId || "", page_id: form.pageId || null, instagram_account_id: form.instagramAccountId.trim() || null, instagram_username: form.instagramUsername.trim() || null,
         cpa_meta: parsed.data.cpaMeta, ticket_medio: parsed.data.ticketMedio,
         limite_escala: parsed.data.limiteEscala, budget_maximo: parsed.data.budgetMaximo, budget_frequency: parsed.data.budgetFrequency,
         api_base_url: form.apiBaseUrl.trim() || null,
