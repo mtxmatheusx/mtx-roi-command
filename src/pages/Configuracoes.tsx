@@ -51,7 +51,7 @@ export default function Configuracoes() {
 
   // --- Existing form state ---
   const [form, setForm] = useState({
-    name: "", adAccountId: "act_", pixelId: "", pageId: "", instagramAccountId: "",
+    name: "", adAccountId: "act_", pixelId: "", pageId: "", instagramAccountId: "", instagramUsername: "",
     cpaMeta: "45", ticketMedio: "697", limiteEscala: "15",
     budgetMaximo: "0", budgetFrequency: "monthly" as "daily" | "weekly" | "monthly",
     metaAccessToken: "", geminiApiKey: "", apiBaseUrl: "",
@@ -151,6 +151,7 @@ export default function Configuracoes() {
         pixelId: activeProfile.pixel_id || "",
         pageId: (activeProfile as any).page_id || "",
         instagramAccountId: (activeProfile as any).instagram_account_id || "",
+        instagramUsername: (activeProfile as any).instagram_username || "",
         cpaMeta: String(activeProfile.cpa_meta ?? 45),
         ticketMedio: String(activeProfile.ticket_medio ?? 697),
         limiteEscala: String(activeProfile.limite_escala ?? 15),
@@ -188,7 +189,7 @@ export default function Configuracoes() {
     try {
       const updateData: Record<string, unknown> = {
         id: activeProfile.id, name: parsed.data.name, ad_account_id: parsed.data.adAccountId,
-        pixel_id: parsed.data.pixelId || "", page_id: form.pageId || null, instagram_account_id: form.instagramAccountId.trim() || null,
+        pixel_id: parsed.data.pixelId || "", page_id: form.pageId || null, instagram_account_id: form.instagramAccountId.trim() || null, instagram_username: form.instagramUsername.trim() || null,
         cpa_meta: parsed.data.cpaMeta, ticket_medio: parsed.data.ticketMedio,
         limite_escala: parsed.data.limiteEscala, budget_maximo: parsed.data.budgetMaximo, budget_frequency: parsed.data.budgetFrequency,
         api_base_url: form.apiBaseUrl.trim() || null,
@@ -572,6 +573,18 @@ export default function Configuracoes() {
                 </span>
               </div>
               <Input id="instagramAccountId" placeholder="17841400000000000" value={form.instagramAccountId} onChange={(e) => handleChange("instagramAccountId", e.target.value)} className="font-mono text-sm" />
+            </div>
+            <div className="space-y-2 max-w-md">
+              <div className="flex items-center gap-2">
+                <Label htmlFor="instagramUsername">Instagram Username (RapidAPI)</Label>
+                <span className="relative group">
+                  <span className="text-muted-foreground cursor-help text-xs border border-border rounded-full w-4 h-4 inline-flex items-center justify-center">?</span>
+                  <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 text-xs bg-popover text-popover-foreground border rounded-md shadow-md w-64 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                    Username do Instagram (sem @). Usado pela RapidAPI para buscar dados de seguidores e engagement sem depender da Meta Business API.
+                  </span>
+                </span>
+              </div>
+              <Input id="instagramUsername" placeholder="seuusuario" value={form.instagramUsername} onChange={(e) => handleChange("instagramUsername", e.target.value.replace("@", ""))} className="font-mono text-sm" />
             </div>
             <div className="flex items-center gap-3">
               <Button variant="outline" onClick={handleTestConnection} disabled={testResult === "loading"} className="gap-2">

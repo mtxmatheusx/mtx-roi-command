@@ -2,46 +2,34 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-async function discoverIgAccountId(pageId: string, accessToken: string): Promise<string | null> {
-  // Try multiple API versions for instagram_business_account discovery
-  for (const version of ["v19.0", "v18.0", "v17.0"]) {
-    try {
-      const res = await fetch(
-        `https://graph.facebook.com/${version}/${pageId}?fields=instagram_business_account&access_token=${accessToken}`
-      );
-      const data = await res.json();
-      if (data?.instagram_business_account?.id) {
-        return data.instagram_business_account.id;
-      }
-    } catch {
-      continue;
-    }
-  }
-
-  // Fallback: try /me/accounts to find the page and its IG account
+// RapidAPI Instagram Scraper - fetch profile data by username
+async function fetchViaRapidApi(username: string, rapidApiKey: string) {
+  const url = `https://instagram-scraper-stable-api.p.rapidapi.com/user_data?username=${encodeURIComponent(username)}`;
   try {
-    const res = await fetch(
-      `https://graph.facebook.com/v19.0/me/accounts?fields=id,instagram_business_account&access_token=${accessToken}`
-    );
+    const res = await fetch(url, {
+      method: "GET",
+      headers: {
+        "X-RapidAPI-Key": rapidApiKey,
+        "X-RapidAPI-Host": "instagram-scraper-stable-api.p.rapidapi.com",
+      },
+    });
     const data = await res.json();
-    if (data?.data) {
-      for (const page of data.data) {
-        if (page.id === pageId && page.instagram_business_account?.id) {
-          return page.instagram_business_account.id;
-        }
-      }
+    console.log("RapidAPI response status:", res.status);
+    if (!res.ok) {
+      return { error: `RapidAPI error ${res.status}: ${JSON.stringify(data)}` };
     }
-  } catch {
-    // ignore
+    return data;
+  } catch (e) {
+    console.error("RapidAPI fetch error:", e);
+    return { error: e.message };
   }
-
-  return null;
 }
 
-async function fetchIgData(igAccountId: string, accessToken: string) {
+// Fallback: Meta Graph API
+async function fetchViaMeta(igAccountId: string, accessToken: string) {
   for (const version of ["v21.0", "v20.0", "v19.0", "v18.0"]) {
     try {
       const res = await fetch(
@@ -53,32 +41,53 @@ async function fetchIgData(igAccountId: string, accessToken: string) {
       }
       if (data.error?.code === 36106) continue;
       if (data.error) return data;
-    } catch {
-      continue;
-    }
+    } catch { continue; }
   }
   return null;
 }
 
-async function fetchRecentEngagement(igAccountId: string, accessToken: string) {
-  // Fetch recent media and sum likes+comments
+// Fetch engagement from recent posts via RapidAPI
+async function fetchEngagementRapidApi(username: string, rapidApiKey: string) {
+  try {
+    const url = `https://instagram-scraper-stable-api.p.rapidapi.com/user_posts?username=${encodeURIComponent(username)}&amount=25`;
+    const res = await fetch(url, {
+      method: "GET",
+      headers: {
+        "X-RapidAPI-Key": rapidApiKey,
+        "X-RapidAPI-Host": "instagram-scraper-stable-api.p.rapidapi.com",
+      },
+    });
+    const data = await res.json();
+    if (!res.ok || !data?.items) return { likes: 0, comments: 0, posts: 0 };
+    
+    let totalLikes = 0, totalComments = 0;
+    const items = Array.isArray(data.items) ? data.items : [];
+    for (const post of items) {
+      totalLikes += post.like_count || post.likes?.count || 0;
+      totalComments += post.comment_count || post.comments?.count || 0;
+    }
+    return { likes: totalLikes, comments: totalComments, posts: items.length };
+  } catch {
+    return { likes: 0, comments: 0, posts: 0 };
+  }
+}
+
+// Fetch engagement from Meta API
+async function fetchEngagementMeta(igAccountId: string, accessToken: string) {
   try {
     const res = await fetch(
-      `https://graph.facebook.com/v19.0/${igAccountId}/media?fields=like_count,comments_count,timestamp&limit=25&access_token=${accessToken}`
+      `https://graph.facebook.com/v19.0/${igAccountId}/media?fields=like_count,comments_count&limit=25&access_token=${accessToken}`
     );
     const data = await res.json();
     if (data?.data && Array.isArray(data.data)) {
-      let totalLikes = 0;
-      let totalComments = 0;
-      for (const post of data.data) {
-        totalLikes += post.like_count || 0;
-        totalComments += post.comments_count || 0;
+      let likes = 0, comments = 0;
+      for (const p of data.data) {
+        likes += p.like_count || 0;
+        comments += p.comments_count || 0;
       }
-      return { likes: totalLikes, comments: totalComments, posts: data.data.length };
+      return { likes, comments, posts: data.data.length };
     }
-  } catch (e) {
-    console.error("Engagement fetch error:", e);
-  }
+  } catch {}
   return { likes: 0, comments: 0, posts: 0 };
 }
 
@@ -101,9 +110,11 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
+    const rapidApiKey = Deno.env.get("RAPIDAPI_KEY");
+
     const { data: profile, error: profileError } = await supabase
       .from("client_profiles")
-      .select("page_id, meta_access_token, name, user_id, instagram_account_id")
+      .select("page_id, meta_access_token, name, user_id, instagram_account_id, instagram_username")
       .eq("id", profile_id)
       .single();
 
@@ -115,53 +126,71 @@ Deno.serve(async (req) => {
     }
 
     const accessToken = profile.meta_access_token || Deno.env.get("META_ACCESS_TOKEN");
-    if (!accessToken) {
-      return new Response(JSON.stringify({ error: "No access token available" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    const igUsername = profile.instagram_username;
+    const igAccountId = profile.instagram_account_id;
 
-    let igAccountId = profile.instagram_account_id;
+    let followers = 0, following = 0, mediaCount = 0;
+    let username = igUsername || "";
+    let profilePicUrl = "";
+    let likes = 0, comments = 0, engPosts = 0;
+    let source = "none";
 
-    if (!igAccountId && profile.page_id) {
-      console.log("Attempting to discover IG account from page:", profile.page_id);
-      igAccountId = await discoverIgAccountId(profile.page_id, accessToken);
-      if (igAccountId) {
-        console.log("Discovered IG account ID:", igAccountId);
-        await supabase
-          .from("client_profiles")
-          .update({ instagram_account_id: igAccountId })
-          .eq("id", profile_id);
+    // Strategy 1: RapidAPI (preferred - no need for Meta Business Account)
+    if (rapidApiKey && igUsername) {
+      console.log(`[RapidAPI] Fetching data for @${igUsername}`);
+      const rapidData = await fetchViaRapidApi(igUsername, rapidApiKey);
+      
+      if (!rapidData.error && (rapidData.follower_count !== undefined || rapidData.followers_count !== undefined || rapidData.edge_followed_by)) {
+        followers = rapidData.follower_count || rapidData.followers_count || rapidData.edge_followed_by?.count || 0;
+        following = rapidData.following_count || rapidData.follows_count || rapidData.edge_follow?.count || 0;
+        mediaCount = rapidData.media_count || rapidData.edge_owner_to_timeline_media?.count || 0;
+        username = rapidData.username || igUsername;
+        profilePicUrl = rapidData.profile_pic_url_hd || rapidData.profile_pic_url || rapidData.profile_picture_url || "";
+        source = "rapidapi";
+
+        // Fetch engagement
+        const eng = await fetchEngagementRapidApi(igUsername, rapidApiKey);
+        likes = eng.likes;
+        comments = eng.comments;
+        engPosts = eng.posts;
+      } else {
+        console.log("[RapidAPI] Failed:", rapidData.error || "No data returned");
       }
     }
 
-    if (!igAccountId) {
+    // Strategy 2: Meta Graph API (fallback)
+    if (source === "none" && igAccountId && accessToken) {
+      console.log(`[Meta API] Fetching data for IG account: ${igAccountId}`);
+      const metaData = await fetchViaMeta(igAccountId, accessToken);
+      
+      if (metaData && !metaData.error) {
+        followers = metaData.followers_count || 0;
+        following = metaData.follows_count || 0;
+        mediaCount = metaData.media_count || 0;
+        username = metaData.username || metaData.name || "";
+        profilePicUrl = metaData.profile_picture_url || "";
+        source = "meta";
+
+        const eng = await fetchEngagementMeta(igAccountId, accessToken);
+        likes = eng.likes;
+        comments = eng.comments;
+        engPosts = eng.posts;
+      } else {
+        console.log("[Meta API] Failed:", metaData?.error?.message || "No data");
+      }
+    }
+
+    if (source === "none") {
       return new Response(JSON.stringify({
-        error: "Instagram Account ID não encontrado. Configure o Instagram Account ID nas Configurações do perfil, ou verifique se a Page tem uma conta Business do Instagram vinculada."
+        error: "Não foi possível buscar dados do Instagram. Configure o 'Instagram Username' nas Configurações do perfil e adicione sua RAPIDAPI_KEY, ou configure o Instagram Account ID para usar a Meta API."
       }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Fetch IG data + engagement in parallel
-    const [igData, engagement] = await Promise.all([
-      fetchIgData(igAccountId, accessToken),
-      fetchRecentEngagement(igAccountId, accessToken),
-    ]);
-
-    if (!igData || igData.error) {
-      const errorMsg = igData?.error?.message || "Failed to fetch Instagram data";
-      return new Response(JSON.stringify({ error: `Instagram API: ${errorMsg}` }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const followers = igData.followers_count || 0;
-    const engagementRate = followers > 0 && engagement.posts > 0
-      ? ((engagement.likes + engagement.comments) / engagement.posts / followers) * 100
+    const engagementRate = followers > 0 && engPosts > 0
+      ? ((likes + comments) / engPosts / followers) * 100
       : 0;
 
     const today = new Date().toISOString().split("T")[0];
@@ -171,28 +200,27 @@ Deno.serve(async (req) => {
         profile_id,
         user_id: profile.user_id,
         followers_count: followers,
-        following_count: igData.follows_count || 0,
-        media_count: igData.media_count || 0,
-        likes_count: engagement.likes,
-        comments_count: engagement.comments,
+        following_count: following,
+        media_count: mediaCount,
+        likes_count: likes,
+        comments_count: comments,
         engagement_rate: Math.round(engagementRate * 100) / 100,
         snapshot_date: today,
       }, { onConflict: "profile_id,snapshot_date" });
 
-    if (upsertError) {
-      console.error("Upsert error:", upsertError);
-    }
+    if (upsertError) console.error("Upsert error:", upsertError);
 
     return new Response(JSON.stringify({
       success: true,
+      source,
       data: {
-        username: igData.username || igData.name,
-        profile_picture_url: igData.profile_picture_url,
+        username,
+        profile_picture_url: profilePicUrl,
         followers_count: followers,
-        following_count: igData.follows_count || 0,
-        media_count: igData.media_count || 0,
-        likes_count: engagement.likes,
-        comments_count: engagement.comments,
+        following_count: following,
+        media_count: mediaCount,
+        likes_count: likes,
+        comments_count: comments,
         engagement_rate: Math.round(engagementRate * 100) / 100,
         snapshot_date: today,
       },

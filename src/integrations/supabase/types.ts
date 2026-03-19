@@ -217,6 +217,7 @@ export type Database = {
           hourly_optimizer_enabled: boolean
           id: string
           instagram_account_id: string | null
+          instagram_username: string | null
           is_active: boolean
           limite_escala: number
           meta_access_token: string | null
@@ -251,6 +252,7 @@ export type Database = {
           hourly_optimizer_enabled?: boolean
           id?: string
           instagram_account_id?: string | null
+          instagram_username?: string | null
           is_active?: boolean
           limite_escala?: number
           meta_access_token?: string | null
@@ -285,6 +287,7 @@ export type Database = {
           hourly_optimizer_enabled?: boolean
           id?: string
           instagram_account_id?: string | null
+          instagram_username?: string | null
           is_active?: boolean
           limite_escala?: number
           meta_access_token?: string | null
