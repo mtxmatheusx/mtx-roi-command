@@ -82,3 +82,6 @@ verify_jwt = false
 
 [functions.fetch-instagram-followers]
 verify_jwt = false
+
+[functions.daily-follower-sync]
+verify_jwt = false
