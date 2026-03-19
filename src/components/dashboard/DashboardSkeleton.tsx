@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 
-function SkeletonPulse({ className }: { className?: string }) {
-  return <div className={`shimmer rounded-md ${className ?? ""}`} />;
+function SkeletonPulse({ className, style }: { className?: string; style?: React.CSSProperties }) {
+  return <div className={`shimmer rounded-md ${className ?? ""}`} style={style} />;
 }
 
 export function MetricCardSkeleton() {
