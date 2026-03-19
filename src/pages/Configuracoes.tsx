@@ -57,6 +57,7 @@ export default function Configuracoes() {
     metaAccessToken: "", geminiApiKey: "", apiBaseUrl: "",
   });
   const [tokenEditing, setTokenEditing] = useState(false);
+  const [applyTokenToAll, setApplyTokenToAll] = useState(true);
   const [geminiEditing, setGeminiEditing] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
