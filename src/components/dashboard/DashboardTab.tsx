@@ -224,18 +224,18 @@ export default function DashboardTab(props: DashboardTabProps) {
           </motion.div>
 
           {/* Primary KPIs */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <MetricCard title="Investimento" value={formatCurrency(totalSpend)} icon={<DollarSign className="w-4 h-4" />} delta={deltaSpend} invertDelta />
-            <MetricCard title="CPA" value={formatCurrency(avgCPA)} subtitle={`Meta: ${formatCurrency(cpaMeta)}`} variant={avgCPA > cpaMeta * 1.2 ? "danger" : "default"} icon={<Target className="w-4 h-4" />} delta={deltaCPA} invertDelta />
-            <MetricCard title="ROAS" value={`${roas.toFixed(2)}x`} variant={roas > 3 ? "profit" : "default"} icon={<TrendingUp className="w-4 h-4" />} delta={deltaROAS} />
-            <MetricCard title="Compras" value={String(totalPurchases)} icon={<BarChart3 className="w-4 h-4" />} delta={deltaPurchases} />
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            <MetricCard title="Investimento" value={formatCurrency(totalSpend)} icon={<DollarSign className="w-4 h-4" />} delta={deltaSpend} invertDelta index={0} />
+            <MetricCard title="CPA" value={formatCurrency(avgCPA)} subtitle={`Meta: ${formatCurrency(cpaMeta)}`} variant={avgCPA > cpaMeta * 1.2 ? "danger" : "default"} icon={<Target className="w-4 h-4" />} delta={deltaCPA} invertDelta index={1} />
+            <MetricCard title="ROAS" value={`${roas.toFixed(2)}x`} variant={roas > 3 ? "profit" : "default"} icon={<TrendingUp className="w-4 h-4" />} delta={deltaROAS} index={2} />
+            <MetricCard title="Compras" value={String(totalPurchases)} icon={<BarChart3 className="w-4 h-4" />} delta={deltaPurchases} index={3} />
           </div>
 
           {/* Secondary KPIs */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <MetricCard title="CPM" value={formatCurrency(avgCPM)} icon={<Eye className="w-4 h-4" />} delta={deltaCPM} invertDelta />
-            <MetricCard title="CTR" value={`${avgCTR.toFixed(2)}%`} variant={avgCTR < 1 ? "danger" : "default"} icon={<MousePointerClick className="w-4 h-4" />} delta={deltaCTR} />
-            <MetricCard title="Ticket Médio" value={formatCurrency(calcTicketMedio)} icon={<ShoppingBag className="w-4 h-4" />} delta={deltaTM} />
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
+            <MetricCard title="CPM" value={formatCurrency(avgCPM)} icon={<Eye className="w-4 h-4" />} delta={deltaCPM} invertDelta index={4} />
+            <MetricCard title="CTR" value={`${avgCTR.toFixed(2)}%`} variant={avgCTR < 1 ? "danger" : "default"} icon={<MousePointerClick className="w-4 h-4" />} delta={deltaCTR} index={5} />
+            <MetricCard title="Ticket Médio" value={formatCurrency(calcTicketMedio)} icon={<ShoppingBag className="w-4 h-4" />} delta={deltaTM} index={6} />
           </div>
 
           {/* Charts */}
