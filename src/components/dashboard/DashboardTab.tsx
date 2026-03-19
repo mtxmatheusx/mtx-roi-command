@@ -191,13 +191,12 @@ export default function DashboardTab(props: DashboardTabProps) {
         <>
           {/* Hero Profit Section */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.97 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
-            className="glass-card p-8 sm:p-10 text-center relative overflow-hidden"
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+            className="glass-card p-6 sm:p-10 text-center relative overflow-hidden"
           >
-            {/* Subtle gradient accent */}
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.02] via-transparent to-success/[0.02] pointer-events-none" />
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.015] via-transparent to-success/[0.015] pointer-events-none" />
             <div className="relative">
               <p className="text-[11px] font-semibold text-muted-foreground tracking-[0.2em] uppercase mb-4">Lucro Líquido Total</p>
               <p className={`text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tighter hero-number ${totalProfit >= 0 ? "text-success" : "text-destructive"}`}>{formatCurrency(totalProfit)}</p>
