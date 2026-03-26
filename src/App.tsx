@@ -37,7 +37,15 @@ const FeedPreview = lazy(() => import("./pages/FeedPreview"));
 const GoogleDriveFolders = lazy(() => import("./pages/GoogleDriveFolders"));
 const KanbanBoard = lazy(() => import("./pages/KanbanBoard"));
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000,
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 function PageLoader() {
   return (

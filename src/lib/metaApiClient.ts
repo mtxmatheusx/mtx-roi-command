@@ -122,6 +122,10 @@ export interface OptimizeInput {
 
 // ── Helpers ────────────────────────────────────────────
 
+const API_TIMEOUT = 30_000;
+const MAX_RETRIES = 2;
+const RETRY_BACKOFF = [1000, 3000];
+
 async function apiCall<T>(
   baseUrl: string,
   path: string,
@@ -129,24 +133,66 @@ async function apiCall<T>(
   options: RequestInit = {}
 ): Promise<T> {
   const url = `${baseUrl.replace(/\/$/, "")}${path}`;
-  const res = await fetch(url, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-      ...(options.headers || {}),
-    },
-  });
 
-  const data = await res.json().catch(() => ({}));
+  let lastError: Error | null = null;
 
-  if (!res.ok) {
-    const msg =
-      data?.error_user_msg || data?.error?.message || data?.error || data?.detail || `API Error ${res.status}`;
-    throw new Error(typeof msg === "string" ? msg : JSON.stringify(msg));
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    if (attempt > 0) {
+      await new Promise((r) => setTimeout(r, RETRY_BACKOFF[attempt - 1] || 3000));
+    }
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), API_TIMEOUT);
+
+    try {
+      const res = await fetch(url, {
+        ...options,
+        signal: controller.signal,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+          ...(options.headers || {}),
+        },
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        const msg =
+          data?.error_user_msg || data?.error?.message || data?.error || data?.detail || `API Error ${res.status}`;
+        const error = new Error(typeof msg === "string" ? msg : JSON.stringify(msg));
+
+        // Don't retry on auth/permission errors
+        if (res.status === 401 || res.status === 403 || res.status === 400) {
+          throw error;
+        }
+
+        // Retry on 429 (rate limit) and 5xx
+        if (res.status === 429 || res.status >= 500) {
+          lastError = error;
+          continue;
+        }
+
+        throw error;
+      }
+
+      return data as T;
+    } catch (e: unknown) {
+      if (e instanceof DOMException && e.name === "AbortError") {
+        lastError = new Error(`Request timeout after ${API_TIMEOUT / 1000}s`);
+        continue;
+      }
+      if (e instanceof TypeError && e.message.includes("fetch")) {
+        lastError = new Error("Falha de conexão com a API");
+        continue;
+      }
+      throw e;
+    } finally {
+      clearTimeout(timeout);
+    }
   }
 
-  return data as T;
+  throw lastError || new Error("Request failed after retries");
 }
 
 function post<T>(baseUrl: string, path: string, token: string, body: unknown): Promise<T> {
