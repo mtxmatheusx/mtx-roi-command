@@ -36,6 +36,7 @@ const BrandIdentity = lazy(() => import("./pages/BrandIdentity"));
 const FeedPreview = lazy(() => import("./pages/FeedPreview"));
 const GoogleDriveFolders = lazy(() => import("./pages/GoogleDriveFolders"));
 const KanbanBoard = lazy(() => import("./pages/KanbanBoard"));
+const Relatorio = lazy(() => import("./pages/Relatorio"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -88,6 +89,7 @@ const App = () => (
               <Route path="/feed-preview" element={<ProtectedRoute><FeedPreview /></ProtectedRoute>} />
               <Route path="/google-drive" element={<ProtectedRoute><GoogleDriveFolders /></ProtectedRoute>} />
               <Route path="/kanban" element={<ProtectedRoute><KanbanBoard /></ProtectedRoute>} />
+              <Route path="/relatorio" element={<ProtectedRoute><Relatorio /></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>

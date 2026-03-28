@@ -5,6 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function Auth() {
   const { signIn, signUp, resetPassword, user } = useAuth();
@@ -21,6 +22,23 @@ export default function Auth() {
     return null;
   }
 
+  const checkClientAndRedirect = async () => {
+    const { data: { user: currentUser } } = await supabase.auth.getUser();
+    if (currentUser) {
+      const { data: access } = await supabase
+        .from("client_access")
+        .select("profile_id")
+        .eq("user_id", currentUser.id)
+        .limit(1)
+        .maybeSingle();
+      if (access) {
+        navigate("/relatorio", { replace: true });
+        return;
+      }
+    }
+    navigate("/");
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -31,7 +49,7 @@ export default function Auth() {
         toast({ title: "Erro ao criar conta", description: error.message, variant: "destructive" });
       } else {
         toast({ title: "Conta criada!", description: "Você já está logado." });
-        navigate("/");
+        await checkClientAndRedirect();
       }
     } else {
       const { error } = await signIn(email, password);
@@ -39,7 +57,7 @@ export default function Auth() {
       if (error) {
         toast({ title: "Erro ao entrar", description: error.message, variant: "destructive" });
       } else {
-        navigate("/");
+        await checkClientAndRedirect();
       }
     }
   };

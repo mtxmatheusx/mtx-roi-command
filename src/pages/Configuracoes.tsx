@@ -22,6 +22,7 @@ import { supabase } from "@/integrations/supabase/client";
 import ReactMarkdown from "react-markdown";
 import { useAuth } from "@/hooks/useAuth";
 import PlatformConnectionsManager from "@/components/PlatformConnectionsManager";
+import ClientAccessSection from "@/components/ClientAccessSection";
 
 const configSchema = z.object({
   name: z.string().min(1, "Nome do cliente é obrigatório"),
@@ -1166,6 +1167,9 @@ export default function Configuracoes() {
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}Salvar Configurações
           </Button>
         </div>
+
+        {/* Client Access */}
+        <ClientAccessSection />
 
         {/* Delete Profile */}
         {profiles.length > 1 && (
