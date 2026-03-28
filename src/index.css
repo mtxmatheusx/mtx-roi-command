@@ -6,33 +6,34 @@
 
 @layer base {
   :root {
-    --background: 220 14% 97%;
-    --foreground: 220 20% 10%;
+    /* Faciliten Design System — Dark Theme with Cyan-Purple Accent */
+    --background: 0 0% 4%;
+    --foreground: 0 0% 88%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 220 20% 10%;
+    --card: 0 0% 8%;
+    --card-foreground: 0 0% 88%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 220 20% 10%;
+    --popover: 0 0% 8%;
+    --popover-foreground: 0 0% 88%;
 
-    --primary: 211 100% 50%;
+    --primary: 187 100% 42%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 220 14% 96%;
-    --secondary-foreground: 220 10% 30%;
+    --secondary: 0 0% 12%;
+    --secondary-foreground: 0 0% 70%;
 
-    --muted: 220 14% 96%;
-    --muted-foreground: 220 8% 46%;
+    --muted: 0 0% 12%;
+    --muted-foreground: 0 0% 53%;
 
-    --accent: 220 14% 96%;
-    --accent-foreground: 220 15% 18%;
+    --accent: 270 67% 55%;
+    --accent-foreground: 0 0% 100%;
 
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 13% 91%;
-    --input: 220 13% 89%;
-    --ring: 211 100% 50%;
+    --border: 0 0% 17%;
+    --input: 0 0% 14%;
+    --ring: 187 100% 42%;
 
     --radius: 0.75rem;
 
@@ -40,32 +41,35 @@
     --success-foreground: 0 0% 100%;
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
-    --info: 211 100% 50%;
+    --info: 187 100% 42%;
     --info-foreground: 0 0% 100%;
 
     /* Chart tokens */
-    --chart-blue: 211 100% 50%;
+    --chart-blue: 187 100% 42%;
     --chart-green: 152 69% 41%;
     --chart-orange: 38 92% 50%;
     --chart-purple: 270 67% 55%;
     --chart-pink: 340 82% 59%;
 
-    /* Elevation system */
-    --shadow-xs: 0 1px 2px 0 hsl(220 20% 10% / 0.03);
-    --shadow-sm: 0 1px 3px 0 hsl(220 20% 10% / 0.04), 0 1px 2px -1px hsl(220 20% 10% / 0.02);
-    --shadow-card: 0 1px 3px -1px hsl(220 20% 10% / 0.04), 0 2px 8px -2px hsl(220 20% 10% / 0.06);
-    --shadow-elevated: 0 4px 12px -4px hsl(220 20% 10% / 0.08), 0 12px 36px -8px hsl(220 20% 10% / 0.1);
-    --shadow-focus: 0 0 0 3px hsl(211 100% 50% / 0.12);
+    /* Gradient accent */
+    --gradient-accent: linear-gradient(135deg, hsl(187 100% 42%), hsl(270 67% 55%));
+
+    /* Elevation system — dark */
+    --shadow-xs: 0 1px 2px 0 hsl(0 0% 0% / 0.2);
+    --shadow-sm: 0 1px 3px 0 hsl(0 0% 0% / 0.3), 0 1px 2px -1px hsl(0 0% 0% / 0.15);
+    --shadow-card: 0 1px 3px -1px hsl(0 0% 0% / 0.3), 0 2px 8px -2px hsl(0 0% 0% / 0.25);
+    --shadow-elevated: 0 4px 12px -4px hsl(0 0% 0% / 0.4), 0 12px 36px -8px hsl(0 0% 0% / 0.35);
+    --shadow-focus: 0 0 0 3px hsl(187 100% 42% / 0.25);
 
     /* Sidebar */
-    --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 220 20% 10%;
-    --sidebar-primary: 211 100% 50%;
+    --sidebar-background: 0 0% 5%;
+    --sidebar-foreground: 0 0% 88%;
+    --sidebar-primary: 187 100% 42%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 14% 96%;
-    --sidebar-accent-foreground: 220 15% 18%;
-    --sidebar-border: 220 13% 93%;
-    --sidebar-ring: 211 100% 50%;
+    --sidebar-accent: 0 0% 12%;
+    --sidebar-accent-foreground: 0 0% 88%;
+    --sidebar-border: 0 0% 14%;
+    --sidebar-ring: 187 100% 42%;
 
     /* Timing */
     --transition-fast: 120ms;
@@ -139,7 +143,34 @@
   .bg-success { background-color: hsl(var(--success)); }
   .bg-warning { background-color: hsl(var(--warning)); }
 
-  /* Glass card – refined elevation */
+  /* Gradient text accent — Faciliten cyan-to-purple */
+  .text-gradient-accent {
+    background: var(--gradient-accent);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Gradient border glow */
+  .border-gradient-accent {
+    border-image: var(--gradient-accent) 1;
+  }
+
+  /* Gradient button */
+  .btn-gradient {
+    background: var(--gradient-accent);
+    color: white;
+    border: none;
+    transition: opacity var(--transition-base) ease, transform var(--transition-fast) ease;
+  }
+  .btn-gradient:hover {
+    opacity: 0.9;
+  }
+  .btn-gradient:active {
+    transform: scale(0.98);
+  }
+
+  /* Glass card – dark elevated */
   .glass-card {
     background: hsl(var(--card));
     border: 1px solid hsl(var(--border));
@@ -151,7 +182,7 @@
   }
   .glass-card:hover {
     box-shadow: var(--shadow-elevated);
-    border-color: hsl(var(--border) / 0.6);
+    border-color: hsl(var(--primary) / 0.2);
   }
 
   /* Interactive glass card */
@@ -168,7 +199,7 @@
   }
   .glass-card-interactive:hover {
     box-shadow: var(--shadow-elevated);
-    border-color: hsl(var(--primary) / 0.15);
+    border-color: hsl(var(--primary) / 0.3);
     transform: translateY(-2px);
   }
   .glass-card-interactive:active {
