@@ -33,12 +33,30 @@ export function useTokenHealth() {
           const json = await res.json();
           const data = json?.data;
 
+          // debug_token can fail for System User tokens when self-debugging.
+          // Instead of marking as invalid, verify the token works by calling /me.
           if (!data || !data.is_valid) {
+            // Fallback: try a simple /me call to verify if the token actually works
+            const meRes = await fetch(
+              `https://graph.facebook.com/v21.0/me?access_token=${profile.meta_access_token}`
+            );
+            const meJson = await meRes.json();
+            if (meJson.id && !meJson.error) {
+              // Token works — it's a System User or app token that can't self-debug
+              continue;
+            }
             newAlerts.push({ profileName: profile.name, daysLeft: 0, status: "invalid" });
             continue;
           }
 
-          if (data.expires_at && data.expires_at > 0) {
+          // System User tokens have expires_at = 0 — they never expire
+          const isSystemUser = data.type === "SYSTEM_USER" || data.type === "system_user";
+          if (isSystemUser || !data.expires_at || data.expires_at === 0) {
+            // Permanent token — no alert needed
+            continue;
+          }
+
+          if (data.expires_at > 0) {
             const expiresMs = data.expires_at * 1000;
             const daysLeft = Math.floor((expiresMs - Date.now()) / (1000 * 60 * 60 * 24));
             if (daysLeft <= 5) {
@@ -50,7 +68,7 @@ export function useTokenHealth() {
             }
           }
         } catch {
-          // silently skip network errors
+          // silently skip network errors — don't flag as invalid
         }
       }
 

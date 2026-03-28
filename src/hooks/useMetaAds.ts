@@ -176,11 +176,14 @@ function isShortRange(dateRange?: DateRange): boolean {
 
 function isMetaTokenExpired(message: string, errorCode?: string): boolean {
   if (errorCode === "TOKEN_EXPIRED") return true;
-  return (
-    message.includes("Session has expired") ||
-    message.includes("Error validating access token") ||
-    message.includes("invalid or has expired")
-  );
+  // Only flag as expired for clear expiration messages.
+  // "Error validating access token" alone is too broad — it fires on
+  // temporary API errors and System User tokens that are still valid.
+  if (message.includes("Session has expired")) return true;
+  if (message.includes("invalid or has expired")) return true;
+  // Specific sub-code pattern: "Error validating access token: The session has been invalidated"
+  if (message.includes("session has been invalidated")) return true;
+  return false;
 }
 
 export function useMetaAds(dateRange?: DateRange, profileConfig?: { adAccountId?: string; cpaMeta?: number; ticketMedio?: number; accessToken?: string | null }) {
@@ -323,7 +326,8 @@ export function useMetaAds(dateRange?: DateRange, profileConfig?: { adAccountId?
         msg.includes("ads_read") ||
         msg.includes("Unsupported get request") ||
         msg.includes("Session has expired") ||
-        msg.includes("Error validating access token")
+        msg.includes("invalid or has expired") ||
+        msg.includes("session has been invalidated")
       ) return false;
       return failureCount < 1;
     },
