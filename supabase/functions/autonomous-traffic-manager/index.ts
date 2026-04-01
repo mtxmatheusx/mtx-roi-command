@@ -754,16 +754,23 @@ serve(async (req) => {
             method: "POST",
             headers: { Authorization: `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json" },
             body: JSON.stringify({
-              from: "MTX Agent <agent@mtx-roi-command.lovable.app>",
+              from: "MTX Agent <onboarding@resend.dev>",
               to: ["mtxagenciacriativa@gmail.com"],
               subject: `🤖 MTX Agent — ${profileName} | ${dateBRT} ${nowBRT.split(" ")[1] || nowBRT}`,
               html,
             }),
           });
           const emailData = await emailResp.json();
-          console.log(`[Email] ${profileName}: ${emailResp.ok ? "sent" : "failed"}`, emailResp.ok ? emailData.id : emailData);
+          if (!emailResp.ok) {
+            console.error(`[Email] ${profileName}: failed`, JSON.stringify(emailData));
+            r.email_error = emailData.message || `Resend error ${emailResp.status}`;
+          } else {
+            console.log(`[Email] ${profileName}: sent`, emailData.id);
+            r.email_sent = true;
+          }
         } catch (emailErr) {
-          console.warn(`[Email] Failed for ${profileName}:`, emailErr);
+          console.error(`[Email] Failed for ${profileName}:`, emailErr);
+          r.email_error = (emailErr as Error).message;
         }
       }
     }
