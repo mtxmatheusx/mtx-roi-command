@@ -75,25 +75,36 @@ export default function AgenteAutonomo() {
   };
 
   const handleManualRun = async () => {
+    if (!activeProfile?.id || !user?.id) return;
     setIsRunning(true);
     setRunResult(null);
     try {
       const { data, error } = await supabase.functions.invoke("autonomous-traffic-manager", {
-        body: {},
+        body: { profile_id: activeProfile.id, skip_email: true },
       });
       if (error) throw error;
       setRunResult(data);
-      const activeResult = data?.results?.find((r: any) => r.profile_id === activeProfile?.id) || data?.results?.[0];
-      toast({ title: "✅ Agente executado", description: activeResult?.ai_summary || `${data?.results?.length || 0} perfis analisados.` });
+      const activeResult = data?.results?.find((r: any) => r.profile_id === activeProfile.id) || data?.results?.[0];
+      const actionsCount = activeResult?.actions?.length || 0;
+      const campaignsAnalyzed = activeResult?.campaigns_analyzed || 0;
 
-      // Check for self-heal actions and notify
-      const selfHealActions = activeResult?.actions?.filter((a: any) => a.recovered || a.action === "self_heal") || [];
-      if (selfHealActions.length > 0) {
+      // Check for token error
+      if (activeResult?.error?.includes("190") || activeResult?.error?.includes("token")) {
+        toast({ title: "⚠️ Token Meta expirado", description: "Atualize o token nas Configurações.", variant: "destructive" });
+      } else {
         toast({
-          title: "🔧 Auto-correção acionada",
-          description: `${selfHealActions.length} falha(s) corrigida(s) automaticamente pelo agente.`,
+          title: "✅ Agente executado",
+          description: `${campaignsAnalyzed} campanhas analisadas, ${actionsCount} ações tomadas.${activeResult?.ai_summary ? ` ${activeResult.ai_summary}` : ""}`,
         });
       }
+
+      // Log to emergency_logs
+      await supabase.from("emergency_logs").insert({
+        profile_id: activeProfile.id,
+        user_id: user.id,
+        action_type: "agent_manual_run",
+        details: { triggered_by: "manual_button", actions_count: actionsCount, campaigns_analyzed: campaignsAnalyzed, skip_email: true },
+      });
 
       loadLogs();
     } catch (e: any) {
@@ -267,13 +278,38 @@ export default function AgenteAutonomo() {
   };
 
   const handleSendReportNow = async () => {
+    if (!activeProfile?.id || !user?.id) return;
     setIsSendingReport(true);
     try {
-      const { data, error } = await supabase.functions.invoke("daily-email-report", {
-        body: { manual: true },
+      const { data, error } = await supabase.functions.invoke("autonomous-traffic-manager", {
+        body: { profile_id: activeProfile.id },
       });
       if (error) throw error;
-      toast({ title: "📊 Relatório enviado", description: data?.message || "Relatório diário gerado e enviado com sucesso." });
+      const activeResult = data?.results?.find((r: any) => r.profile_id === activeProfile.id) || data?.results?.[0];
+      const actionsCount = activeResult?.actions?.length || 0;
+      const campaignsAnalyzed = activeResult?.campaigns_analyzed || 0;
+
+      // Check for token error
+      if (activeResult?.error?.includes("190") || activeResult?.error?.includes("token")) {
+        toast({ title: "⚠️ Token Meta expirado", description: "Atualize o token nas Configurações.", variant: "destructive" });
+      } else if (data?.email_error || activeResult?.email_error) {
+        toast({ title: "⚡ Análise concluída, mas email falhou", description: `${campaignsAnalyzed} campanhas, ${actionsCount} ações. Verifique RESEND_API_KEY.` });
+      } else {
+        toast({
+          title: "✅ Relatório enviado para mtxagenciacriativa@gmail.com",
+          description: `${campaignsAnalyzed} campanhas analisadas, ${actionsCount} ações tomadas.`,
+        });
+      }
+
+      // Log to emergency_logs
+      await supabase.from("emergency_logs").insert({
+        profile_id: activeProfile.id,
+        user_id: user.id,
+        action_type: "agent_manual_report",
+        details: { triggered_by: "manual_button", actions_count: actionsCount, campaigns_analyzed: campaignsAnalyzed, with_email: true },
+      });
+
+      loadLogs();
     } catch (e: any) {
       toast({ title: "Erro ao enviar relatório", description: e.message, variant: "destructive" });
     } finally {
