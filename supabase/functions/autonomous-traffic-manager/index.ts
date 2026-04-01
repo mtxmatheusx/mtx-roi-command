@@ -665,18 +665,36 @@ serve(async (req) => {
         const actions: any[] = r.actions || [];
         const campaignsCount = r.campaigns_analyzed || 0;
 
+        const actionIcon = (action: string) => {
+          const map: Record<string, string> = { pause: "🔴", scale: "✅", reduce: "🟡", rollback: "🔄", create_new_campaign: "🆕", generate_creative: "🎨" };
+          return map[action] || "⚡";
+        };
+        const actionLabel = (action: string) => {
+          const map: Record<string, string> = { pause: "PAUSA", scale: "ESCALA", reduce: "REDUÇÃO", rollback: "ROLLBACK", create_new_campaign: "NOVA CAMPANHA", generate_creative: "NOVO CRIATIVO" };
+          return map[action] || action.toUpperCase();
+        };
+        const actionColor = (action: string) => {
+          if (action === "pause") return "#ff4444";
+          if (action === "scale") return "#00ff88";
+          if (action === "reduce" || action === "rollback") return "#ffaa00";
+          return "#00ff88";
+        };
+
         const actionsHtml = actions.length > 0
           ? actions.map((a: any) => `
-            <tr>
-              <td style="padding:8px 12px;border-bottom:1px solid #f0f0f0;font-size:13px;">
-                <strong style="color:${a.action === "pause" ? "#e74c3c" : a.action === "scale" ? "#27ae60" : "#f39c12"};">
-                  ${a.action === "pause" ? "⏸️ PAUSA" : a.action === "scale" ? "📈 ESCALA" : a.action === "reduce" ? "📉 REDUÇÃO" : a.action === "rollback" ? "↩️ ROLLBACK" : "⚡ " + (a.action || "").toUpperCase()}
-                </strong>
-              </td>
-              <td style="padding:8px 12px;border-bottom:1px solid #f0f0f0;font-size:13px;color:#555;">${a.reason || "—"}</td>
-              ${a.new_budget ? `<td style="padding:8px 12px;border-bottom:1px solid #f0f0f0;font-size:13px;">R$ ${a.previous_budget?.toFixed(0) || "?"} → R$ ${a.new_budget.toFixed(0)}</td>` : `<td style="padding:8px 12px;border-bottom:1px solid #f0f0f0;font-size:13px;">—</td>`}
-            </tr>`).join("")
-          : `<tr><td colspan="3" style="padding:16px;text-align:center;color:#27ae60;font-size:14px;">✅ Todas as campanhas saudáveis</td></tr>`;
+            <div style="background:#111111;border:1px solid #1e1e1e;border-radius:8px;padding:14px 16px;margin-bottom:8px;">
+              <div style="display:flex;align-items:center;margin-bottom:6px;">
+                <span style="font-size:16px;margin-right:8px;">${actionIcon(a.action)}</span>
+                <span style="font-size:12px;font-weight:700;color:${actionColor(a.action)};text-transform:uppercase;letter-spacing:0.5px;">${actionLabel(a.action)}</span>
+                ${a.new_budget ? `<span style="margin-left:auto;font-size:13px;color:#ffffff;font-weight:600;">R$ ${a.previous_budget?.toFixed(0) || "?"} → R$ ${a.new_budget.toFixed(0)}</span>` : ""}
+              </div>
+              <div style="font-size:13px;color:#888888;line-height:1.4;">${a.reason || "—"}</div>
+            </div>`).join("")
+          : `<div style="background:#111111;border:1px solid #00ff88;border-radius:8px;padding:20px;text-align:center;">
+              <div style="font-size:24px;margin-bottom:8px;">✅</div>
+              <div style="font-size:16px;font-weight:700;color:#00ff88;">Todas as campanhas saudáveis</div>
+              <div style="font-size:12px;color:#888888;margin-top:4px;">Nenhuma intervenção necessária neste ciclo</div>
+            </div>`;
 
         // Find latest report for this profile
         let reportLink = "";
@@ -685,40 +703,82 @@ serve(async (req) => {
           if (snap?.[0]) reportLink = `https://mtx-roi-command.lovable.app/relatorio?token=${snap[0].token}`;
         } catch {}
 
-        const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"></head>
-<body style="margin:0;padding:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
-<div style="max-width:600px;margin:0 auto;padding:32px 20px;">
-  <div style="margin-bottom:24px;">
-    <div style="font-size:11px;color:#9b9a97;text-transform:uppercase;letter-spacing:1px;">MTX Autonomous Agent v4</div>
-    <h1 style="font-size:22px;font-weight:700;color:#37352f;margin:4px 0;">🤖 Resumo — ${profileName}</h1>
-    <div style="font-size:13px;color:#9b9a97;">${dateBRT} · ${nowBRT}</div>
+        const statusColor = actions.length === 0 ? "#00ff88" : actions.some((a: any) => a.action === "pause") ? "#ff4444" : "#ffaa00";
+        const statusText = actions.length === 0 ? "SAUDÁVEL" : actions.some((a: any) => a.action === "pause") ? "INTERVENÇÃO" : "OTIMIZADO";
+
+        const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><meta name="color-scheme" content="dark"><meta name="supported-color-schemes" content="dark"></head>
+<body style="margin:0;padding:0;background:#0a0a0a;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;color:#ffffff;">
+<div style="max-width:600px;margin:0 auto;padding:0;">
+
+  <!-- Header -->
+  <div style="background:linear-gradient(135deg,#0a0a0a 0%,#111111 100%);padding:32px 24px 24px;border-bottom:1px solid #1e1e1e;">
+    <div style="font-size:10px;color:#00ff88;text-transform:uppercase;letter-spacing:2px;font-weight:600;margin-bottom:4px;">MTX Assessoria Estratégica</div>
+    <div style="font-size:22px;font-weight:800;color:#ffffff;margin-bottom:2px;">🤖 Agente Autônomo</div>
+    <div style="font-size:11px;color:#888888;">Engine Claude Opus 4.5 · Tool-Use Loop</div>
   </div>
 
-  <div style="background:#f7f6f3;border-radius:8px;padding:16px;margin-bottom:24px;">
+  <!-- Destaque -->
+  <div style="background:#111111;border-bottom:1px solid #1e1e1e;padding:20px 24px;">
+    <div style="font-size:10px;color:#888888;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px;">Perfil Analisado</div>
+    <div style="font-size:20px;font-weight:700;color:#ffffff;margin-bottom:4px;">${profileName}</div>
+    <div style="font-size:12px;color:#888888;">${dateBRT} · ${nowBRT}</div>
+  </div>
+
+  <!-- Metric Cards -->
+  <div style="padding:20px 24px;">
     <table width="100%" cellpadding="0" cellspacing="0">
       <tr>
-        <td><span style="font-size:11px;color:#9b9a97;">Campanhas verificadas</span><br><strong style="font-size:20px;color:#37352f;">${campaignsCount}</strong></td>
-        <td><span style="font-size:11px;color:#9b9a97;">Ações tomadas</span><br><strong style="font-size:20px;color:${actions.length > 0 ? "#e74c3c" : "#27ae60"};">${actions.length}</strong></td>
-        <td><span style="font-size:11px;color:#9b9a97;">Próxima análise</span><br><strong style="font-size:20px;color:#37352f;">${nextRun}</strong></td>
+        <td width="33%" style="padding:0 4px 0 0;">
+          <div style="background:#111111;border:1px solid #1e1e1e;border-radius:8px;padding:16px;text-align:center;">
+            <div style="font-size:9px;color:#888888;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Campanhas</div>
+            <div style="font-size:28px;font-weight:800;color:#ffffff;">${campaignsCount}</div>
+          </div>
+        </td>
+        <td width="33%" style="padding:0 2px;">
+          <div style="background:#111111;border:1px solid #1e1e1e;border-radius:8px;padding:16px;text-align:center;">
+            <div style="font-size:9px;color:#888888;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Ações</div>
+            <div style="font-size:28px;font-weight:800;color:${actions.length > 0 ? "#ffaa00" : "#00ff88"};">${actions.length}</div>
+          </div>
+        </td>
+        <td width="33%" style="padding:0 0 0 4px;">
+          <div style="background:#111111;border:1px solid ${statusColor};border-radius:8px;padding:16px;text-align:center;">
+            <div style="font-size:9px;color:#888888;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Status</div>
+            <div style="font-size:14px;font-weight:800;color:${statusColor};">${statusText}</div>
+          </div>
+        </td>
       </tr>
     </table>
   </div>
 
-  <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e8e7e4;border-radius:6px;overflow:hidden;margin-bottom:24px;">
-    <thead><tr style="background:#f7f6f3;">
-      <th style="padding:10px 12px;text-align:left;font-size:11px;color:#9b9a97;text-transform:uppercase;">Ação</th>
-      <th style="padding:10px 12px;text-align:left;font-size:11px;color:#9b9a97;text-transform:uppercase;">Motivo</th>
-      <th style="padding:10px 12px;text-align:left;font-size:11px;color:#9b9a97;text-transform:uppercase;">Budget</th>
-    </tr></thead>
-    <tbody>${actionsHtml}</tbody>
-  </table>
+  <!-- Actions Section -->
+  <div style="padding:0 24px 20px;">
+    <div style="font-size:10px;color:#888888;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:12px;">Ações Tomadas</div>
+    ${actionsHtml}
+  </div>
 
-  ${reportLink ? `<div style="text-align:center;margin-bottom:24px;"><a href="${reportLink}" style="display:inline-block;background:#2eaadc;color:#fff;padding:10px 24px;border-radius:6px;text-decoration:none;font-size:14px;font-weight:600;">📊 Ver Relatório Completo</a></div>` : ""}
+  ${r.ai_summary ? `
+  <!-- Claude Analysis -->
+  <div style="padding:0 24px 20px;">
+    <div style="font-size:10px;color:#888888;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:12px;">Análise do Claude</div>
+    <div style="background:#111111;border:1px solid #1e1e1e;border-radius:8px;padding:16px;">
+      <div style="font-size:13px;color:#cccccc;line-height:1.6;">${r.ai_summary.slice(0, 600)}</div>
+    </div>
+  </div>` : ""}
 
-  ${r.ai_summary ? `<div style="background:#fbfbfa;border:1px solid #e8e7e4;border-radius:6px;padding:14px;margin-bottom:24px;"><div style="font-size:11px;color:#9b9a97;text-transform:uppercase;margin-bottom:6px;">Análise do Claude</div><div style="font-size:13px;color:#37352f;line-height:1.5;">${r.ai_summary.slice(0, 500)}</div></div>` : ""}
+  ${reportLink ? `
+  <!-- Report CTA -->
+  <div style="padding:0 24px 24px;text-align:center;">
+    <a href="${reportLink}" style="display:inline-block;background:#00ff88;color:#0a0a0a;padding:12px 32px;border-radius:6px;text-decoration:none;font-size:14px;font-weight:700;letter-spacing:0.3px;">📊 Ver Relatório Completo</a>
+  </div>` : ""}
 
-  <div style="text-align:center;font-size:11px;color:#c4c4c0;margin-top:32px;">MTX Command Center · Engine: Claude Opus 4.5 · ${nowBRT}</div>
-</div></body></html>`;
+  <!-- Footer -->
+  <div style="background:#111111;border-top:1px solid #1e1e1e;padding:20px 24px;text-align:center;">
+    <div style="font-size:11px;color:#888888;margin-bottom:4px;">Próxima análise: <strong style="color:#ffffff;">${nextRun}</strong></div>
+    <div style="font-size:10px;color:#444444;margin-top:8px;">MTX Command Center · Agente Autônomo v4 · ${nowBRT}</div>
+  </div>
+
+</div>
+</body></html>`;
 
         try {
           const emailResp = await fetch("https://api.resend.com/emails", {
