@@ -442,7 +442,7 @@ serve(async (req) => {
     const { today, wtdSince, mtdSince } = getTimeframeRanges();
     const currentHour = currentHourBRT();
 
-    console.log(`[MTX Agent v4 — Claude] Running at ${currentHour}:00 BRT | Profiles: ${profiles.length}`);
+    console.log(`[MTX Agent v4 — Gemini] Running at ${currentHour}:00 BRT | Profiles: ${profiles.length}`);
 
     const profilePromises = profiles
       .filter((profile: any) => {
