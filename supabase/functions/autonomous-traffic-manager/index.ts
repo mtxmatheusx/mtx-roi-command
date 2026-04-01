@@ -493,14 +493,14 @@ serve(async (req) => {
             };
           });
 
-          // Get decisions — Claude Agent v4 or static fallback
+          // Get decisions — Gemini Agent v4 or static fallback
           let decisions: Decision[];
           let aiSummary = "";
 
-          if (ANTHROPIC_KEY && campaignInsights.length > 0) {
+          if (GEMINI_KEY && campaignInsights.length > 0) {
             try {
-              const aiResult = await executeClaudeAgent(
-                ANTHROPIC_KEY, profile.name, {
+              const aiResult = await executeGeminiAgent(
+                GEMINI_KEY, profile.name, {
                   cpa_meta: profile.cpa_meta,
                   cpa_max_toleravel: profile.cpa_max_toleravel,
                   roas_min_escala: profile.roas_min_escala,
@@ -513,10 +513,10 @@ serve(async (req) => {
               );
               decisions = aiResult.decisions;
               aiSummary = aiResult.summary;
-            } catch (claudeErr) {
-              console.error("Claude Agent error, falling back to static rules:", claudeErr);
+            } catch (geminiErr) {
+              console.error("Gemini Agent error, falling back to static rules:", geminiErr);
               decisions = applyStaticRules(campaignInsights, profile, adsetsList);
-              aiSummary = `Claude indisponível, regras estáticas aplicadas. Erro: ${(claudeErr as Error).message}`;
+              aiSummary = `Gemini indisponível, regras estáticas aplicadas. Erro: ${(geminiErr as Error).message}`;
             }
           } else {
             decisions = applyStaticRules(campaignInsights, profile, adsetsList);
@@ -540,12 +540,12 @@ serve(async (req) => {
                 new_budget: decision.new_budget,
                 previous_budget: decision.previous_budget,
                 ai_driven: true,
-                engine: "claude-opus-4-5",
+                engine: "gemini-2.0-flash",
                 hour: currentHour,
               },
             });
 
-            profileResult.actions.push({ ...decision, status: "EXECUTED", engine: "claude" });
+            profileResult.actions.push({ ...decision, status: "EXECUTED", engine: "gemini" });
           }
 
           return profileResult;
