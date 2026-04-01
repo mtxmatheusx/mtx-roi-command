@@ -160,96 +160,46 @@ async function metaApiCallWithRetry(
   return { data: null, success: false, attempts: maxRetries + 1, error: lastError };
 }
 
-// ─── Claude Agent Tools ────────────────────────────────────
+// ─── Gemini Agent Tools (Function Declarations) ────────────
 
-const AGENT_TOOLS = [
-  {
-    name: "pause_campaign",
-    description: "Pausa campanha com CPA acima do limite ou saturação",
-    input_schema: {
-      type: "object",
-      properties: {
-        campaign_id: { type: "string" },
-        campaign_name: { type: "string" },
-        reason: { type: "string" },
-      },
-      required: ["campaign_id", "campaign_name", "reason"],
+const GEMINI_TOOLS = [{
+  function_declarations: [
+    {
+      name: "pause_campaign",
+      description: "Pausa campanha com CPA acima do limite ou saturação",
+      parameters: { type: "OBJECT", properties: { campaign_id: { type: "STRING" }, campaign_name: { type: "STRING" }, reason: { type: "STRING" } }, required: ["campaign_id", "campaign_name", "reason"] },
     },
-  },
-  {
-    name: "scale_campaign",
-    description: "Aumenta budget de campanha com ROAS positivo",
-    input_schema: {
-      type: "object",
-      properties: {
-        campaign_id: { type: "string" },
-        campaign_name: { type: "string" },
-        new_budget_reais: { type: "number" },
-        reason: { type: "string" },
-      },
-      required: ["campaign_id", "campaign_name", "new_budget_reais", "reason"],
+    {
+      name: "scale_campaign",
+      description: "Aumenta budget de campanha com ROAS positivo",
+      parameters: { type: "OBJECT", properties: { campaign_id: { type: "STRING" }, campaign_name: { type: "STRING" }, new_budget_reais: { type: "NUMBER" }, reason: { type: "STRING" } }, required: ["campaign_id", "campaign_name", "new_budget_reais", "reason"] },
     },
-  },
-  {
-    name: "reduce_budget",
-    description: "Reduz budget em 30% de campanha jovem com CPA alto (menos de 4 dias)",
-    input_schema: {
-      type: "object",
-      properties: {
-        campaign_id: { type: "string" },
-        campaign_name: { type: "string" },
-        new_budget_reais: { type: "number" },
-        reason: { type: "string" },
-      },
-      required: ["campaign_id", "campaign_name", "new_budget_reais", "reason"],
+    {
+      name: "reduce_budget",
+      description: "Reduz budget em 30% de campanha jovem com CPA alto (menos de 4 dias)",
+      parameters: { type: "OBJECT", properties: { campaign_id: { type: "STRING" }, campaign_name: { type: "STRING" }, new_budget_reais: { type: "NUMBER" }, reason: { type: "STRING" } }, required: ["campaign_id", "campaign_name", "new_budget_reais", "reason"] },
     },
-  },
-  {
-    name: "create_new_campaign",
-    description: "Cria nova campanha quando não há campanhas ativas suficientes OU ROAS geral está abaixo do mínimo há 3+ dias",
-    input_schema: {
-      type: "object",
-      properties: {
-        profile_id: { type: "string" },
-        objective: { type: "string", enum: ["OUTCOME_SALES", "OUTCOME_LEADS", "OUTCOME_TRAFFIC"] },
-        daily_budget_reais: { type: "number" },
-        justification: { type: "string" },
-      },
-      required: ["profile_id", "objective", "daily_budget_reais", "justification"],
+    {
+      name: "create_new_campaign",
+      description: "Cria nova campanha quando não há campanhas ativas suficientes OU ROAS geral está abaixo do mínimo há 3+ dias",
+      parameters: { type: "OBJECT", properties: { profile_id: { type: "STRING" }, objective: { type: "STRING" }, daily_budget_reais: { type: "NUMBER" }, justification: { type: "STRING" } }, required: ["profile_id", "objective", "daily_budget_reais", "justification"] },
     },
-  },
-  {
-    name: "generate_creative",
-    description: "Gera novo criativo quando frequência > 3.5 ou CTR < 0.8% (fadiga detectada)",
-    input_schema: {
-      type: "object",
-      properties: {
-        profile_id: { type: "string" },
-        campaign_id: { type: "string" },
-        creative_type: { type: "string", enum: ["static_image", "carousel", "video_script"] },
-        reason: { type: "string" },
-      },
-      required: ["profile_id", "campaign_id", "creative_type", "reason"],
+    {
+      name: "generate_creative",
+      description: "Gera novo criativo quando frequência > 3.5 ou CTR < 0.8% (fadiga detectada)",
+      parameters: { type: "OBJECT", properties: { profile_id: { type: "STRING" }, campaign_id: { type: "STRING" }, creative_type: { type: "STRING" }, reason: { type: "STRING" } }, required: ["profile_id", "campaign_id", "creative_type", "reason"] },
     },
-  },
-  {
-    name: "generate_client_report",
-    description: "Gera relatório público para o cliente e envia link via WhatsApp",
-    input_schema: {
-      type: "object",
-      properties: {
-        profile_id: { type: "string" },
-        profile_name: { type: "string" },
-        summary: { type: "string" },
-      },
-      required: ["profile_id", "profile_name", "summary"],
+    {
+      name: "generate_client_report",
+      description: "Gera relatório público para o cliente",
+      parameters: { type: "OBJECT", properties: { profile_id: { type: "STRING" }, profile_name: { type: "STRING" }, summary: { type: "STRING" } }, required: ["profile_id", "profile_name", "summary"] },
     },
-  },
-];
+  ],
+}];
 
-// ─── Claude Agent (Tool-Use Loop) ──────────────────────────
+// ─── Gemini Agent (Function-Calling Loop) ──────────────────
 
-async function executeClaudeAgent(
+async function executeGeminiAgent(
   apiKey: string,
   profileName: string,
   profileConfig: any,
@@ -298,52 +248,48 @@ Responda sempre em português com justificativa técnica clara.`;
    CTR: ${c.ctr.toFixed(2)}% | Frequência: ${c.frequency.toFixed(2)}`
   ).join("\n\n");
 
-  const messages: any[] = [{
-    role: "user",
-    content: `Analise e otimize as campanhas do perfil "${profileName}". Tome todas as ações necessárias.\n\n${campaignsText}`,
-  }];
+  const contents: any[] = [
+    { role: "user", parts: [{ text: `Analise e otimize as campanhas do perfil "${profileName}". Tome todas as ações necessárias.\n\n${campaignsText}` }] },
+  ];
 
   for (let turn = 0; turn < 6; turn++) {
-    const resp = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "claude-opus-4-5",
-        max_tokens: 8096,
-        tools: AGENT_TOOLS,
-        system: systemPrompt,
-        messages,
-      }),
-    });
+    const resp = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          system_instruction: { parts: [{ text: systemPrompt }] },
+          contents,
+          tools: GEMINI_TOOLS,
+        }),
+      }
+    );
 
     if (!resp.ok) {
       const errText = await resp.text();
-      console.error(`Claude API error (turn ${turn}):`, resp.status, errText);
+      console.error(`Gemini API error (turn ${turn}):`, resp.status, errText);
       break;
     }
 
     const result = await resp.json();
-    if (!result.content) break;
+    const candidate = result.candidates?.[0];
+    if (!candidate?.content) break;
 
-    messages.push({ role: "assistant", content: result.content });
+    contents.push(candidate.content);
 
-    if (result.stop_reason === "end_turn") break;
+    const functionCalls = (candidate.content.parts || []).filter((p: any) => p.functionCall);
+    if (functionCalls.length === 0) break; // model finished with text only
 
-    const toolResults: any[] = [];
+    const functionResponses: any[] = [];
 
-    for (const block of result.content) {
-      if (block.type !== "tool_use") continue;
-      const inp = block.input;
+    for (const part of functionCalls) {
+      const { name, args: inp } = part.functionCall;
       let toolResult: any = { success: false };
 
       try {
-        if (block.name === "pause_campaign") {
+        if (name === "pause_campaign") {
           const campaign = campaigns.find(c => c.id === inp.campaign_id);
-          // Safety: block pause for young campaigns
           if (campaign && campaign.age_days < MIN_DAYS_BEFORE_PAUSE) {
             toolResult = { success: false, blocked: true, reason: `Campanha protegida (${campaign.age_days} dias < ${MIN_DAYS_BEFORE_PAUSE}). Use reduce_budget.` };
           } else {
@@ -352,11 +298,9 @@ Responda sempre em português com justificativa técnica clara.`;
               { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: "PAUSED", access_token: accessToken }) }
             );
             toolResult = { success: pauseResp.success, error: pauseResp.error };
-            if (pauseResp.success) {
-              decisions.push({ campaign_id: inp.campaign_id, action: "pause", reason: inp.reason });
-            }
+            if (pauseResp.success) decisions.push({ campaign_id: inp.campaign_id, action: "pause", reason: inp.reason });
           }
-        } else if (block.name === "scale_campaign") {
+        } else if (name === "scale_campaign") {
           const newBudgetCents = Math.round(inp.new_budget_reais * 100);
           const scaleResp = await metaApiCallWithRetry(
             `https://graph.facebook.com/v23.0/${inp.campaign_id}`,
@@ -367,27 +311,25 @@ Responda sempre em português com justificativa técnica clara.`;
             const campaign = campaigns.find(c => c.id === inp.campaign_id);
             decisions.push({ campaign_id: inp.campaign_id, action: "scale", reason: inp.reason, new_budget: inp.new_budget_reais, previous_budget: campaign?.daily_budget });
           }
-        } else if (block.name === "reduce_budget") {
+        } else if (name === "reduce_budget") {
           const newBudgetCents = Math.round(inp.new_budget_reais * 100);
           const reduceResp = await metaApiCallWithRetry(
             `https://graph.facebook.com/v23.0/${inp.campaign_id}`,
             { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ daily_budget: newBudgetCents, access_token: accessToken }) }
           );
           toolResult = { success: reduceResp.success, error: reduceResp.error };
-          if (reduceResp.success) {
-            decisions.push({ campaign_id: inp.campaign_id, action: "reduce", reason: inp.reason, new_budget: inp.new_budget_reais });
-          }
-        } else if (block.name === "create_new_campaign") {
+          if (reduceResp.success) decisions.push({ campaign_id: inp.campaign_id, action: "reduce", reason: inp.reason, new_budget: inp.new_budget_reais });
+        } else if (name === "create_new_campaign") {
           const createResp = await supabase.functions.invoke("ai-campaign-draft", {
             body: { profileId: inp.profile_id, objective: inp.objective, dailyBudget: Math.round(inp.daily_budget_reais * 100) },
           });
-          toolResult = { success: !createResp.error, draft_id: createResp.data?.draftId, message: "Campanha draft criada. Aguarda publicação manual para segurança." };
-        } else if (block.name === "generate_creative") {
+          toolResult = { success: !createResp.error, draft_id: createResp.data?.draftId, message: "Campanha draft criada. Aguarda publicação manual." };
+        } else if (name === "generate_creative") {
           const creativeResp = await supabase.functions.invoke("ai-creative-brain", {
             body: { profileId: inp.profile_id, campaignId: inp.campaign_id, creativeType: inp.creative_type, autoMode: true },
           });
           toolResult = { success: !creativeResp.error, creative_id: creativeResp.data?.creativeId };
-        } else if (block.name === "generate_client_report") {
+        } else if (name === "generate_client_report") {
           const reportResp = await supabase.functions.invoke("generate-client-report", {
             body: { profileId: inp.profile_id, summary: inp.summary },
           });
@@ -397,22 +339,17 @@ Responda sempre em português com justificativa técnica clara.`;
         toolResult = { success: false, error: e.message };
       }
 
-      toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify(toolResult) });
+      functionResponses.push({ functionResponse: { name, response: toolResult } });
     }
 
-    if (toolResults.length > 0) {
-      messages.push({ role: "user", content: toolResults });
-    } else {
-      break;
-    }
+    contents.push({ role: "function", parts: functionResponses });
   }
 
-  const lastAssistant = [...messages].reverse().find(m => m.role === "assistant");
-  const textBlock = Array.isArray(lastAssistant?.content)
-    ? lastAssistant.content.find((b: any) => b.type === "text")
-    : null;
+  // Extract final text from last model response
+  const lastModel = [...contents].reverse().find(c => c.role === "model");
+  const textPart = (lastModel?.parts || []).find((p: any) => p.text);
 
-  return { decisions, summary: textBlock?.text || "Análise concluída pelo Claude Agent v4." };
+  return { decisions, summary: textPart?.text || "Análise concluída pelo Gemini Agent v4." };
 }
 
 // ─── Static Rules Fallback ─────────────────────────────────
