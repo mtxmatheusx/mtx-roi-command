@@ -89,7 +89,7 @@ const App = () => (
               <Route path="/feed-preview" element={<ProtectedRoute><FeedPreview /></ProtectedRoute>} />
               <Route path="/google-drive" element={<ProtectedRoute><GoogleDriveFolders /></ProtectedRoute>} />
               <Route path="/kanban" element={<ProtectedRoute><KanbanBoard /></ProtectedRoute>} />
-              <Route path="/relatorio" element={<ProtectedRoute><Relatorio /></ProtectedRoute>} />
+              <Route path="/relatorio" element={<Relatorio />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
