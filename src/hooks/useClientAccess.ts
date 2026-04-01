@@ -60,7 +60,7 @@ export function useClientAccess() {
 
   const removeClient = useCallback(
     async (accessId: string) => {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from("client_access")
         .delete()
         .eq("id", accessId);

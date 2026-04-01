@@ -62,7 +62,7 @@ export function useClientReport() {
     queryKey: ["report_snapshots", profileId],
     queryFn: async () => {
       if (!profileId) return [];
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("report_snapshots")
         .select("snapshot_date, data")
         .eq("profile_id", profileId)
