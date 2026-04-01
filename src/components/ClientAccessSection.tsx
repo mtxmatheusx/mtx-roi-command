@@ -46,9 +46,7 @@ export default function ClientAccessSection() {
     setRemoving(null);
   };
 
-  const reportUrl = typeof window !== "undefined"
-    ? `${window.location.origin}/relatorio`
-    : "/relatorio";
+  const reportUrl = "https://mtx-roi-command.lovable.app/relatorio";
 
   const copyUrl = () => {
     navigator.clipboard.writeText(reportUrl);

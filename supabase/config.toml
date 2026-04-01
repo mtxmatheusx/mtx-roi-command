@@ -84,4 +84,9 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.daily-follower-sync]
+
+[functions.create-client-user]
+verify_jwt = false
+
+[functions.generate-client-report]
 verify_jwt = false
