@@ -649,7 +649,95 @@ serve(async (req) => {
       });
 
     const results = await Promise.all(profilePromises);
-    console.log(`[MTX Agent v4] Done. Actions: ${results.reduce((s: number, r: any) => s + (r.actions?.length || 0), 0)}`);
+    const totalActions = results.reduce((s: number, r: any) => s + (r.actions?.length || 0), 0);
+    console.log(`[MTX Agent v4] Done. Actions: ${totalActions}`);
+
+    // ─── Send summary email via Resend ─────────────────────────
+    const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
+    if (RESEND_API_KEY) {
+      const nowBRT = new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
+      const dateBRT = new Date().toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
+      const nextRun = `${((currentHour + 12) % 24).toString().padStart(2, "0")}:00 BRT`;
+
+      for (const r of results) {
+        if (r.error && !r.actions) continue;
+        const profileName = r.profile || "Perfil";
+        const actions: any[] = r.actions || [];
+        const campaignsCount = r.campaigns_analyzed || 0;
+
+        const actionsHtml = actions.length > 0
+          ? actions.map((a: any) => `
+            <tr>
+              <td style="padding:8px 12px;border-bottom:1px solid #f0f0f0;font-size:13px;">
+                <strong style="color:${a.action === "pause" ? "#e74c3c" : a.action === "scale" ? "#27ae60" : "#f39c12"};">
+                  ${a.action === "pause" ? "⏸️ PAUSA" : a.action === "scale" ? "📈 ESCALA" : a.action === "reduce" ? "📉 REDUÇÃO" : a.action === "rollback" ? "↩️ ROLLBACK" : "⚡ " + (a.action || "").toUpperCase()}
+                </strong>
+              </td>
+              <td style="padding:8px 12px;border-bottom:1px solid #f0f0f0;font-size:13px;color:#555;">${a.reason || "—"}</td>
+              ${a.new_budget ? `<td style="padding:8px 12px;border-bottom:1px solid #f0f0f0;font-size:13px;">R$ ${a.previous_budget?.toFixed(0) || "?"} → R$ ${a.new_budget.toFixed(0)}</td>` : `<td style="padding:8px 12px;border-bottom:1px solid #f0f0f0;font-size:13px;">—</td>`}
+            </tr>`).join("")
+          : `<tr><td colspan="3" style="padding:16px;text-align:center;color:#27ae60;font-size:14px;">✅ Todas as campanhas saudáveis</td></tr>`;
+
+        // Find latest report for this profile
+        let reportLink = "";
+        try {
+          const { data: snap } = await sb.from("report_snapshots").select("token").eq("profile_id", r.profile_id).order("created_at", { ascending: false }).limit(1);
+          if (snap?.[0]) reportLink = `https://mtx-roi-command.lovable.app/relatorio?token=${snap[0].token}`;
+        } catch {}
+
+        const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+<div style="max-width:600px;margin:0 auto;padding:32px 20px;">
+  <div style="margin-bottom:24px;">
+    <div style="font-size:11px;color:#9b9a97;text-transform:uppercase;letter-spacing:1px;">MTX Autonomous Agent v4</div>
+    <h1 style="font-size:22px;font-weight:700;color:#37352f;margin:4px 0;">🤖 Resumo — ${profileName}</h1>
+    <div style="font-size:13px;color:#9b9a97;">${dateBRT} · ${nowBRT}</div>
+  </div>
+
+  <div style="background:#f7f6f3;border-radius:8px;padding:16px;margin-bottom:24px;">
+    <table width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td><span style="font-size:11px;color:#9b9a97;">Campanhas verificadas</span><br><strong style="font-size:20px;color:#37352f;">${campaignsCount}</strong></td>
+        <td><span style="font-size:11px;color:#9b9a97;">Ações tomadas</span><br><strong style="font-size:20px;color:${actions.length > 0 ? "#e74c3c" : "#27ae60"};">${actions.length}</strong></td>
+        <td><span style="font-size:11px;color:#9b9a97;">Próxima análise</span><br><strong style="font-size:20px;color:#37352f;">${nextRun}</strong></td>
+      </tr>
+    </table>
+  </div>
+
+  <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e8e7e4;border-radius:6px;overflow:hidden;margin-bottom:24px;">
+    <thead><tr style="background:#f7f6f3;">
+      <th style="padding:10px 12px;text-align:left;font-size:11px;color:#9b9a97;text-transform:uppercase;">Ação</th>
+      <th style="padding:10px 12px;text-align:left;font-size:11px;color:#9b9a97;text-transform:uppercase;">Motivo</th>
+      <th style="padding:10px 12px;text-align:left;font-size:11px;color:#9b9a97;text-transform:uppercase;">Budget</th>
+    </tr></thead>
+    <tbody>${actionsHtml}</tbody>
+  </table>
+
+  ${reportLink ? `<div style="text-align:center;margin-bottom:24px;"><a href="${reportLink}" style="display:inline-block;background:#2eaadc;color:#fff;padding:10px 24px;border-radius:6px;text-decoration:none;font-size:14px;font-weight:600;">📊 Ver Relatório Completo</a></div>` : ""}
+
+  ${r.ai_summary ? `<div style="background:#fbfbfa;border:1px solid #e8e7e4;border-radius:6px;padding:14px;margin-bottom:24px;"><div style="font-size:11px;color:#9b9a97;text-transform:uppercase;margin-bottom:6px;">Análise do Claude</div><div style="font-size:13px;color:#37352f;line-height:1.5;">${r.ai_summary.slice(0, 500)}</div></div>` : ""}
+
+  <div style="text-align:center;font-size:11px;color:#c4c4c0;margin-top:32px;">MTX Command Center · Engine: Claude Opus 4.5 · ${nowBRT}</div>
+</div></body></html>`;
+
+        try {
+          const emailResp = await fetch("https://api.resend.com/emails", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              from: "MTX Agent <agent@mtx-roi-command.lovable.app>",
+              to: ["mtxagenciacriativa@gmail.com"],
+              subject: `🤖 MTX Agent — ${profileName} | ${dateBRT} ${nowBRT.split(" ")[1] || nowBRT}`,
+              html,
+            }),
+          });
+          const emailData = await emailResp.json();
+          console.log(`[Email] ${profileName}: ${emailResp.ok ? "sent" : "failed"}`, emailResp.ok ? emailData.id : emailData);
+        } catch (emailErr) {
+          console.warn(`[Email] Failed for ${profileName}:`, emailErr);
+        }
+      }
+    }
 
     return new Response(JSON.stringify({
       results,
@@ -658,6 +746,7 @@ serve(async (req) => {
       engine: ANTHROPIC_KEY ? "claude-opus-4-5" : "static-rules",
       version: "v4-claude",
       hour_brt: currentHour,
+      email_enabled: !!RESEND_API_KEY,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
