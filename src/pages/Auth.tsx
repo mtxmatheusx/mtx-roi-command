@@ -25,7 +25,7 @@ export default function Auth() {
   const checkClientAndRedirect = async () => {
     const { data: { user: currentUser } } = await supabase.auth.getUser();
     if (currentUser) {
-      const { data: access } = await supabase
+      const { data: access } = await (supabase as any)
         .from("client_access")
         .select("profile_id")
         .eq("user_id", currentUser.id)

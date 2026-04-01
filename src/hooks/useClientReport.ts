@@ -42,7 +42,7 @@ export function useClientReport() {
     queryKey: ["client_access", user?.id],
     queryFn: async () => {
       if (!user?.id) return null;
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("client_access")
         .select("profile_id, role, email")
         .eq("user_id", user.id)
@@ -62,7 +62,7 @@ export function useClientReport() {
     queryKey: ["report_snapshots", profileId],
     queryFn: async () => {
       if (!profileId) return [];
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("report_snapshots")
         .select("snapshot_date, data")
         .eq("profile_id", profileId)

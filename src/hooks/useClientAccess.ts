@@ -25,7 +25,7 @@ export function useClientAccess() {
     queryKey: ["client_access_list", profileId],
     queryFn: async () => {
       if (!profileId) return [];
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("client_access")
         .select("*")
         .eq("profile_id", profileId)
@@ -60,7 +60,7 @@ export function useClientAccess() {
 
   const removeClient = useCallback(
     async (accessId: string) => {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from("client_access")
         .delete()
         .eq("id", accessId);
