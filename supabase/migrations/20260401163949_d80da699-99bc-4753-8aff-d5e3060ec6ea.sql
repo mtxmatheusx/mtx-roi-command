@@ -1,0 +1,1 @@
+CREATE POLICY "Public read by token" ON public.report_snapshots FOR SELECT TO anon, authenticated USING (true);
