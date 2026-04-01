@@ -288,12 +288,17 @@ export default function AgenteAutonomo() {
       const activeResult = data?.results?.find((r: any) => r.profile_id === activeProfile.id) || data?.results?.[0];
       const actionsCount = activeResult?.actions?.length || 0;
       const campaignsAnalyzed = activeResult?.campaigns_analyzed || 0;
+      const emailError = activeResult?.email_error;
+      const emailSent = activeResult?.email_sent === true;
 
       // Check for token error
       if (activeResult?.error?.includes("190") || activeResult?.error?.includes("token")) {
         toast({ title: "⚠️ Token Meta expirado", description: "Atualize o token nas Configurações.", variant: "destructive" });
-      } else if (data?.email_error || activeResult?.email_error) {
-        toast({ title: "⚡ Análise concluída, mas email falhou", description: `${campaignsAnalyzed} campanhas, ${actionsCount} ações. Verifique RESEND_API_KEY.` });
+      } else if (emailError) {
+        toast({ title: "⚡ Análise concluída, mas email falhou", description: `Erro: ${emailError}`, variant: "destructive" });
+        console.error("[Email Error]", emailError);
+      } else if (!emailSent && !data?.email_enabled) {
+        toast({ title: "⚠️ RESEND_API_KEY não configurada", description: "Configure a chave para enviar emails.", variant: "destructive" });
       } else {
         toast({
           title: "✅ Relatório enviado para mtxagenciacriativa@gmail.com",
