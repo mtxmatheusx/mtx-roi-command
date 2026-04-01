@@ -286,7 +286,6 @@ Cruze sempre DTD (hoje) + WTD (semana) + MTD (mês):
 
 ## COMPORTAMENTO
 Após cada ação, avalie se é necessária ação adicional.
-Use send_whatsapp_alert para ações críticas (pause ou create_new_campaign).
 Use generate_client_report no final se houve ações significativas.
 Responda sempre em português com justificativa técnica clara.`;
 
