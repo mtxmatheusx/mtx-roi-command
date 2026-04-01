@@ -233,19 +233,6 @@ const AGENT_TOOLS = [
     },
   },
   {
-    name: "send_whatsapp_alert",
-    description: "Envia alerta no WhatsApp após ação crítica",
-    input_schema: {
-      type: "object",
-      properties: {
-        profile_name: { type: "string" },
-        message: { type: "string" },
-        urgency: { type: "string", enum: ["low", "medium", "high", "critical"] },
-      },
-      required: ["profile_name", "message", "urgency"],
-    },
-  },
-  {
     name: "generate_client_report",
     description: "Gera relatório público para o cliente e envia link via WhatsApp",
     input_schema: {
@@ -299,7 +286,6 @@ Cruze sempre DTD (hoje) + WTD (semana) + MTD (mês):
 
 ## COMPORTAMENTO
 Após cada ação, avalie se é necessária ação adicional.
-Use send_whatsapp_alert para ações críticas (pause ou create_new_campaign).
 Use generate_client_report no final se houve ações significativas.
 Responda sempre em português com justificativa técnica clara.`;
 
@@ -401,23 +387,6 @@ Responda sempre em português com justificativa técnica clara.`;
             body: { profileId: inp.profile_id, campaignId: inp.campaign_id, creativeType: inp.creative_type, autoMode: true },
           });
           toolResult = { success: !creativeResp.error, creative_id: creativeResp.data?.creativeId };
-        } else if (block.name === "send_whatsapp_alert") {
-          const EVOLUTION_URL = Deno.env.get("EVOLUTION_API_URL");
-          const EVOLUTION_KEY = Deno.env.get("EVOLUTION_API_KEY");
-          const EVOLUTION_INSTANCE = Deno.env.get("EVOLUTION_INSTANCE");
-          const WA_NUMBER = Deno.env.get("WHATSAPP_AGENCY_NUMBER");
-          if (EVOLUTION_URL && EVOLUTION_KEY && WA_NUMBER) {
-            const emoji = { low: "🟡", medium: "🟠", high: "🔴", critical: "🚨" }[inp.urgency as string] || "⚡";
-            const text = `${emoji} *MTX ROI Command*\n*Cliente:* ${inp.profile_name}\n\n${inp.message}\n\n_${new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}_`;
-            const waResp = await fetch(`${EVOLUTION_URL}/message/sendText/${EVOLUTION_INSTANCE}`, {
-              method: "POST",
-              headers: { apikey: EVOLUTION_KEY, "Content-Type": "application/json" },
-              body: JSON.stringify({ number: WA_NUMBER, text }),
-            });
-            toolResult = { sent: waResp.ok };
-          } else {
-            toolResult = { sent: false, reason: "Evolution API não configurada" };
-          }
         } else if (block.name === "generate_client_report") {
           const reportResp = await supabase.functions.invoke("generate-client-report", {
             body: { profileId: inp.profile_id, summary: inp.summary },
