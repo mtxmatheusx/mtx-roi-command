@@ -233,19 +233,6 @@ const AGENT_TOOLS = [
     },
   },
   {
-    name: "send_whatsapp_alert",
-    description: "Envia alerta no WhatsApp após ação crítica",
-    input_schema: {
-      type: "object",
-      properties: {
-        profile_name: { type: "string" },
-        message: { type: "string" },
-        urgency: { type: "string", enum: ["low", "medium", "high", "critical"] },
-      },
-      required: ["profile_name", "message", "urgency"],
-    },
-  },
-  {
     name: "generate_client_report",
     description: "Gera relatório público para o cliente e envia link via WhatsApp",
     input_schema: {
