@@ -430,7 +430,7 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const ANTHROPIC_KEY = Deno.env.get("ANTHROPIC_API_KEY");
+    const GEMINI_KEY = Deno.env.get("GEMINI_API_KEY");
     const sb = createClient(supabaseUrl, supabaseKey);
 
     const { data: profiles, error } = await sb.from("client_profiles").select("*").or("cpa_max_toleravel.gt.0,roas_min_escala.gt.0");
