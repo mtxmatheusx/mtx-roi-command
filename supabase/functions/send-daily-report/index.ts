@@ -176,13 +176,13 @@ function generateEmailHTML(data: {
   clientes: ClientData[]; geminiAnalysis: string
 }): string {
 
-  const statusBadge = (roi: number) => {
-    if (roi >= 150) return { label: `🟢 ROI ${Math.round(roi)}%`, bg: '#edfaf1', color: '#1a7f37', border: 'rgba(52,199,89,0.25)' }
-    if (roi >= 80)  return { label: `🟡 ROI ${Math.round(roi)}%`, bg: '#fff8ec', color: '#b25c00', border: 'rgba(255,159,10,0.25)' }
-    return { label: `🔴 ROI ${Math.round(roi)}% — Atenção`, bg: '#fff0ef', color: '#c0392b', border: 'rgba(255,59,48,0.25)' }
+  const statusBadge = (roas: number) => {
+    if (roas >= 3) return { label: `🟢 ROAS ${roas.toFixed(1)}x`, bg: '#edfaf1', color: '#1a7f37', border: 'rgba(52,199,89,0.25)' }
+    if (roas >= 1.5)  return { label: `🟡 ROAS ${roas.toFixed(1)}x`, bg: '#fff8ec', color: '#b25c00', border: 'rgba(255,159,10,0.25)' }
+    return { label: `🔴 ROAS ${roas.toFixed(1)}x — Atenção`, bg: '#fff0ef', color: '#c0392b', border: 'rgba(255,59,48,0.25)' }
   }
 
-  const roiColor = (v: number) => v >= 150 ? '#1a7f37' : v >= 80 ? '#b25c00' : '#c0392b'
+  const roiColor = (v: number) => v >= 3 ? '#1a7f37' : v >= 1.5 ? '#b25c00' : '#c0392b'
 
   const periods = ['Hoje', 'Ontem', '7 dias', '15 dias', '30 dias']
 
