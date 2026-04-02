@@ -209,7 +209,7 @@ function recoveryColor(v: number): string { return v >= 80 ? '#00ff88' : v >= 50
 
 function kpiCard(label: string, value: string, color: string, subtitle?: string): string {
   return `<td style="padding:6px;">
-    <div style="background:#111;border:1px solid #1a1a2e;border-radius:12px;padding:16px 14px;text-align:center;">
+    <div style="background:linear-gradient(145deg,#0f0f0f 0%,#1a1a1a 50%,#0f0f0f 100%);border:1px solid rgba(255,255,255,0.06);border-top-color:rgba(255,255,255,0.1);border-radius:14px;padding:16px 14px;text-align:center;box-shadow:0 4px 24px -4px rgba(0,0,0,0.35),inset 0 1px 0 0 rgba(255,255,255,0.06);">
       <div style="font-size:10px;color:#666;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">${label}</div>
       <div style="font-size:22px;font-weight:800;color:${color};font-variant-numeric:tabular-nums;">${value}</div>
       ${subtitle ? `<div style="font-size:10px;color:#555;margin-top:4px;">${subtitle}</div>` : ''}
