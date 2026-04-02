@@ -27,6 +27,8 @@ interface ClientData {
     cpa: [number, number, number, number]
     cpm: [number, number, number, number]
     ctr: [number, number, number, number]
+    lucro: [number, number, number, number]
+    spend: [number, number, number, number]
   }
   alertas: string[]
   agentActions: number
