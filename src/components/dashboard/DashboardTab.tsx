@@ -192,7 +192,7 @@ export default function DashboardTab(props: DashboardTabProps) {
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-            className="bg-card border border-border rounded-[20px] shadow-[var(--shadow-float)] relative overflow-hidden"
+            className="rounded-[20px] relative overflow-hidden bg-white/[0.82] backdrop-blur-[24px] backdrop-saturate-[170%] border border-white/75 [border-top-color:rgba(255,255,255,0.95)] shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_12px_32px_rgba(0,0,0,0.08),0_4px_8px_rgba(0,0,0,0.04)] dark:bg-[rgba(30,30,30,0.85)] dark:border-white/10 dark:[border-top-color:rgba(255,255,255,0.16)] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_12px_32px_rgba(0,0,0,0.35)]"
           >
             <div className="p-6 sm:p-10 text-center">
               <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.03] via-transparent to-[hsl(var(--success))]/[0.03] pointer-events-none" />
