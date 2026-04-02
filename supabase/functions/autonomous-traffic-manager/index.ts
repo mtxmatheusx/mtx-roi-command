@@ -48,12 +48,16 @@ function dateStr(d: Date): string { return d.toISOString().slice(0, 10); }
 function getTimeframeRanges() {
   const now = new Date();
   const today = dateStr(now);
+  const d7Since = dateStr(new Date(now.getTime() - 7 * 86400000));
+  const d15Since = dateStr(new Date(now.getTime() - 15 * 86400000));
+  const d30Since = dateStr(new Date(now.getTime() - 30 * 86400000));
+  // Keep legacy WTD/MTD for Gemini prompt compatibility
   const dayOfWeek = now.getDay();
   const mondayOffset = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
   const monday = new Date(now); monday.setDate(now.getDate() - mondayOffset);
   const wtdSince = dateStr(monday);
   const mtdSince = `${today.slice(0, 7)}-01`;
-  return { today, wtdSince, mtdSince };
+  return { today, d7Since, d15Since, d30Since, wtdSince, mtdSince };
 }
 
 function parseMetrics(ins: any) {
