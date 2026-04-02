@@ -190,7 +190,7 @@ export default function DashboardTab(props: DashboardTabProps) {
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-            className="glass-card p-6 sm:p-10 text-center relative overflow-hidden"
+            className="glass-strong p-6 sm:p-10 text-center relative overflow-hidden"
           >
             <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.015] via-transparent to-success/[0.015] pointer-events-none" />
             <div className="relative">
