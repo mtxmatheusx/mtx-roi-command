@@ -267,6 +267,7 @@ export default function CampanhasPage() {
                     </tbody>
                   </table>
                 </div>
+              )}
               </div>
             </motion.div>
           )}
