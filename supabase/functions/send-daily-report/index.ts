@@ -29,7 +29,7 @@ interface ClientReport {
   periods: { today: PeriodMetrics; d7: PeriodMetrics; d15: PeriodMetrics; d30: PeriodMetrics }
 }
 
-const DATE_PRESETS = ['today', 'last_7d', 'last_14d', 'last_30d'] as const
+const DATE_PRESETS = ['today', 'last_7_days', 'last_14_days', 'last_30_days'] as const
 const PERIOD_KEYS = ['today', 'd7', 'd15', 'd30'] as const
 
 async function fetchMetaInsights(
