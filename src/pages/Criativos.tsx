@@ -236,7 +236,7 @@ export default function CriativosPage() {
           {assets.length > 0 && (
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
               {assets.map((asset) => (
-                <div key={asset.id} className="group relative bg-secondary rounded-lg overflow-hidden border border-border">
+                <div key={asset.id} className="group relative liquid-glass overflow-hidden !rounded-lg">
                   {asset.file_type === "image" ? (
                     <img src={asset.file_url} alt={asset.description || asset.file_name} className="w-full h-24 object-cover" />
                   ) : (
