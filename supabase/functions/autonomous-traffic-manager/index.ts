@@ -470,14 +470,15 @@ serve(async (req) => {
 
         try {
           const campaignUrl = `https://graph.facebook.com/v23.0/${profile.ad_account_id}/campaigns?fields=id,name,effective_status,daily_budget,created_time&effective_status=["ACTIVE"]&access_token=${accessToken}&limit=100`;
-          const adsetUrl = `https://graph.facebook.com/v23.0/${profile.ad_account_id}/adsets?fields=id,name,daily_budget,effective_status,campaign_id,insights.time_range({"since":"${wtdSince}","until":"${today}"}){spend,actions,action_values,ctr,frequency}&effective_status=["ACTIVE"]&access_token=${accessToken}&limit=100`;
+          const adsetUrl = `https://graph.facebook.com/v23.0/${profile.ad_account_id}/adsets?fields=id,name,daily_budget,effective_status,campaign_id,insights.time_range({"since":"${d7Since}","until":"${today}"}){spend,actions,action_values,ctr,frequency}&effective_status=["ACTIVE"]&access_token=${accessToken}&limit=100`;
 
-          const [campaignResp, adsetResp, dtdMap, wtdMap, mtdMap] = await Promise.all([
+          const [campaignResp, adsetResp, todayMap, d7Map, d15Map, d30Map] = await Promise.all([
             fetch(campaignUrl).then(r => r.json()),
             fetch(adsetUrl).then(r => r.json()),
             fetchInsightsForRange(profile.ad_account_id, accessToken, today, today),
-            fetchInsightsForRange(profile.ad_account_id, accessToken, wtdSince, today),
-            fetchInsightsForRange(profile.ad_account_id, accessToken, mtdSince, today),
+            fetchInsightsForRange(profile.ad_account_id, accessToken, d7Since, today),
+            fetchInsightsForRange(profile.ad_account_id, accessToken, d15Since, today),
+            fetchInsightsForRange(profile.ad_account_id, accessToken, d30Since, today),
           ]);
 
           if (campaignResp.error) { profileResult.error = campaignResp.error.message; return profileResult; }
@@ -485,29 +486,37 @@ serve(async (req) => {
           const adsetsList = adsetResp.data || [];
 
           const campaignInsights: CampaignInsight[] = (campaignResp.data || []).map((c: any) => {
-            const dtd = parseMetrics(dtdMap.get(c.id));
-            const wtd = parseMetrics(wtdMap.get(c.id));
-            const mtd = parseMetrics(mtdMap.get(c.id));
-            const dtdRoas = dtd.spend > 0 ? dtd.revenue / dtd.spend : 0;
-            const wtdRoas = wtd.spend > 0 ? wtd.revenue / wtd.spend : 0;
-            const mtdRoas = mtd.spend > 0 ? mtd.revenue / mtd.spend : 0;
+            const tdy = parseMetrics(todayMap.get(c.id));
+            const s7 = parseMetrics(d7Map.get(c.id));
+            const s15 = parseMetrics(d15Map.get(c.id));
+            const s30 = parseMetrics(d30Map.get(c.id));
             const ageDays = campaignAgeDays(c.created_time);
+
+            const buildWindow = (m: any): WindowMetrics => {
+              const roas = m.spend > 0 ? m.revenue / m.spend : 0;
+              const cpa = m.purchases > 0 ? m.spend / m.purchases : (m.spend > 0 ? m.spend : 0);
+              return { spend: m.spend, purchases: m.purchases, revenue: m.revenue, roas, cpa, cpm: m.cpm, ctr: m.ctr };
+            };
+
+            const todayW = buildWindow(tdy);
+            const d7W = buildWindow(s7);
+            const d15W = buildWindow(s15);
+            const d30W = buildWindow(s30);
 
             return {
               id: c.id, name: c.name, effective_status: c.effective_status,
               daily_budget: parseInt(c.daily_budget || "0", 10) / 100,
               created_time: c.created_time || "", age_days: ageDays,
-              dtd_spend: dtd.spend, dtd_purchases: dtd.purchases, dtd_revenue: dtd.revenue,
-              dtd_roas: dtdRoas, dtd_cpa: dtd.purchases > 0 ? dtd.spend / dtd.purchases : (dtd.spend > 0 ? dtd.spend : 0),
-              dtd_cpm: dtd.cpm, dtd_ctr: dtd.ctr,
-              wtd_spend: wtd.spend, wtd_purchases: wtd.purchases, wtd_revenue: wtd.revenue,
-              wtd_roas: wtdRoas, wtd_cpa: wtd.purchases > 0 ? wtd.spend / wtd.purchases : (wtd.spend > 0 ? wtd.spend : 0),
-              wtd_cpm: wtd.cpm, wtd_ctr: wtd.ctr,
-              mtd_spend: mtd.spend, mtd_purchases: mtd.purchases, mtd_revenue: mtd.revenue,
-              mtd_roas: mtdRoas, mtd_cpa: mtd.purchases > 0 ? mtd.spend / mtd.purchases : (mtd.spend > 0 ? mtd.spend : 0),
-              mtd_cpm: mtd.cpm, mtd_ctr: mtd.ctr,
-              ctr: wtd.ctr, frequency: wtd.frequency,
-              trend: determineTrend(dtdRoas, wtdRoas, mtdRoas),
+              today: todayW, d7: d7W, d15: d15W, d30: d30W,
+              // Legacy aliases for Gemini/static rules (map today->dtd, 7d->wtd, 30d->mtd)
+              dtd_spend: todayW.spend, dtd_purchases: todayW.purchases, dtd_revenue: todayW.revenue,
+              dtd_roas: todayW.roas, dtd_cpa: todayW.cpa, dtd_cpm: todayW.cpm, dtd_ctr: todayW.ctr,
+              wtd_spend: d7W.spend, wtd_purchases: d7W.purchases, wtd_revenue: d7W.revenue,
+              wtd_roas: d7W.roas, wtd_cpa: d7W.cpa, wtd_cpm: d7W.cpm, wtd_ctr: d7W.ctr,
+              mtd_spend: d30W.spend, mtd_purchases: d30W.purchases, mtd_revenue: d30W.revenue,
+              mtd_roas: d30W.roas, mtd_cpa: d30W.cpa, mtd_cpm: d30W.cpm, mtd_ctr: d30W.ctr,
+              ctr: d7W.ctr, frequency: s7.frequency || 0,
+              trend: determineTrend(todayW.roas, d7W.roas, d30W.roas),
             };
           });
 
