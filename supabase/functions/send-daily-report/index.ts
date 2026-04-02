@@ -257,7 +257,7 @@ function periodPanel(label: string, emoji: string, p: PeriodMetrics, cpaMeta: nu
 
 function buildAgentSection(agent: AgentData): string {
   if (agent.totalActions === 0) {
-    return `<div style="background:#0d1117;border:1px solid #1a1a2e;border-radius:12px;padding:14px 16px;margin-bottom:16px;">
+    return `<div style="background:linear-gradient(145deg,#0a0e14,#111827,#0a0e14);border:1px solid rgba(255,255,255,0.06);border-radius:14px;padding:14px 16px;margin-bottom:16px;box-shadow:inset 0 1px 0 0 rgba(255,255,255,0.04);">
       <p style="color:#555;margin:0;font-size:12px;">🤖 Agente Autônomo — Sem ações nas últimas 24h</p>
     </div>`
   }
