@@ -171,26 +171,25 @@
     transform: scale(0.98);
   }
 
-  /* Glass card – Apple frosted mirror */
+  /* Glass card – Apple translucent frosted glass */
   .glass-card {
-    background: linear-gradient(
-      145deg,
-      hsl(var(--card)) 0%,
-      hsl(0 0% 10%) 50%,
-      hsl(var(--card)) 100%
-    );
-    border: 1px solid hsl(0 0% 100% / 0.06);
-    border-top-color: hsl(0 0% 100% / 0.1);
+    background: hsl(0 0% 100% / 0.04);
+    border: 1px solid hsl(0 0% 100% / 0.08);
+    border-top-color: hsl(0 0% 100% / 0.14);
     border-radius: var(--radius);
-    box-shadow: var(--shadow-glass);
-    backdrop-filter: blur(20px) saturate(1.4);
-    -webkit-backdrop-filter: blur(20px) saturate(1.4);
+    box-shadow:
+      0 4px 24px -4px hsl(0 0% 0% / 0.3),
+      inset 0 1px 0 0 hsl(0 0% 100% / 0.08),
+      inset 0 -1px 0 0 hsl(0 0% 0% / 0.1);
+    backdrop-filter: blur(40px) saturate(1.8) brightness(1.1);
+    -webkit-backdrop-filter: blur(40px) saturate(1.8) brightness(1.1);
     position: relative;
     overflow: hidden;
     transition:
       box-shadow var(--transition-base) cubic-bezier(0.22, 1, 0.36, 1),
       border-color var(--transition-base) cubic-bezier(0.22, 1, 0.36, 1),
-      transform var(--transition-base) cubic-bezier(0.22, 1, 0.36, 1);
+      transform var(--transition-base) cubic-bezier(0.22, 1, 0.36, 1),
+      background var(--transition-base) cubic-bezier(0.22, 1, 0.36, 1);
   }
   .glass-card::before {
     content: "";
@@ -198,41 +197,42 @@
     inset: 0;
     border-radius: inherit;
     background: linear-gradient(
-      165deg,
-      hsl(0 0% 100% / 0.05) 0%,
-      transparent 40%,
-      transparent 60%,
-      hsl(0 0% 100% / 0.02) 100%
+      170deg,
+      hsl(0 0% 100% / 0.08) 0%,
+      hsl(0 0% 100% / 0.02) 30%,
+      transparent 50%
     );
     pointer-events: none;
     z-index: 1;
   }
   .glass-card:hover {
-    box-shadow: var(--shadow-elevated);
+    background: hsl(0 0% 100% / 0.06);
+    box-shadow:
+      0 8px 32px -8px hsl(0 0% 0% / 0.4),
+      inset 0 1px 0 0 hsl(0 0% 100% / 0.1);
     border-color: hsl(var(--primary) / 0.15);
     transform: translateY(-1px);
   }
 
   /* Interactive glass card */
   .glass-card-interactive {
-    background: linear-gradient(
-      145deg,
-      hsl(var(--card)) 0%,
-      hsl(0 0% 10%) 50%,
-      hsl(var(--card)) 100%
-    );
-    border: 1px solid hsl(0 0% 100% / 0.06);
-    border-top-color: hsl(0 0% 100% / 0.1);
+    background: hsl(0 0% 100% / 0.04);
+    border: 1px solid hsl(0 0% 100% / 0.08);
+    border-top-color: hsl(0 0% 100% / 0.14);
     border-radius: var(--radius);
-    box-shadow: var(--shadow-glass);
-    backdrop-filter: blur(20px) saturate(1.4);
-    -webkit-backdrop-filter: blur(20px) saturate(1.4);
+    box-shadow:
+      0 4px 24px -4px hsl(0 0% 0% / 0.3),
+      inset 0 1px 0 0 hsl(0 0% 100% / 0.08),
+      inset 0 -1px 0 0 hsl(0 0% 0% / 0.1);
+    backdrop-filter: blur(40px) saturate(1.8) brightness(1.1);
+    -webkit-backdrop-filter: blur(40px) saturate(1.8) brightness(1.1);
     position: relative;
     overflow: hidden;
     transition:
       box-shadow var(--transition-base) cubic-bezier(0.22, 1, 0.36, 1),
       transform var(--transition-base) cubic-bezier(0.22, 1, 0.36, 1),
-      border-color var(--transition-base) cubic-bezier(0.22, 1, 0.36, 1);
+      border-color var(--transition-base) cubic-bezier(0.22, 1, 0.36, 1),
+      background var(--transition-base) cubic-bezier(0.22, 1, 0.36, 1);
     cursor: pointer;
   }
   .glass-card-interactive::before {
@@ -241,23 +241,25 @@
     inset: 0;
     border-radius: inherit;
     background: linear-gradient(
-      165deg,
-      hsl(0 0% 100% / 0.05) 0%,
-      transparent 40%,
-      transparent 60%,
-      hsl(0 0% 100% / 0.02) 100%
+      170deg,
+      hsl(0 0% 100% / 0.08) 0%,
+      hsl(0 0% 100% / 0.02) 30%,
+      transparent 50%
     );
     pointer-events: none;
     z-index: 1;
   }
   .glass-card-interactive:hover {
-    box-shadow: var(--shadow-elevated);
+    background: hsl(0 0% 100% / 0.06);
+    box-shadow:
+      0 8px 32px -8px hsl(0 0% 0% / 0.4),
+      inset 0 1px 0 0 hsl(0 0% 100% / 0.1);
     border-color: hsl(var(--primary) / 0.2);
     transform: translateY(-2px);
   }
   .glass-card-interactive:active {
     transform: translateY(0);
-    box-shadow: var(--shadow-card);
+    background: hsl(0 0% 100% / 0.03);
   }
 
   /* Hero number typography */
