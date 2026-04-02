@@ -37,6 +37,7 @@ const FeedPreview = lazy(() => import("./pages/FeedPreview"));
 const GoogleDriveFolders = lazy(() => import("./pages/GoogleDriveFolders"));
 const KanbanBoard = lazy(() => import("./pages/KanbanBoard"));
 const Relatorio = lazy(() => import("./pages/Relatorio"));
+const SkillsHub = lazy(() => import("./pages/SkillsHub"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
