@@ -395,7 +395,7 @@ function buildEmailHtml(clients: ClientReport[], type: string, email: string, ge
   </div>
 
   <!-- ═══ FOOTER ═══ -->
-  <div style="background:#050505;padding:28px 24px;text-align:center;border-top:1px solid #1a1a2e;">
+  <div style="background:linear-gradient(135deg,rgba(255,255,255,0.04) 0%,rgba(255,255,255,0.01) 100%);padding:28px 24px;text-align:center;border-top:1px solid rgba(255,255,255,0.08);">
     <a href="https://mtx-roi-command.lovable.app" style="display:inline-block;background:linear-gradient(135deg,#ff3b3b,#ff6b35);color:#fff;text-decoration:none;padding:14px 40px;border-radius:10px;font-weight:700;font-size:14px;letter-spacing:0.3px;">
       Abrir MTX Command Center →
     </a>
