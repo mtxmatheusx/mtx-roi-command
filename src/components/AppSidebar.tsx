@@ -1,322 +1,244 @@
-import { NavLink as RouterNavLink } from "react-router-dom";
+import { NavLink as RouterNavLink, useLocation } from "react-router-dom";
 import {
-  BarChart3, Zap, Target, ImageIcon, Settings, LogOut, Brain, Rocket,
-  Shield, Building2, Users, Beaker, Wand2, Bot, MessageSquare,
-  PanelLeftClose, PanelLeft, X, Palette, Grid3X3, FolderPlus, KanbanSquare,
-  ShoppingCart, Mail
+  Sidebar, SidebarContent, SidebarFooter, SidebarGroup,
+  SidebarGroupContent, SidebarGroupLabel, SidebarHeader,
+  SidebarMenu, SidebarMenuBadge, SidebarMenuButton,
+  SidebarMenuItem, SidebarMenuSub, SidebarMenuSubButton,
+  SidebarMenuSubItem, useSidebar,
+} from "@/components/ui/sidebar";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import {
+  BarChart2, Bot, ChevronDown, CreditCard, Globe,
+  LayoutDashboard, Layers, LogOut, Mail, Search, Settings,
+  ShoppingBag, Sparkles, Target, TestTube, Users, Zap,
+  Rocket, Brain, Shield, Beaker, ImageIcon, Wand2,
+  MessageSquare, Palette, Grid3X3, FolderPlus, KanbanSquare,
 } from "lucide-react";
+import { useState } from "react";
+import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { useTranslation } from "react-i18next";
 import ProfileSelector from "@/components/ProfileSelector";
-import { cn } from "@/lib/utils";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { useSidebarState } from "@/hooks/useSidebarState";
-import { useIsMobile } from "@/hooks/use-mobile";
-import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
+
+interface NavChild {
+  to: string;
+  label: string;
+}
+
+interface NavItem {
+  to: string;
+  icon: React.ElementType;
+  label: string;
+  badge?: string | null;
+  end?: boolean;
+  children?: NavChild[];
+}
 
 interface NavGroup {
   label: string;
-  items: { to: string; label: string; icon: React.ElementType; end?: boolean }[];
+  items: NavItem[];
 }
+
+const NAV: NavGroup[] = [
+  {
+    label: "Principal",
+    items: [
+      { to: "/", icon: LayoutDashboard, label: "Dashboard", end: true },
+      { to: "/agencia", icon: Globe, label: "Visão da Agência" },
+    ],
+  },
+  {
+    label: "Ads & Tráfego",
+    items: [
+      {
+        to: "/campanhas", icon: Target, label: "Meta Ads", badge: "26",
+        children: [
+          { to: "/campanhas", label: "Campanhas" },
+          { to: "/lancar-campanha", label: "Lançar & Publicar" },
+          { to: "/diagnostico", label: "Diagnóstico IA" },
+          { to: "/criativos", label: "Criativos" },
+        ],
+      },
+      { to: "/simulador", icon: Zap, label: "Simulador" },
+      { to: "/auditoria-meta", icon: Shield, label: "Auditoria Meta" },
+    ],
+  },
+  {
+    label: "Criação",
+    items: [
+      { to: "/laboratorio-estrategico", icon: Beaker, label: "Lab Estratégico" },
+      { to: "/laboratorio-visual", icon: Wand2, label: "Lab Visual" },
+      { to: "/personagens-ugc", icon: Users, label: "Personagens UGC" },
+    ],
+  },
+  {
+    label: "E-commerce",
+    items: [
+      { to: "/skills", icon: CreditCard, label: "Stripe", badge: "NOVO" },
+      { to: "/skills", icon: Mail, label: "Klaviyo", badge: "NOVO" },
+      { to: "/skills", icon: ShoppingBag, label: "Shopify" },
+    ],
+  },
+  {
+    label: "Analytics & CRO",
+    items: [
+      { to: "/skills", icon: Search, label: "Search Console" },
+      { to: "/skills", icon: BarChart2, label: "Google Analytics 4" },
+      { to: "/skills", icon: TestTube, label: "Hotjar" },
+      { to: "/skills", icon: Sparkles, label: "Optimizely" },
+    ],
+  },
+  {
+    label: "Automação",
+    items: [
+      { to: "/agente-autonomo", icon: Bot, label: "Agente Autônomo" },
+      { to: "/skills", icon: Zap, label: "N8N Flows" },
+      { to: "/skills", icon: Layers, label: "Typeform" },
+    ],
+  },
+  {
+    label: "Ferramentas",
+    items: [
+      { to: "/feedback-copy", icon: MessageSquare, label: "Feedbacks de Copy" },
+      { to: "/brand-identity", icon: Palette, label: "Briefing & ID Visual" },
+      { to: "/feed-preview", icon: Grid3X3, label: "Preview do Feed" },
+      { to: "/google-drive", icon: FolderPlus, label: "Pastas Google Drive" },
+      { to: "/kanban", icon: KanbanSquare, label: "Quadro de Tarefas" },
+      { to: "/skills", icon: Brain, label: "Skills Hub" },
+    ],
+  },
+];
 
 export default function AppSidebar() {
   const { signOut } = useAuth();
   const { t } = useTranslation();
-  const { collapsed, toggle, mobileOpen, setMobileOpen } = useSidebarState();
-  const isMobile = useIsMobile();
+  const location = useLocation();
+  const { state } = useSidebar();
+  const collapsed = state === "collapsed";
 
-  const navGroups: NavGroup[] = [
-    {
-      label: "Ads & Tráfego",
-      items: [
-        { to: "/", label: t("nav.dashboard"), icon: BarChart3, end: true },
-        { to: "/campanhas", label: t("nav.campaigns"), icon: Target },
-        { to: "/lancar-campanha", label: "Lançar & Publicar", icon: Rocket },
-        { to: "/diagnostico", label: t("nav.diagnostic"), icon: Brain },
-      ],
-    },
-    {
-      label: "Analytics & CRO",
-      items: [
-        { to: "/simulador", label: t("nav.simulator"), icon: Zap },
-        { to: "/auditoria-meta", label: t("nav.auditMeta"), icon: Shield },
-      ],
-    },
-    {
-      label: "Criação",
-      items: [
-        { to: "/laboratorio-estrategico", label: "Laboratório Estratégico", icon: Beaker },
-        { to: "/criativos", label: t("nav.creatives"), icon: ImageIcon },
-        { to: "/laboratorio-visual", label: "Laboratório Visual", icon: Wand2 },
-        { to: "/personagens-ugc", label: "Personagens UGC", icon: Users },
-      ],
-    },
-    {
-      label: "Automação",
-      items: [
-        { to: "/agente-autonomo", label: "Agente Autônomo", icon: Bot },
-      ],
-    },
-    {
-      label: "Ferramentas",
-      items: [
-        { to: "/feedback-copy", label: "Feedbacks de Copy", icon: MessageSquare },
-        { to: "/brand-identity", label: "Briefing & ID Visual", icon: Palette },
-        { to: "/feed-preview", label: "Preview do Feed", icon: Grid3X3 },
-        { to: "/google-drive", label: "Pastas Google Drive", icon: FolderPlus },
-        { to: "/kanban", label: "Quadro de Tarefas", icon: KanbanSquare },
-        { to: "/skills", label: "Skills Hub", icon: Brain },
-      ],
-    },
-  ];
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
+    "Meta Ads": true,
+  });
 
-  const isVisible = isMobile ? mobileOpen : true;
-  const showLabels = isMobile ? true : !collapsed;
+  const toggle = (label: string) =>
+    setOpenGroups((prev) => ({ ...prev, [label]: !prev[label] }));
 
-  const handleNavClick = () => {
-    if (isMobile) setMobileOpen(false);
-  };
-
-  const NavItem = ({ to, label, icon: Icon, end }: { to: string; label: string; icon: React.ElementType; end?: boolean }) => {
-    const link = (
-      <RouterNavLink
-        to={to}
-        end={end}
-        onClick={handleNavClick}
-        aria-label={label}
-        className={({ isActive }) =>
-          cn(
-            "group relative flex items-center gap-2.5 rounded-lg text-sm font-medium transition-all duration-200 ease-out active:scale-[0.97]",
-            !showLabels ? "justify-center px-2 py-2.5" : "px-3 py-2.5",
-            isActive
-              ? "bg-primary/8 text-primary shadow-sm"
-              : "text-muted-foreground hover:text-foreground hover:bg-accent/70"
-          )
-        }
-      >
-        {({ isActive }: { isActive: boolean }) => (
-          <>
-            {/* Animated active indicator bar */}
-            <AnimatePresence>
-              {isActive && (
-                <motion.span
-                  layoutId="sidebar-active-indicator"
-                  className={cn(
-                    "absolute left-0 top-1/2 -translate-y-1/2 w-[3px] rounded-r-full bg-primary",
-                    !showLabels ? "h-5" : "h-6"
-                  )}
-                  initial={{ opacity: 0, scaleY: 0 }}
-                  animate={{ opacity: 1, scaleY: 1 }}
-                  exit={{ opacity: 0, scaleY: 0 }}
-                  transition={{ type: "spring", stiffness: 350, damping: 30 }}
-                />
-              )}
-            </AnimatePresence>
-            <Icon className={cn("w-4 h-4 shrink-0 transition-colors", isActive && "text-primary")} />
-            <AnimatePresence mode="wait">
-              {showLabels && (
-                <motion.span
-                  className="truncate"
-                  initial={{ opacity: 0, width: 0 }}
-                  animate={{ opacity: 1, width: "auto" }}
-                  exit={{ opacity: 0, width: 0 }}
-                  transition={{ duration: 0.15 }}
-                >
-                  {label}
-                </motion.span>
-              )}
-            </AnimatePresence>
-          </>
-        )}
-      </RouterNavLink>
-    );
-
-    if (!showLabels) {
-      return (
-        <Tooltip delayDuration={0}>
-          <TooltipTrigger asChild>{link}</TooltipTrigger>
-          <TooltipContent side="right" sideOffset={10} className="font-medium">
-            {label}
-          </TooltipContent>
-        </Tooltip>
-      );
-    }
-    return link;
-  };
-
-  if (!isVisible) return null;
+  const isChildActive = (children?: NavChild[]) =>
+    children?.some((c) => location.pathname === c.to) ?? false;
 
   return (
-    <aside
-      role="navigation"
-      aria-label="Menu principal"
-      className={cn(
-        "fixed left-0 top-0 h-screen bg-card/80 backdrop-blur-2xl border-r border-border/80 flex flex-col transition-all duration-200 ease-out",
-        isMobile ? "w-64 z-50 shadow-2xl" : collapsed ? "w-[56px] z-50" : "w-60 z-50"
-      )}
-    >
-      {/* Logo */}
-      <div className={cn(
-        "border-b border-border flex items-center shrink-0",
-        !showLabels ? "px-2 py-4 justify-center" : "px-5 py-5 justify-between"
-      )}>
-        {!showLabels ? (
-          <motion.div
-            className="w-8 h-8 rounded-xl bg-primary flex items-center justify-center shadow-sm"
-            whileHover={{ scale: 1.08 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            <span className="text-primary-foreground font-bold text-sm">M</span>
-          </motion.div>
-        ) : (
-          <>
-            <div className="flex items-center gap-2.5">
-              <motion.div
-                className="w-8 h-8 rounded-xl bg-primary flex items-center justify-center shrink-0 shadow-sm"
-                whileHover={{ scale: 1.08 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                <span className="text-primary-foreground font-bold text-sm">M</span>
-              </motion.div>
-              <div>
-                <h1 className="text-sm font-semibold text-foreground leading-none">MTX Estratégias</h1>
-                <p className="text-[11px] text-muted-foreground mt-0.5">Command Center</p>
-              </div>
-            </div>
-            {isMobile && (
-              <button
-                onClick={() => setMobileOpen(false)}
-                className="p-1 rounded-md hover:bg-accent text-muted-foreground"
-                aria-label="Fechar menu"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            )}
-          </>
-        )}
-      </div>
+    <Sidebar collapsible="icon">
+      <SidebarHeader className="border-b border-sidebar-border px-4 py-3">
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground">
+            <Globe className="h-4 w-4" />
+          </div>
+          <div className="leading-none group-data-[collapsible=icon]:hidden">
+            <p className="text-sm font-semibold">MTX Estratégias</p>
+            <p className="text-[10px] text-muted-foreground tabular-nums">Command Center</p>
+          </div>
+        </div>
+      </SidebarHeader>
 
-      {/* Agency Link */}
-      <div className={cn("pt-3 pb-1 shrink-0", !showLabels ? "px-1.5" : "px-3")}>
-        <NavItem to="/agencia" label={t("nav.agencyView")} icon={Building2} />
-      </div>
+      {!collapsed && <ProfileSelector />}
 
-      {showLabels && <ProfileSelector />}
-
-      {/* Grouped Nav with animations */}
-      <LayoutGroup>
-        <nav className={cn("flex-1 py-1 overflow-y-auto", !showLabels ? "px-1.5" : "px-3")} aria-label="Navegação principal">
-          {navGroups.map((group, gi) => (
-            <motion.div
-              key={group.label}
-              className={cn(gi > 0 && "mt-1")}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: gi * 0.05, duration: 0.2 }}
-            >
-              {/* Group label */}
-              <AnimatePresence mode="wait">
-                {showLabels ? (
-                  <motion.p
-                    key="label"
-                    className="px-3 pt-3 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.15 }}
-                  >
-                    {group.label}
-                  </motion.p>
-                ) : (
-                  gi > 0 && (
-                    <motion.div
-                      key="divider"
-                      className="my-2 mx-2"
-                      initial={{ opacity: 0, scaleX: 0 }}
-                      animate={{ opacity: 1, scaleX: 1 }}
-                      exit={{ opacity: 0, scaleX: 0 }}
-                      transition={{ duration: 0.15 }}
+      <SidebarContent>
+        {NAV.map((group) => (
+          <SidebarGroup key={group.label}>
+            <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {group.items.map((item) =>
+                  item.children ? (
+                    <Collapsible
+                      key={item.label}
+                      open={openGroups[item.label]}
+                      onOpenChange={() => toggle(item.label)}
+                      className="group/collapsible"
                     >
-                      <div className="h-px bg-border" />
-                    </motion.div>
+                      <SidebarMenuItem>
+                        <CollapsibleTrigger asChild>
+                          <SidebarMenuButton
+                            isActive={isChildActive(item.children)}
+                            tooltip={item.label}
+                          >
+                            <item.icon />
+                            <span>{item.label}</span>
+                            {item.badge && <SidebarMenuBadge>{item.badge}</SidebarMenuBadge>}
+                            <ChevronDown className={cn(
+                              "ml-auto h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200",
+                              openGroups[item.label] && "rotate-180"
+                            )} />
+                          </SidebarMenuButton>
+                        </CollapsibleTrigger>
+                        <CollapsibleContent>
+                          <SidebarMenuSub>
+                            {item.children.map((child) => (
+                              <SidebarMenuSubItem key={child.to + child.label}>
+                                <SidebarMenuSubButton
+                                  asChild
+                                  isActive={location.pathname === child.to}
+                                >
+                                  <RouterNavLink to={child.to}>
+                                    {child.label}
+                                  </RouterNavLink>
+                                </SidebarMenuSubButton>
+                              </SidebarMenuSubItem>
+                            ))}
+                          </SidebarMenuSub>
+                        </CollapsibleContent>
+                      </SidebarMenuItem>
+                    </Collapsible>
+                  ) : (
+                    <SidebarMenuItem key={item.to + item.label}>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={item.end ? location.pathname === item.to : location.pathname.startsWith(item.to)}
+                        tooltip={item.label}
+                      >
+                        <RouterNavLink to={item.to} end={item.end}>
+                          <item.icon />
+                          <span>{item.label}</span>
+                        </RouterNavLink>
+                      </SidebarMenuButton>
+                      {item.badge && (
+                        <SidebarMenuBadge className={cn(
+                          item.badge === "NOVO" && "bg-primary/10 text-primary"
+                        )}>
+                          {item.badge}
+                        </SidebarMenuBadge>
+                      )}
+                    </SidebarMenuItem>
                   )
                 )}
-              </AnimatePresence>
-              <div className="space-y-0.5">
-                {group.items.map((item, ii) => (
-                  <motion.div
-                    key={item.to}
-                    initial={{ opacity: 0, x: -8 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: gi * 0.05 + ii * 0.02, duration: 0.2 }}
-                  >
-                    <NavItem to={item.to} label={item.label} icon={item.icon} end={item.end} />
-                  </motion.div>
-                ))}
-              </div>
-            </motion.div>
-          ))}
-        </nav>
-      </LayoutGroup>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ))}
+      </SidebarContent>
 
-      {/* Footer */}
-      <div className={cn(
-        "border-t border-border space-y-0.5 shrink-0",
-        !showLabels ? "px-1.5 py-2" : "px-3 py-3"
-      )}>
-        <NavItem to="/configuracoes" label={t("nav.settings")} icon={Settings} />
-
-        {!showLabels ? (
-          <Tooltip delayDuration={0}>
-            <TooltipTrigger asChild>
-              <button
-                onClick={signOut}
-                aria-label={t("nav.logout")}
-                className="flex items-center justify-center w-full px-2 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 text-muted-foreground hover:text-destructive hover:bg-destructive/8 active:scale-95"
-              >
-                <LogOut className="w-4 h-4" />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side="right" sideOffset={10} className="font-medium">{t("nav.logout")}</TooltipContent>
-          </Tooltip>
-        ) : (
-          <button
-            onClick={signOut}
-            aria-label={t("nav.logout")}
-            className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 w-full text-muted-foreground hover:text-destructive hover:bg-destructive/8 active:scale-[0.97]"
-          >
-            <LogOut className="w-4 h-4" />
-            {t("nav.logout")}
-          </button>
-        )}
-
-        {/* Collapse toggle - desktop only */}
-        {!isMobile && (
-          !showLabels ? (
-            <Tooltip delayDuration={0}>
-              <TooltipTrigger asChild>
-                <button
-                  onClick={toggle}
-                  aria-label="Expandir menu"
-                  className="flex items-center justify-center w-full px-2 py-2.5 rounded-lg text-sm transition-colors text-muted-foreground hover:text-foreground hover:bg-accent"
-                >
-                  <PanelLeft className="w-4 h-4" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="right" sideOffset={10} className="font-medium">Expandir menu</TooltipContent>
-            </Tooltip>
-          ) : (
-            <button
-              onClick={toggle}
-              aria-label="Recolher menu"
-              className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors w-full text-muted-foreground hover:text-foreground hover:bg-accent"
+      <SidebarFooter className="border-t border-sidebar-border">
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild tooltip={t("nav.settings")} size="sm">
+              <RouterNavLink to="/configuracoes">
+                <Settings />
+                <span>{t("nav.settings")}</span>
+              </RouterNavLink>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              tooltip={t("nav.logout")}
+              size="sm"
+              onClick={signOut}
             >
-              <PanelLeftClose className="w-4 h-4" />
-              Recolher
-            </button>
-          )
-        )}
-      </div>
-    </aside>
+              <LogOut />
+              <span>{t("nav.logout")}</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarFooter>
+    </Sidebar>
   );
 }
