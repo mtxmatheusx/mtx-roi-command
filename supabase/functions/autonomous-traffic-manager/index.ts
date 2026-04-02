@@ -707,33 +707,36 @@ serve(async (req) => {
 
     const rows = insights.map(c => {
       const windows = [
-        { label: "DTD", purchases: c.dtd_purchases, cpa: c.dtd_cpa, roas: c.dtd_roas, cpm: c.dtd_cpm, ctr: c.dtd_ctr },
-        { label: "WTD", purchases: c.wtd_purchases, cpa: c.wtd_cpa, roas: c.wtd_roas, cpm: c.wtd_cpm, ctr: c.wtd_ctr },
-        { label: "MTD", purchases: c.mtd_purchases, cpa: c.mtd_cpa, roas: c.mtd_roas, cpm: c.mtd_cpm, ctr: c.mtd_ctr },
+        { label: "Hoje", ...c.today },
+        { label: "7 dias", ...c.d7 },
+        { label: "15 dias", ...c.d15 },
+        { label: "30 dias", ...c.d30 },
       ];
       return `
         <div style="background:#111111;border:1px solid #1e1e1e;border-radius:8px;margin-bottom:12px;overflow:hidden;">
           <div style="padding:12px 16px;border-bottom:1px solid #1e1e1e;">
             <div style="font-size:13px;font-weight:700;color:#ffffff;">${c.name}</div>
-            <div style="font-size:11px;color:#888888;margin-top:2px;">Budget: R$ ${c.daily_budget.toFixed(0)} · Status: ${c.effective_status} · Trend: ${c.trend.toUpperCase()}</div>
+            <div style="font-size:11px;color:#888888;margin-top:2px;">Budget: R$ ${c.daily_budget.toFixed(0)} · Trend: ${c.trend.toUpperCase()}</div>
           </div>
           <table width="100%" cellpadding="0" cellspacing="0" style="font-size:12px;">
             <tr style="border-bottom:1px solid #1e1e1e;">
-              <th style="padding:8px 8px;text-align:left;color:#888888;font-weight:600;font-size:10px;text-transform:uppercase;letter-spacing:0.5px;">Janela</th>
-              <th style="padding:8px 6px;text-align:center;color:#888888;font-weight:600;font-size:10px;text-transform:uppercase;">Vendas</th>
-              <th style="padding:8px 6px;text-align:center;color:#888888;font-weight:600;font-size:10px;text-transform:uppercase;">CPA</th>
-              <th style="padding:8px 6px;text-align:center;color:#888888;font-weight:600;font-size:10px;text-transform:uppercase;">ROAS</th>
-              <th style="padding:8px 6px;text-align:center;color:#888888;font-weight:600;font-size:10px;text-transform:uppercase;">CPM</th>
-              <th style="padding:8px 6px;text-align:center;color:#888888;font-weight:600;font-size:10px;text-transform:uppercase;">CTR</th>
+              <th style="padding:8px 6px;text-align:left;color:#888888;font-weight:600;font-size:10px;text-transform:uppercase;letter-spacing:0.5px;">Janela</th>
+              <th style="padding:8px 4px;text-align:center;color:#888888;font-weight:600;font-size:10px;text-transform:uppercase;">Vendas</th>
+              <th style="padding:8px 4px;text-align:center;color:#888888;font-weight:600;font-size:10px;text-transform:uppercase;">Gasto</th>
+              <th style="padding:8px 4px;text-align:center;color:#888888;font-weight:600;font-size:10px;text-transform:uppercase;">CPA</th>
+              <th style="padding:8px 4px;text-align:center;color:#888888;font-weight:600;font-size:10px;text-transform:uppercase;">ROAS</th>
+              <th style="padding:8px 4px;text-align:center;color:#888888;font-weight:600;font-size:10px;text-transform:uppercase;">CPM</th>
+              <th style="padding:8px 4px;text-align:center;color:#888888;font-weight:600;font-size:10px;text-transform:uppercase;">CTR</th>
             </tr>
             ${windows.map(w => `
             <tr style="border-bottom:1px solid #1a1a1a;">
-              <td style="padding:8px 8px;color:#ffffff;font-weight:600;">${w.label}</td>
-              <td style="padding:8px 6px;text-align:center;color:${w.purchases > 0 ? "#00ff88" : "#888888"};font-weight:700;font-variant-numeric:tabular-nums;">${w.purchases}</td>
-              <td style="padding:8px 6px;text-align:center;color:${cpaColor(w.cpa)};font-weight:600;font-variant-numeric:tabular-nums;">${fmtR(w.cpa)}</td>
-              <td style="padding:8px 6px;text-align:center;color:${roasColor(w.roas)};font-weight:600;font-variant-numeric:tabular-nums;">${fmtX(w.roas)}</td>
-              <td style="padding:8px 6px;text-align:center;color:#888888;font-variant-numeric:tabular-nums;">${fmtR(w.cpm)}</td>
-              <td style="padding:8px 6px;text-align:center;color:${w.ctr >= 1.0 ? "#00ff88" : w.ctr >= 0.8 ? "#ffaa00" : "#888888"};font-variant-numeric:tabular-nums;">${fmtP(w.ctr)}</td>
+              <td style="padding:8px 6px;color:#ffffff;font-weight:600;font-size:11px;">${w.label}</td>
+              <td style="padding:8px 4px;text-align:center;color:${w.purchases > 0 ? "#00ff88" : "#888888"};font-weight:700;font-variant-numeric:tabular-nums;">${w.purchases}</td>
+              <td style="padding:8px 4px;text-align:center;color:#ffffff;font-weight:600;font-variant-numeric:tabular-nums;">${fmtR(w.spend)}</td>
+              <td style="padding:8px 4px;text-align:center;color:${cpaColor(w.cpa)};font-weight:600;font-variant-numeric:tabular-nums;">${fmtR(w.cpa)}</td>
+              <td style="padding:8px 4px;text-align:center;color:${roasColor(w.roas)};font-weight:600;font-variant-numeric:tabular-nums;">${fmtX(w.roas)}</td>
+              <td style="padding:8px 4px;text-align:center;color:#888888;font-variant-numeric:tabular-nums;">${fmtR(w.cpm)}</td>
+              <td style="padding:8px 4px;text-align:center;color:${w.ctr >= 1.0 ? "#00ff88" : w.ctr >= 0.8 ? "#ffaa00" : "#888888"};font-variant-numeric:tabular-nums;">${fmtP(w.ctr)}</td>
             </tr>`).join("")}
           </table>
         </div>`;
