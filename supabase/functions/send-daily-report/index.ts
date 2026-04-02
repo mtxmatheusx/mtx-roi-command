@@ -59,7 +59,7 @@ async function fetchMetaInsights(adAccountId: string, accessToken: string, dateP
     const cpm = rows.length > 0 ? rows.reduce((s: number, r: any) => s + parseFloat(r.cpm || '0'), 0) / rows.length : 0
     const ctr = rows.length > 0 ? rows.reduce((s: number, r: any) => s + parseFloat(r.ctr || '0'), 0) / rows.length : 0
     const costPerSale = totalSales > 0 ? totalSpend / totalSales : 0
-    const roi = totalSpend > 0 ? ((totalRevenue - totalSpend) / totalSpend) * 100 : 0
+    const roi = totalSpend > 0 ? totalRevenue / totalSpend : 0 // ROAS (ex: 24.5x)
     const cpa = purchaseCampaigns > 0 ? totalCostPerPurchase / purchaseCampaigns : (totalSales > 0 ? totalSpend / totalSales : 0)
     const profit = totalRevenue - totalSpend
     return { sales: totalSales, spend: totalSpend, revenue: totalRevenue, costPerSale, roi, cpa, cpm, ctr, profit, dataVerified: true }
@@ -87,7 +87,7 @@ CPA Meta: R$${c.cpaMeta} | Agente: ${c.agentActions} ações 24h
 | Métrica     | Hoje       | Ontem      | 7 dias     | 15 dias    | 30 dias    |
 |-------------|------------|------------|------------|------------|------------|
 | Vendas      | ${m.vendas[0]} | ${m.vendas[1]} | ${m.vendas[2]} | ${m.vendas[3]} | ${m.vendas[4]} |
-| ROI %       | ${m.roi[0]}% | ${m.roi[1]}% | ${m.roi[2]}% | ${m.roi[3]}% | ${m.roi[4]}% |
+| ROAS (x)    | ${m.roi[0]}x | ${m.roi[1]}x | ${m.roi[2]}x | ${m.roi[3]}x | ${m.roi[4]}x |
 | CPA R$      | ${m.cpa[0]} | ${m.cpa[1]} | ${m.cpa[2]} | ${m.cpa[3]} | ${m.cpa[4]} |
 | CPM R$      | ${m.cpm[0]} | ${m.cpm[1]} | ${m.cpm[2]} | ${m.cpm[3]} | ${m.cpm[4]} |
 | CTR %       | ${m.ctr[0]}% | ${m.ctr[1]}% | ${m.ctr[2]}% | ${m.ctr[3]}% | ${m.ctr[4]}% |
@@ -122,10 +122,10 @@ Estruture sua resposta em:
 **2. ANÁLISE COMPORTAMENTAL** (use psicologia de marketing)
 - CTR caindo? Possível fadiga criativa — sugira refresh de criativos
 - CPA subindo progressivamente (7d→15d→30d)? Audiência saturando
-- ROI alto em 30d mas baixo hoje? Sazonalidade ou perda de momentum
+- ROAS alto em 30d mas baixo hoje? Sazonalidade ou perda de momentum
 
 **3. ALERTAS CRÍTICOS** (priorize por urgência)
-- ROI < 80% em qualquer período
+- ROAS < 1.5x em qualquer período (breakeven = 1.0x)
 - CPA acima de 30% da meta
 - CTR < 1% sustentado
 - Tendência de queda consistente (3+ períodos)
@@ -136,7 +136,7 @@ Estruture sua resposta em:
 
 **5. PROJEÇÃO** (com base na tendência 7d→15d→30d)
 - Projeção de spend e vendas para o restante do mês
-- ROI projetado se mantiver a tendência atual
+- ROAS projetado se mantiver a tendência atual
 
 Máximo 400 palavras. Seja direto, técnico e acionável. Use **negrito** para destacar dados críticos.`
 
@@ -153,13 +153,13 @@ Máximo 400 palavras. Seja direto, técnico e acionável. Use **negrito** para d
 
 function generateAlerts(m: ClientData['metricas'], cpaMeta: number, nome: string): string[] {
   const alerts: string[] = []
-  // Today alerts
-  if (m.roi[0] < 80) alerts.push(`ROI hoje em ${m.roi[0]}% — abaixo do mínimo saudável (80%).`)
+  // Today alerts (ROAS: 1.0 = breakeven, 3.0 = good)
+  if (m.roi[0] > 0 && m.roi[0] < 1.5) alerts.push(`ROAS hoje em ${fmt(m.roi[0])}x — abaixo do mínimo saudável (1.5x).`)
   if (m.vendas[0] === 0 && m.vendas[2] > 0) alerts.push(`Zero vendas hoje, mas ${m.vendas[2]} nos últimos 7 dias. Verificar campanhas.`)
   if (cpaMeta > 0 && m.cpa[0] > cpaMeta * 1.3) alerts.push(`CPA hoje (R$${m.cpa[0]}) está ${Math.round(((m.cpa[0] - cpaMeta) / cpaMeta) * 100)}% acima da meta (R$${cpaMeta}).`)
   if (m.ctr[0] < 1) alerts.push(`CTR em ${m.ctr[0]}% — abaixo de 1%. Considerar refresh de criativos.`)
   // Trend alerts (cross-period)
-  if (m.roi[2] > 0 && m.roi[0] < m.roi[2] * 0.7) alerts.push(`ROI hoje (${m.roi[0]}%) caiu ${Math.round((1 - m.roi[0] / m.roi[2]) * 100)}% vs média 7d (${m.roi[2]}%). Tendência de queda.`)
+  if (m.roi[2] > 0 && m.roi[0] < m.roi[2] * 0.7) alerts.push(`ROAS hoje (${fmt(m.roi[0])}x) caiu ${Math.round((1 - m.roi[0] / m.roi[2]) * 100)}% vs média 7d (${fmt(m.roi[2])}x). Tendência de queda.`)
   if (m.cpa[2] > 0 && m.cpa[0] > m.cpa[2] * 1.4) alerts.push(`CPA hoje R$${m.cpa[0]} — ${Math.round(((m.cpa[0] - m.cpa[2]) / m.cpa[2]) * 100)}% acima da média 7d (R$${m.cpa[2]}). Escalar com cuidado.`)
   if (m.cpa[2] > m.cpa[3] && m.cpa[3] > m.cpa[4] && m.cpa[4] > 0) alerts.push(`CPA em tendência de alta progressiva: 30d R$${m.cpa[4]} → 15d R$${m.cpa[3]} → 7d R$${m.cpa[2]}. Audiência pode estar saturando.`)
   return alerts
@@ -176,13 +176,13 @@ function generateEmailHTML(data: {
   clientes: ClientData[]; geminiAnalysis: string
 }): string {
 
-  const statusBadge = (roi: number) => {
-    if (roi >= 150) return { label: `🟢 ROI ${Math.round(roi)}%`, bg: '#edfaf1', color: '#1a7f37', border: 'rgba(52,199,89,0.25)' }
-    if (roi >= 80)  return { label: `🟡 ROI ${Math.round(roi)}%`, bg: '#fff8ec', color: '#b25c00', border: 'rgba(255,159,10,0.25)' }
-    return { label: `🔴 ROI ${Math.round(roi)}% — Atenção`, bg: '#fff0ef', color: '#c0392b', border: 'rgba(255,59,48,0.25)' }
+  const statusBadge = (roas: number) => {
+    if (roas >= 3) return { label: `🟢 ROAS ${roas.toFixed(1)}x`, bg: '#edfaf1', color: '#1a7f37', border: 'rgba(52,199,89,0.25)' }
+    if (roas >= 1.5)  return { label: `🟡 ROAS ${roas.toFixed(1)}x`, bg: '#fff8ec', color: '#b25c00', border: 'rgba(255,159,10,0.25)' }
+    return { label: `🔴 ROAS ${roas.toFixed(1)}x — Atenção`, bg: '#fff0ef', color: '#c0392b', border: 'rgba(255,59,48,0.25)' }
   }
 
-  const roiColor = (v: number) => v >= 150 ? '#1a7f37' : v >= 80 ? '#b25c00' : '#c0392b'
+  const roiColor = (v: number) => v >= 3 ? '#1a7f37' : v >= 1.5 ? '#b25c00' : '#c0392b'
 
   const periods = ['Hoje', 'Ontem', '7 dias', '15 dias', '30 dias']
 
@@ -237,7 +237,7 @@ function generateEmailHTML(data: {
         ${kpiPanel('Lucro Líquido', '💰', m.lucro as unknown as number[], v => `R$${fmt(v)}`, profitColor)}
         ${kpiPanel('Vendas', '🛍️', m.vendas as unknown as number[], v => fmtInt(v))}
         ${kpiPanel('Investimento', '💳', m.spend as unknown as number[], v => `R$${fmt(v)}`)}
-        ${kpiPanel('ROI', '📈', m.roi as unknown as number[], v => `${fmt(v)}%`, roiColor)}
+        ${kpiPanel('ROAS', '📈', m.roi as unknown as number[], v => `${fmt(v)}x`, roiColor)}
         ${kpiPanel('CPA', '🎯', m.cpa as unknown as number[], v => `R$${fmt(v)}`)}
         ${kpiPanel('CPM', '👁️', m.cpm as unknown as number[], v => `R$${fmt(v)}`)}
         ${kpiPanel('CTR', '🔗', m.ctr as unknown as number[], v => `${fmt(v)}%`, v => v < 1 ? '#c0392b' : '#6b6b6b')}
@@ -315,8 +315,8 @@ function generateEmailHTML(data: {
         </td>
         <td width="1%"></td>
         <td width="19%" style="background:#f7f7f5;border:1px solid #e8e8e5;border-radius:12px;padding:14px 6px;text-align:center;">
-          <div style="font-size:9px;font-weight:600;color:#ababab;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">📈 ROI</div>
-          <div style="font-size:18px;font-weight:700;color:${data.roiMedio >= 150 ? '#1a7f37' : data.roiMedio >= 80 ? '#b25c00' : '#c0392b'};letter-spacing:-.5px;font-variant-numeric:tabular-nums;">${fmt(data.roiMedio)}%</div>
+          <div style="font-size:9px;font-weight:600;color:#ababab;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">📈 ROAS</div>
+          <div style="font-size:18px;font-weight:700;color:${data.roiMedio >= 3 ? '#1a7f37' : data.roiMedio >= 1.5 ? '#b25c00' : '#c0392b'};letter-spacing:-.5px;font-variant-numeric:tabular-nums;">${fmt(data.roiMedio)}x</div>
         </td>
         <td width="1%"></td>
         <td width="19%" style="background:#f7f7f5;border:1px solid #e8e8e5;border-radius:12px;padding:14px 6px;text-align:center;">
@@ -450,7 +450,7 @@ Deno.serve(async (req) => {
         }))
         const realTotalSpend = allPeriods.reduce((s, p) => s + (p?.spend || 0), 0)
         const realTotalRevenue = allPeriods.reduce((s, p) => s + (p?.revenue || 0), 0)
-        const avgRoi = realTotalSpend > 0 ? ((realTotalRevenue - realTotalSpend) / realTotalSpend) * 100 : 0
+        const avgRoi = realTotalSpend > 0 ? realTotalRevenue / realTotalSpend : 0 // ROAS
         const avgCpa = totalVendas > 0 ? realTotalSpend / totalVendas : 0
         const lucroTotal = realTotalRevenue - realTotalSpend
 
