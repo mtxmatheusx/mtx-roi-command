@@ -450,7 +450,7 @@ Deno.serve(async (req) => {
         }))
         const realTotalSpend = allPeriods.reduce((s, p) => s + (p?.spend || 0), 0)
         const realTotalRevenue = allPeriods.reduce((s, p) => s + (p?.revenue || 0), 0)
-        const avgRoi = realTotalSpend > 0 ? ((realTotalRevenue - realTotalSpend) / realTotalSpend) * 100 : 0
+        const avgRoi = realTotalSpend > 0 ? realTotalRevenue / realTotalSpend : 0 // ROAS
         const avgCpa = totalVendas > 0 ? realTotalSpend / totalVendas : 0
         const lucroTotal = realTotalRevenue - realTotalSpend
 
