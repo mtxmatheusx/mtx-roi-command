@@ -66,18 +66,84 @@ async function fetchMetaInsights(adAccountId: string, accessToken: string, dateP
   } catch (err) { console.error(`Meta fetch error ${adAccountId} (${datePreset}):`, err); return empty }
 }
 
-async function generateGeminiAnalysis(clients: ClientData[], reportType: string): Promise<string> {
+async function loadSkillsContext(sb: any): Promise<string> {
   try {
+    const relevantSkills = ['paid-ads-meta', 'marketing-psychology', 'page-cro', 'analytics-tracking', 'copywriting', 'ab-test-setup']
+    const { data } = await sb.from('agent_skills').select('name, content').in('name', relevantSkills).eq('active', true)
+    if (!data?.length) return ''
+    return data.map((s: any) => `[${s.name}]: ${s.content.substring(0, 500)}`).join('\n\n')
+  } catch { return '' }
+}
+
+async function generateGeminiAnalysis(clients: ClientData[], reportType: string, sb: any): Promise<string> {
+  try {
+    const skillsCtx = await loadSkillsContext(sb)
+
     const summary = clients.map(c => {
       const m = c.metricas
-      return `${c.nome}: Hoje ${m.vendas[0]}v ROI ${m.roi[0]}% CPA R$${m.cpa[0]} | Ontem ${m.vendas[1]}v ROI ${m.roi[1]}% | 7d ${m.vendas[2]}v ROI ${m.roi[2]}% | 30d ${m.vendas[4]}v ROI ${m.roi[4]}%`
-    }).join('\n')
-    const timeCtx = reportType === 'morning' ? 'Relatório matinal. Prioridades do dia.' : reportType === 'midday' ? 'Meio-dia (parcial). Alertas urgentes.' : 'Fechamento. Resumo + planejamento amanhã.'
-    const prompt = `Analista de performance MTX. ${timeCtx}\n\nClientes:\n${summary}\n\nAnálise técnica (máx 200 palavras): Diagnóstico, alertas críticos (ROI<80%), 2-3 recomendações, projeção mensal. Seja direto.`
+      return `## ${c.nome} (${c.accountId})
+CPA Meta: R$${c.cpaMeta} | Agente: ${c.agentActions} ações 24h
+
+| Métrica     | Hoje       | Ontem      | 7 dias     | 15 dias    | 30 dias    |
+|-------------|------------|------------|------------|------------|------------|
+| Vendas      | ${m.vendas[0]} | ${m.vendas[1]} | ${m.vendas[2]} | ${m.vendas[3]} | ${m.vendas[4]} |
+| ROI %       | ${m.roi[0]}% | ${m.roi[1]}% | ${m.roi[2]}% | ${m.roi[3]}% | ${m.roi[4]}% |
+| CPA R$      | ${m.cpa[0]} | ${m.cpa[1]} | ${m.cpa[2]} | ${m.cpa[3]} | ${m.cpa[4]} |
+| CPM R$      | ${m.cpm[0]} | ${m.cpm[1]} | ${m.cpm[2]} | ${m.cpm[3]} | ${m.cpm[4]} |
+| CTR %       | ${m.ctr[0]}% | ${m.ctr[1]}% | ${m.ctr[2]}% | ${m.ctr[3]}% | ${m.ctr[4]}% |
+| Lucro R$    | ${m.lucro[0]} | ${m.lucro[1]} | ${m.lucro[2]} | ${m.lucro[3]} | ${m.lucro[4]} |
+| Spend R$    | ${m.spend[0]} | ${m.spend[1]} | ${m.spend[2]} | ${m.spend[3]} | ${m.spend[4]} |`
+    }).join('\n\n')
+
+    const timeCtx = reportType === 'morning'
+      ? 'Relatório MATINAL — Dados de ontem completo + tendência semanal/mensal.'
+      : reportType === 'midday'
+      ? 'Relatório MEIO-DIA — Dados parciais de hoje. Compare com ontem no mesmo horário.'
+      : 'FECHAMENTO DO DIA — Análise completa: hoje vs ontem vs tendência 7/15/30 dias.'
+
+    const prompt = `Você é o Analista Sênior de Performance da MTX Assessoria. ${timeCtx}
+
+${skillsCtx ? `## Base de Conhecimento Expert\n${skillsCtx}\n` : ''}
+## Dados Completos dos Clientes (5 janelas temporais)
+
+${summary}
+
+## Instruções para o Diagnóstico
+
+Analise TODAS as 5 janelas temporais (Hoje, Ontem, 7d, 15d, 30d) para cada cliente. Não avalie apenas o dia — identifique TENDÊNCIAS e PADRÕES.
+
+Estruture sua resposta em:
+
+**1. DIAGNÓSTICO DE TENDÊNCIA** (obrigatório para cada cliente)
+- Compare Hoje vs Ontem: melhora ou piora?
+- Compare 7d vs 15d vs 30d: tendência ascendente, estável ou descendente?
+- Identifique anomalias: picos ou quedas abruptas entre períodos
+
+**2. ANÁLISE COMPORTAMENTAL** (use psicologia de marketing)
+- CTR caindo? Possível fadiga criativa — sugira refresh de criativos
+- CPA subindo progressivamente (7d→15d→30d)? Audiência saturando
+- ROI alto em 30d mas baixo hoje? Sazonalidade ou perda de momentum
+
+**3. ALERTAS CRÍTICOS** (priorize por urgência)
+- ROI < 80% em qualquer período
+- CPA acima de 30% da meta
+- CTR < 1% sustentado
+- Tendência de queda consistente (3+ períodos)
+
+**4. RECOMENDAÇÕES ACIONÁVEIS** (2-3 por cliente, baseadas nos dados)
+- Cada recomendação deve citar o dado específico que a motiva
+- Use linguagem técnica de media buying
+
+**5. PROJEÇÃO** (com base na tendência 7d→15d→30d)
+- Projeção de spend e vendas para o restante do mês
+- ROI projetado se mantiver a tendência atual
+
+Máximo 400 palavras. Seja direto, técnico e acionável. Use **negrito** para destacar dados críticos.`
+
     const res = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${LOVABLE_API_KEY}` },
-      body: JSON.stringify({ model: 'google/gemini-2.5-flash', messages: [{ role: 'user', content: prompt }], max_tokens: 800, temperature: 0.4 }),
+      body: JSON.stringify({ model: 'google/gemini-2.5-flash', messages: [{ role: 'user', content: prompt }], max_tokens: 1500, temperature: 0.3 }),
     })
     if (!res.ok) return ''
     const data = await res.json()
@@ -87,10 +153,15 @@ async function generateGeminiAnalysis(clients: ClientData[], reportType: string)
 
 function generateAlerts(m: ClientData['metricas'], cpaMeta: number, nome: string): string[] {
   const alerts: string[] = []
-  if (m.roi[0] < 80) alerts.push(`ROI hoje está em ${m.roi[0]}% — abaixo do mínimo saudável (80%).`)
-  if (m.vendas[0] === 0 && m.vendas[1] > 0) alerts.push(`Zero vendas hoje, mas ${m.vendas[1]} nos últimos 7 dias. Verificar se campanhas estão ativas.`)
+  // Today alerts
+  if (m.roi[0] < 80) alerts.push(`ROI hoje em ${m.roi[0]}% — abaixo do mínimo saudável (80%).`)
+  if (m.vendas[0] === 0 && m.vendas[2] > 0) alerts.push(`Zero vendas hoje, mas ${m.vendas[2]} nos últimos 7 dias. Verificar campanhas.`)
   if (cpaMeta > 0 && m.cpa[0] > cpaMeta * 1.3) alerts.push(`CPA hoje (R$${m.cpa[0]}) está ${Math.round(((m.cpa[0] - cpaMeta) / cpaMeta) * 100)}% acima da meta (R$${cpaMeta}).`)
   if (m.ctr[0] < 1) alerts.push(`CTR em ${m.ctr[0]}% — abaixo de 1%. Considerar refresh de criativos.`)
+  // Trend alerts (cross-period)
+  if (m.roi[2] > 0 && m.roi[0] < m.roi[2] * 0.7) alerts.push(`ROI hoje (${m.roi[0]}%) caiu ${Math.round((1 - m.roi[0] / m.roi[2]) * 100)}% vs média 7d (${m.roi[2]}%). Tendência de queda.`)
+  if (m.cpa[2] > 0 && m.cpa[0] > m.cpa[2] * 1.4) alerts.push(`CPA hoje R$${m.cpa[0]} — ${Math.round(((m.cpa[0] - m.cpa[2]) / m.cpa[2]) * 100)}% acima da média 7d (R$${m.cpa[2]}). Escalar com cuidado.`)
+  if (m.cpa[2] > m.cpa[3] && m.cpa[3] > m.cpa[4] && m.cpa[4] > 0) alerts.push(`CPA em tendência de alta progressiva: 30d R$${m.cpa[4]} → 15d R$${m.cpa[3]} → 7d R$${m.cpa[2]}. Audiência pode estar saturando.`)
   return alerts
 }
 
