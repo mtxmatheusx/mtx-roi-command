@@ -729,6 +729,7 @@ serve(async (req) => {
     const rows = insights.map(c => {
       const windows = [
         { label: "Hoje", ...c.today },
+        { label: "Ontem", ...c.yesterday },
         { label: "7 dias", ...c.d7 },
         { label: "15 dias", ...c.d15 },
         { label: "30 dias", ...c.d30 },
