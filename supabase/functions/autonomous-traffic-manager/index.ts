@@ -490,7 +490,9 @@ async function generateGeminiEmailAnalysis(
   30d:    ${fmtW(c.d30)}`
   ).join("\n\n");
 
-  const prompt = `Você é um especialista sênior em tráfego pago com 10 anos de experiência em Meta Ads. Analise os dados abaixo com profundidade técnica e responda em português.
+  const prompt = `Você é um especialista sênior em tráfego pago com 10 anos de experiência em Meta Ads. Analise os dados abaixo com profundidade técnica usando as regras da knowledge base e responda em português.
+
+${skillsContext ? `## KNOWLEDGE BASE DE TRÁFEGO PAGO\n${skillsContext}\n\n` : ""}
 
 PERFIL: ${profileName}
 Metas: CPA Meta R$ ${profileConfig.cpa_meta} | CPA Máx Tolerável R$ ${profileConfig.cpa_max_toleravel} | ROAS Mínimo ${profileConfig.roas_min_escala}x
