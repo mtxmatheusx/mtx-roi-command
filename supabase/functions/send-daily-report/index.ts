@@ -107,6 +107,64 @@ async function fetchMetaInsights(
   }
 }
 
+async function generateGeminiAnalysis(clients: ClientReport[], reportType: string): Promise<string> {
+  try {
+    const clientSummaries = clients.map(c => {
+      const p = c.periods
+      return `Cliente: ${c.name} (${c.adAccountId}, CPA Meta: R$${c.cpaMeta})
+  Hoje: ${p.today.sales} vendas, R$${p.today.spend.toFixed(2)} spend, ROI ${p.today.roi.toFixed(1)}%, CPA R$${p.today.cpa.toFixed(2)}, CPM R$${p.today.cpm.toFixed(2)}, CTR ${p.today.ctr.toFixed(2)}%
+  7d: ${p.d7.sales} vendas, R$${p.d7.spend.toFixed(2)} spend, ROI ${p.d7.roi.toFixed(1)}%, CPA R$${p.d7.cpa.toFixed(2)}, CPM R$${p.d7.cpm.toFixed(2)}, CTR ${p.d7.ctr.toFixed(2)}%
+  15d: ${p.d15.sales} vendas, R$${p.d15.spend.toFixed(2)} spend, ROI ${p.d15.roi.toFixed(1)}%, CPA R$${p.d15.cpa.toFixed(2)}, CPM R$${p.d15.cpm.toFixed(2)}, CTR ${p.d15.ctr.toFixed(2)}%
+  30d: ${p.d30.sales} vendas, R$${p.d30.spend.toFixed(2)} spend, ROI ${p.d30.roi.toFixed(1)}%, CPA R$${p.d30.cpa.toFixed(2)}, CPM R$${p.d30.cpm.toFixed(2)}, CTR ${p.d30.ctr.toFixed(2)}%`
+    }).join('\n\n')
+
+    const timeContext = reportType === 'morning'
+      ? 'Este é o relatório matinal com dados de ontem. Foque em prioridades e ações para o dia.'
+      : reportType === 'midday'
+      ? 'Este é o relatório do meio-dia com dados parciais de hoje. Foque em alertas e ajustes urgentes.'
+      : 'Este é o fechamento do dia. Foque em resumo de resultados e planejamento para amanhã.'
+
+    const prompt = `Você é o analista de performance da MTX, especialista em Meta Ads e media buying.
+${timeContext}
+
+Dados dos clientes:
+${clientSummaries}
+
+Gere uma análise técnica em português (máx 300 palavras) com:
+1. **Diagnóstico**: Identifique tendências (ROI subindo/caindo, CPA acima da meta, CTR preocupante)
+2. **Alertas críticos**: Campanhas que precisam de atenção imediata (ROI < 80%, CTR < 1%, zero vendas)
+3. **Recomendações**: 2-3 ações específicas e práticas (ex: "Pausar campanha X", "Aumentar budget de Y em 20%", "Testar novo criativo para Z")
+4. **Projeção**: Se o ritmo atual se mantiver, qual o resultado esperado no fim do mês
+
+Use dados concretos dos números fornecidos. Seja direto, técnico e acionável. Não use linguagem genérica.`
+
+    const res = await fetch('https://api.lovable.dev/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-2.5-flash',
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 1024,
+        temperature: 0.4,
+      }),
+    })
+
+    if (!res.ok) {
+      console.error(`Gemini API error: ${res.status}`)
+      return 'Análise indisponível no momento.'
+    }
+
+    const data = await res.json()
+    return data.choices?.[0]?.message?.content || 'Análise indisponível no momento.'
+  } catch (err) {
+    console.error('Gemini analysis error:', err)
+    return 'Análise indisponível no momento.'
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
