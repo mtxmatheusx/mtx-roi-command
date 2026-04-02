@@ -758,6 +758,7 @@ export default function AIChatPanel() {
               </div>
             </>
           )}
+          </div>
         </div>
       )}
     </>
