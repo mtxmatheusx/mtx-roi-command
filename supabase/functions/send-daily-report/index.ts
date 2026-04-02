@@ -122,10 +122,10 @@ Estruture sua resposta em:
 **2. ANÁLISE COMPORTAMENTAL** (use psicologia de marketing)
 - CTR caindo? Possível fadiga criativa — sugira refresh de criativos
 - CPA subindo progressivamente (7d→15d→30d)? Audiência saturando
-- ROI alto em 30d mas baixo hoje? Sazonalidade ou perda de momentum
+- ROAS alto em 30d mas baixo hoje? Sazonalidade ou perda de momentum
 
 **3. ALERTAS CRÍTICOS** (priorize por urgência)
-- ROI < 80% em qualquer período
+- ROAS < 1.5x em qualquer período (breakeven = 1.0x)
 - CPA acima de 30% da meta
 - CTR < 1% sustentado
 - Tendência de queda consistente (3+ períodos)
@@ -136,7 +136,7 @@ Estruture sua resposta em:
 
 **5. PROJEÇÃO** (com base na tendência 7d→15d→30d)
 - Projeção de spend e vendas para o restante do mês
-- ROI projetado se mantiver a tendência atual
+- ROAS projetado se mantiver a tendência atual
 
 Máximo 400 palavras. Seja direto, técnico e acionável. Use **negrito** para destacar dados críticos.`
 
