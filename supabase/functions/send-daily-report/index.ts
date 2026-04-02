@@ -237,7 +237,7 @@ function generateEmailHTML(data: {
         ${kpiPanel('Lucro Líquido', '💰', m.lucro as unknown as number[], v => `R$${fmt(v)}`, profitColor)}
         ${kpiPanel('Vendas', '🛍️', m.vendas as unknown as number[], v => fmtInt(v))}
         ${kpiPanel('Investimento', '💳', m.spend as unknown as number[], v => `R$${fmt(v)}`)}
-        ${kpiPanel('ROI', '📈', m.roi as unknown as number[], v => `${fmt(v)}%`, roiColor)}
+        ${kpiPanel('ROAS', '📈', m.roi as unknown as number[], v => `${fmt(v)}x`, roiColor)}
         ${kpiPanel('CPA', '🎯', m.cpa as unknown as number[], v => `R$${fmt(v)}`)}
         ${kpiPanel('CPM', '👁️', m.cpm as unknown as number[], v => `R$${fmt(v)}`)}
         ${kpiPanel('CTR', '🔗', m.ctr as unknown as number[], v => `${fmt(v)}%`, v => v < 1 ? '#c0392b' : '#6b6b6b')}
