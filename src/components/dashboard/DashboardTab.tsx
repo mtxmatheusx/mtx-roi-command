@@ -164,16 +164,13 @@ export default function DashboardTab(props: DashboardTabProps) {
         return (
           <div className="space-y-2">
             {exceeded && (
-              <div className="flex items-center gap-2 p-3.5 rounded-xl bg-destructive/5 border border-destructive/15 text-sm font-medium text-destructive">
+              <div className="flex items-center gap-2 p-3.5 rounded-xl badge-red border text-sm font-medium">
                 <OctagonAlert className="w-4 h-4 shrink-0" />
                 Limite {freqLabels[budgetFrequency]} de {formatCurrency(budgetMaximo)} atingido. Escala suspensa.
               </div>
             )}
-            <div className="liquid-glass">
-              <div className="lg-distortion" />
-              <div className="lg-overlay" />
-              <div className="lg-specular" />
-              <div className="lg-content flex items-center gap-4">
+            <div className="bg-card border border-border rounded-2xl shadow-[var(--shadow-card)]">
+              <div className="p-4 flex items-center gap-4">
               <span className="text-xs text-muted-foreground whitespace-nowrap font-medium">
                 {formatCurrency(spendNoPeriodo)} / {formatCurrency(budgetMaximo)}
               </span>
@@ -195,15 +192,12 @@ export default function DashboardTab(props: DashboardTabProps) {
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-            className="liquid-glass-strong relative"
+            className="bg-card border border-border rounded-[20px] shadow-[var(--shadow-float)] relative overflow-hidden"
           >
-            <div className="lg-distortion" />
-            <div className="lg-overlay" />
-            <div className="lg-specular" />
-            <div className="lg-content p-6 sm:p-10 text-center">
-              <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.015] via-transparent to-success/[0.015] pointer-events-none" />
+            <div className="p-6 sm:p-10 text-center">
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.03] via-transparent to-[hsl(var(--success))]/[0.03] pointer-events-none" />
               <div className="relative">
-                <p className="text-[11px] font-semibold text-muted-foreground tracking-[0.2em] uppercase mb-4">Lucro Líquido Total</p>
+                <p className="t-label mb-4">Lucro Líquido Total</p>
                 <p className={`text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tighter hero-number ${totalProfit >= 0 ? "text-success" : "text-destructive"}`}>{formatCurrency(totalProfit)}</p>
                 <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-5 mt-5">
                   <span className="text-sm text-muted-foreground">
@@ -216,8 +210,7 @@ export default function DashboardTab(props: DashboardTabProps) {
                   {deltaProfit !== null && isFinite(deltaProfit) && (
                     <>
                       <span className="w-1 h-1 rounded-full bg-border" />
-                      <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full transition-colors
-                        ${deltaProfit >= 0 ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"}`}>
+                      <span className={`badge-status ${deltaProfit >= 0 ? "badge-green" : "badge-red"}`}>
                         {deltaProfit >= 0 ? <TrendingUp className="w-3 h-3" /> : null}
                         {deltaProfit > 0 ? "+" : ""}{deltaProfit.toFixed(1)}%
                       </span>
@@ -262,25 +255,21 @@ export default function DashboardTab(props: DashboardTabProps) {
 
           {/* Automation Log */}
           <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
-            className="liquid-glass">
-            <div className="lg-distortion" />
-            <div className="lg-overlay" />
-            <div className="lg-specular" />
-            <div className="lg-content !p-0 overflow-hidden">
+            className="bg-card border border-border rounded-2xl shadow-[var(--shadow-card)] overflow-hidden">
               <div className="px-6 py-4 border-b border-border flex items-center gap-2.5">
-                <div className="w-6 h-6 rounded-md bg-success/10 flex items-center justify-center">
+                <div className="w-6 h-6 rounded-md bg-[hsl(var(--green-bg))] flex items-center justify-center">
                   <Activity className="w-3.5 h-3.5 text-success" />
                 </div>
                 <h2 className="text-sm font-semibold text-foreground">Log de Automação</h2>
-                <span className="text-[10px] text-muted-foreground font-medium bg-muted px-2 py-0.5 rounded-full ml-1">{logs.length}</span>
+                <span className="t-label bg-muted px-2 py-0.5 rounded-full ml-1 !mb-0">{logs.length}</span>
               </div>
               <div className="max-h-64 overflow-y-auto">
                 {logs.length === 0 ? (
                   <p className="p-6 text-sm text-muted-foreground">Nenhum log registrado ainda.</p>
                 ) : (
-                  <div className="divide-y divide-border">
+                  <div className="divide-y divide-[hsl(var(--divider))]">
                     {logs.map((log, i) => (
-                      <div key={i} className={`px-6 py-3 text-sm flex items-start gap-3 transition-colors ${log.type === "action" ? "bg-destructive/3" : "hover:bg-muted/50"}`}>
+                      <div key={i} className={`px-6 py-3 text-sm flex items-start gap-3 transition-colors ${log.type === "action" ? "bg-[hsl(var(--red-bg))]" : "hover:bg-muted/50"}`}>
                         <span className="text-[10px] text-muted-foreground whitespace-nowrap font-mono mt-0.5">{log.time}</span>
                         <span className={log.type === "action" ? "text-destructive font-medium" : "text-muted-foreground"}>{log.message}</span>
                       </div>
@@ -288,7 +277,6 @@ export default function DashboardTab(props: DashboardTabProps) {
                   </div>
                 )}
               </div>
-            </div>
           </motion.div>
 
           {/* Data Verified */}

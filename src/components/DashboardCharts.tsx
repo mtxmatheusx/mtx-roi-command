@@ -26,8 +26,7 @@ const chartData = (daily: DailyDataPoint[]) =>
 const CustomTooltip = ({ active, payload, label, formatter }: any) => {
   if (!active || !payload?.length) return null;
   return (
-    <div className="rounded-xl bg-black/60 border border-white/10 px-4 py-3 text-xs backdrop-blur-xl"
-         style={{ boxShadow: "var(--shadow-elevated)" }}>
+    <div className="rounded-xl bg-card border border-border px-4 py-3 text-xs shadow-[var(--shadow-elevated)]">
       <p className="font-semibold text-foreground mb-1.5 text-[11px] tracking-wide uppercase">{label}</p>
       {payload.map((entry: any, i: number) => (
         <div key={i} className="flex items-center gap-2 mt-1">

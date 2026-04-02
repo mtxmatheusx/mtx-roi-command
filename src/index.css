@@ -6,86 +6,173 @@
 
 @layer base {
   :root {
-    /* Faciliten Design System — Dark Theme with Cyan-Purple Accent */
-    --background: 0 0% 4%;
-    --foreground: 0 0% 88%;
+    /* ═══ Apple × Notion Design System ═══ */
 
-    --card: 0 0% 8%;
-    --card-foreground: 0 0% 88%;
+    /* Surfaces */
+    --background: 40 11% 100%;
+    --foreground: 0 0% 10%;
 
-    --popover: 0 0% 8%;
-    --popover-foreground: 0 0% 88%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 10%;
 
-    --primary: 187 100% 42%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 10%;
+
+    /* Apple Blue accent */
+    --primary: 211 100% 45%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 0 0% 12%;
-    --secondary-foreground: 0 0% 70%;
+    --secondary: 40 11% 96%;
+    --secondary-foreground: 0 0% 42%;
 
-    --muted: 0 0% 12%;
-    --muted-foreground: 0 0% 53%;
+    --muted: 40 5% 94%;
+    --muted-foreground: 0 0% 42%;
 
-    --accent: 270 67% 55%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 211 100% 97%;
+    --accent-foreground: 211 100% 32%;
 
-    --destructive: 0 72% 51%;
+    /* Apple System Red */
+    --destructive: 4 100% 59%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 0 0% 17%;
-    --input: 0 0% 14%;
-    --ring: 187 100% 42%;
+    --border: 40 5% 90%;
+    --input: 40 5% 90%;
+    --ring: 211 100% 45%;
+    --divider: 40 5% 94%;
 
     --radius: 0.75rem;
 
-    --success: 152 69% 41%;
+    /* Status — Apple System Colors */
+    --success: 142 71% 49%;
     --success-foreground: 0 0% 100%;
-    --warning: 38 92% 50%;
+    --warning: 36 100% 52%;
     --warning-foreground: 0 0% 100%;
-    --info: 187 100% 42%;
+    --info: 211 100% 45%;
     --info-foreground: 0 0% 100%;
 
+    /* Status semantic bg/text */
+    --green-bg: 140 45% 95%;
+    --green-text: 142 56% 36%;
+    --yellow-bg: 40 100% 96%;
+    --yellow-text: 30 100% 35%;
+    --red-bg: 0 100% 97%;
+    --red-text: 4 62% 48%;
+    --blue-bg: 211 100% 97%;
+    --blue-text: 211 100% 32%;
+    --purple-bg: 280 60% 97%;
+    --purple-text: 280 50% 40%;
+
     /* Chart tokens */
-    --chart-blue: 187 100% 42%;
-    --chart-green: 152 69% 41%;
-    --chart-orange: 38 92% 50%;
-    --chart-purple: 270 67% 55%;
+    --chart-blue: 211 100% 45%;
+    --chart-green: 142 71% 49%;
+    --chart-orange: 36 100% 52%;
+    --chart-purple: 280 67% 55%;
     --chart-pink: 340 82% 59%;
 
-    /* Gradient accent */
-    --gradient-accent: linear-gradient(135deg, hsl(187 100% 42%), hsl(270 67% 55%));
+    /* Apple Shadows */
+    --shadow-xs: 0 1px 2px rgba(0,0,0,.04);
+    --shadow-sm: 0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
+    --shadow-card: 0 2px 8px -2px rgba(0,0,0,.08), 0 0 0 1px rgba(0,0,0,.03);
+    --shadow-elevated: 0 4px 12px rgba(0,0,0,.06), 0 2px 4px rgba(0,0,0,.04);
+    --shadow-focus: 0 0 0 3px hsl(211 100% 45% / 0.12);
+    --shadow-float: 0 12px 32px rgba(0,0,0,.08), 0 4px 8px rgba(0,0,0,.04);
+    --shadow-heavy: 0 24px 48px rgba(0,0,0,.10), 0 8px 16px rgba(0,0,0,.04);
 
-    /* Elevation system — Apple-inspired */
-    --shadow-xs: 0 1px 2px 0 hsl(0 0% 0% / 0.2);
-    --shadow-sm: 0 1px 3px 0 hsl(0 0% 0% / 0.25), 0 1px 2px -1px hsl(0 0% 0% / 0.12);
-    --shadow-card: 0 2px 8px -2px hsl(0 0% 0% / 0.3), 0 0 0 1px hsl(0 0% 100% / 0.04);
-    --shadow-elevated: 0 8px 30px -8px hsl(0 0% 0% / 0.45), 0 0 0 1px hsl(0 0% 100% / 0.06);
-    --shadow-focus: 0 0 0 3px hsl(187 100% 42% / 0.25);
-    --shadow-glass: 0 4px 24px -4px hsl(0 0% 0% / 0.35), inset 0 1px 0 0 hsl(0 0% 100% / 0.06);
-
-    /* Sidebar */
-    --sidebar-background: 0 0% 5%;
-    --sidebar-foreground: 0 0% 88%;
-    --sidebar-primary: 187 100% 42%;
+    /* Sidebar — Notion style */
+    --sidebar-background: 40 11% 96%;
+    --sidebar-foreground: 0 0% 10%;
+    --sidebar-primary: 211 100% 45%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 0 0% 12%;
-    --sidebar-accent-foreground: 0 0% 88%;
-    --sidebar-border: 0 0% 14%;
-    --sidebar-ring: 187 100% 42%;
+    --sidebar-accent: 40 5% 92%;
+    --sidebar-accent-foreground: 0 0% 10%;
+    --sidebar-border: 40 5% 90%;
+    --sidebar-ring: 211 100% 45%;
 
-    /* Timing */
+    /* Timing — Apple spring */
+    --ease: cubic-bezier(0.16, 1, 0.3, 1);
     --transition-fast: 120ms;
     --transition-base: 200ms;
     --transition-slow: 320ms;
+  }
+
+  .dark {
+    --background: 0 0% 10%;
+    --foreground: 0 0% 91%;
+
+    --card: 0 0% 12%;
+    --card-foreground: 0 0% 91%;
+
+    --popover: 0 0% 12%;
+    --popover-foreground: 0 0% 91%;
+
+    --primary: 211 100% 60%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 0 0% 15%;
+    --secondary-foreground: 0 0% 55%;
+
+    --muted: 0 0% 15%;
+    --muted-foreground: 0 0% 55%;
+
+    --accent: 211 50% 18%;
+    --accent-foreground: 211 100% 75%;
+
+    --destructive: 4 100% 64%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 0 0% 20%;
+    --input: 0 0% 20%;
+    --ring: 211 100% 60%;
+    --divider: 0 0% 17%;
+
+    --success: 142 71% 53%;
+    --success-foreground: 0 0% 100%;
+    --warning: 36 100% 55%;
+    --warning-foreground: 0 0% 100%;
+
+    --green-bg: 142 30% 12%;
+    --green-text: 142 60% 70%;
+    --yellow-bg: 36 40% 13%;
+    --yellow-text: 36 80% 70%;
+    --red-bg: 4 40% 12%;
+    --red-text: 4 80% 70%;
+    --blue-bg: 211 40% 14%;
+    --blue-text: 211 80% 70%;
+    --purple-bg: 280 30% 14%;
+    --purple-text: 280 60% 70%;
+
+    --shadow-xs: 0 1px 2px rgba(0,0,0,.20);
+    --shadow-sm: 0 1px 3px rgba(0,0,0,.25), 0 1px 2px rgba(0,0,0,.15);
+    --shadow-card: 0 2px 8px -2px rgba(0,0,0,.35), 0 0 0 1px rgba(255,255,255,.04);
+    --shadow-elevated: 0 4px 12px rgba(0,0,0,.30), 0 2px 4px rgba(0,0,0,.15);
+    --shadow-float: 0 12px 32px rgba(0,0,0,.35), 0 4px 8px rgba(0,0,0,.20);
+    --shadow-heavy: 0 24px 48px rgba(0,0,0,.45), 0 8px 16px rgba(0,0,0,.25);
+
+    --sidebar-background: 0 0% 8%;
+    --sidebar-foreground: 0 0% 91%;
+    --sidebar-primary: 211 100% 60%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 0 0% 15%;
+    --sidebar-accent-foreground: 0 0% 91%;
+    --sidebar-border: 0 0% 18%;
   }
 }
 
 @layer base {
   * {
     @apply border-border;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+  }
+
+  h1, h2, h3 {
+    letter-spacing: -0.4px;
+  }
+  p, span, td {
+    letter-spacing: -0.1px;
   }
 
   body {
-    @apply bg-background text-foreground font-sans antialiased;
+    @apply bg-background text-foreground antialiased;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
@@ -139,247 +226,179 @@
 }
 
 @layer utilities {
+  /* Status text utilities */
   .text-success { color: hsl(var(--success)); }
   .text-warning { color: hsl(var(--warning)); }
   .bg-success { background-color: hsl(var(--success)); }
   .bg-warning { background-color: hsl(var(--warning)); }
 
-  /* Gradient text accent — Faciliten cyan-to-purple */
-  .text-gradient-accent {
-    background: var(--gradient-accent);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+  /* ═══ Apple × Notion Typography Scale ═══ */
+  .t-hero    { font-size: 34px; font-weight: 800; letter-spacing: -0.8px; color: hsl(var(--foreground)); }
+  .t-title   { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; color: hsl(var(--foreground)); }
+  .t-heading { font-size: 17px; font-weight: 600; letter-spacing: -0.3px; color: hsl(var(--foreground)); }
+  .t-body    { font-size: 15px; font-weight: 400; letter-spacing: -0.1px; color: hsl(var(--foreground)); line-height: 1.6; }
+  .t-caption { font-size: 13px; font-weight: 400; color: hsl(var(--muted-foreground)); }
+  .t-label   { font-size: 11px; font-weight: 600; color: hsl(var(--muted-foreground)); text-transform: uppercase; letter-spacing: 0.06em; }
+  .t-mono    { font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
+
+  /* Hero number style */
+  .hero-number {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
   }
 
-  /* Gradient border glow */
-  .border-gradient-accent {
-    border-image: var(--gradient-accent) 1;
+  /* ═══ Apple × Notion Card System ═══ */
+  .notion-card {
+    background: hsl(var(--card));
+    border: 1px solid hsl(var(--border));
+    border-radius: 16px;
+    box-shadow: var(--shadow-card);
+    transition: box-shadow 200ms cubic-bezier(0.16,1,0.3,1),
+                transform 200ms cubic-bezier(0.16,1,0.3,1);
+  }
+  .notion-card:hover {
+    box-shadow: var(--shadow-elevated);
+    transform: translateY(-1px);
   }
 
-  /* Gradient button */
-  .btn-gradient {
-    background: var(--gradient-accent);
-    color: white;
-    border: none;
-    transition: opacity var(--transition-base) ease, transform var(--transition-fast) ease;
-  }
-  .btn-gradient:hover {
-    opacity: 0.9;
-  }
-  .btn-gradient:active {
-    transform: scale(0.98);
-  }
-
-  /* ══════════════════════════════════════════
-     APPLE LIQUID GLASS — com refração real
-     iOS 26 / WWDC 2025
-     ══════════════════════════════════════════ */
-
-  .liquid-glass {
-    position: relative;
+  /* Strong card — hero panels */
+  .notion-card-strong {
+    background: hsl(var(--card));
+    border: 1px solid hsl(var(--border));
     border-radius: 20px;
-    overflow: hidden;
-    isolation: isolate;
-    box-shadow:
-      0 2px 4px rgba(0,0,0,0.04),
-      0 8px 24px rgba(0,0,0,0.10),
-      0 24px 48px rgba(0,0,0,0.08);
-    transition: transform 220ms cubic-bezier(0.16,1,0.3,1),
-                box-shadow 220ms cubic-bezier(0.16,1,0.3,1);
+    box-shadow: var(--shadow-float);
+    transition: box-shadow 200ms cubic-bezier(0.16,1,0.3,1),
+                transform 200ms cubic-bezier(0.16,1,0.3,1);
   }
 
-  .liquid-glass:hover {
-    transform: translateY(-2px) scale(1.005);
-    box-shadow:
-      0 4px 8px rgba(0,0,0,0.06),
-      0 16px 40px rgba(0,0,0,0.14),
-      0 40px 80px rgba(0,0,0,0.10);
+  /* ═══ Status Badges ═══ */
+  .badge-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    border-radius: 980px;
+    padding: 3px 10px;
+    font-size: 12px;
+    font-weight: 600;
   }
+  .badge-green  { background: hsl(var(--green-bg));  color: hsl(var(--green-text));  }
+  .badge-yellow { background: hsl(var(--yellow-bg)); color: hsl(var(--yellow-text)); }
+  .badge-red    { background: hsl(var(--red-bg));    color: hsl(var(--red-text));    }
+  .badge-blue   { background: hsl(var(--blue-bg));   color: hsl(var(--blue-text));   }
+  .badge-purple { background: hsl(var(--purple-bg)); color: hsl(var(--purple-text)); }
 
-  /* Camada 1 — Distorção/Refração */
-  .lg-distortion {
-    position: absolute;
-    inset: 0;
-    z-index: 0;
-    backdrop-filter: blur(0px);
-    filter: url(#lg-dist);
-    isolation: isolate;
-    pointer-events: none;
+  /* Legacy glass aliases (for charts/backwards compat) */
+  .glass-green  { background: hsl(var(--green-bg));  border-color: hsl(var(--success) / 0.3); }
+  .glass-yellow { background: hsl(var(--yellow-bg)); border-color: hsl(var(--warning) / 0.3); }
+  .glass-red    { background: hsl(var(--red-bg));     border-color: hsl(var(--destructive) / 0.3); }
+
+  /* ═══ Section labels — Notion style ═══ */
+  .section-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: hsl(var(--muted-foreground));
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
   }
-
-  /* Camada 2 — Vidro translúcido */
-  .lg-overlay {
-    position: absolute;
-    inset: 0;
-    z-index: 1;
-    background: rgba(255, 255, 255, 0.10);
-    backdrop-filter: blur(28px) saturate(180%) brightness(1.06);
-    -webkit-backdrop-filter: blur(28px) saturate(180%) brightness(1.06);
-    pointer-events: none;
-  }
-
-  /* Camada 3 — Reflexo especular (brilho Apple) */
-  .lg-specular {
-    position: absolute;
-    inset: 0;
-    z-index: 2;
-    border-radius: inherit;
-    overflow: hidden;
-    background: linear-gradient(
-      135deg,
-      rgba(255,255,255,0.22) 0%,
-      rgba(255,255,255,0.06) 25%,
-      transparent 50%
-    );
-    box-shadow:
-      inset 1px 1px 0 rgba(255,255,255,0.55),
-      inset 0 0 8px rgba(255,255,255,0.12),
-      inset -1px -1px 0 rgba(255,255,255,0.04);
-    pointer-events: none;
-  }
-
-  /* Camada 4 — Borda luminosa */
-  .liquid-glass::after {
+  .section-label::after {
     content: "";
-    position: absolute;
-    inset: 0;
-    z-index: 3;
-    border-radius: inherit;
-    border-top: 1px solid rgba(255,255,255,0.40);
-    border-left: 1px solid rgba(255,255,255,0.20);
-    border-right: 1px solid rgba(255,255,255,0.08);
-    border-bottom: 1px solid rgba(255,255,255,0.05);
-    pointer-events: none;
+    flex: 1;
+    height: 1px;
+    background: hsl(var(--border));
   }
 
-  /* Conteúdo sempre acima */
+  /* ═══ Apple Glass — for modals & overlays ═══ */
+  .apple-glass {
+    background: hsl(var(--card) / 0.80);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    border: 1px solid hsl(var(--border) / 0.60);
+    border-radius: 20px;
+    box-shadow: var(--shadow-heavy);
+  }
+
+  /* ═══ Legacy liquid-glass mappings ═══ */
+  /* Map old liquid-glass to clean notion-card for backwards compat */
+  .liquid-glass {
+    background: hsl(var(--card));
+    border: 1px solid hsl(var(--border));
+    border-radius: 16px;
+    box-shadow: var(--shadow-card);
+    position: relative;
+    overflow: hidden;
+    transition: box-shadow 200ms cubic-bezier(0.16,1,0.3,1),
+                transform 200ms cubic-bezier(0.16,1,0.3,1);
+  }
+  .liquid-glass:hover {
+    box-shadow: var(--shadow-elevated);
+    transform: translateY(-1px);
+  }
+
+  .liquid-glass-strong {
+    background: hsl(var(--card));
+    border: 1px solid hsl(var(--border));
+    border-radius: 20px;
+    box-shadow: var(--shadow-float);
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Hide legacy glass layers — no longer needed */
+  .lg-distortion,
+  .lg-overlay,
+  .lg-specular {
+    display: none;
+  }
   .lg-content {
     position: relative;
-    z-index: 4;
     padding: 1.25rem;
   }
 
-  /* Variante forte — hero panels */
-  .liquid-glass-strong {
-    position: relative;
-    border-radius: 24px;
-    overflow: hidden;
-    isolation: isolate;
-    box-shadow:
-      0 4px 8px rgba(0,0,0,0.06),
-      0 16px 40px rgba(0,0,0,0.14),
-      0 40px 80px rgba(0,0,0,0.10);
-    transition: transform 220ms cubic-bezier(0.16,1,0.3,1),
-                box-shadow 220ms cubic-bezier(0.16,1,0.3,1);
-  }
+  /* Legacy aliases */
+  .liquid-glass::after,
   .liquid-glass-strong::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    z-index: 3;
-    border-radius: inherit;
-    border-top: 1px solid rgba(255,255,255,0.50);
-    border-left: 1px solid rgba(255,255,255,0.25);
-    border-right: 1px solid rgba(255,255,255,0.10);
-    border-bottom: 1px solid rgba(255,255,255,0.06);
-    pointer-events: none;
+    display: none;
   }
 
-  /* Variante dark — sidebar/nav */
-  .liquid-glass-dark {
-    position: relative;
-    overflow: hidden;
-    isolation: isolate;
-  }
-  .liquid-glass-dark .lg-overlay {
-    background: rgba(0, 0, 0, 0.35);
-    backdrop-filter: blur(28px) saturate(180%);
-    -webkit-backdrop-filter: blur(28px) saturate(180%);
-  }
-  .liquid-glass-dark .lg-specular {
-    background: linear-gradient(
-      135deg,
-      rgba(255,255,255,0.08) 0%,
-      rgba(255,255,255,0.02) 30%,
-      transparent 60%
-    );
-    box-shadow:
-      inset 1px 1px 0 rgba(255,255,255,0.12),
-      inset 0 0 6px rgba(255,255,255,0.04);
-  }
-
-  /* Background com profundidade */
   .glass-bg {
-    background:
-      radial-gradient(ellipse 60% 50% at 15% 15%, oklch(0.30 0.14 260) 0%, transparent 55%),
-      radial-gradient(ellipse 50% 60% at 85% 80%, oklch(0.24 0.12 300) 0%, transparent 55%),
-      radial-gradient(ellipse 70% 70% at 50% 50%, oklch(0.18 0.05 240) 0%, transparent 70%),
-      oklch(0.12 0.03 250);
+    background: hsl(var(--background));
     min-height: 100svh;
   }
 
-  /* Status badges em glass */
-  .glass-green  { background: rgba(34, 197, 94, 0.15);  border-color: rgba(34, 197, 94, 0.3);  }
-  .glass-yellow { background: rgba(234, 179, 8, 0.15);  border-color: rgba(234, 179, 8, 0.3);  }
-  .glass-red    { background: rgba(239, 68, 68, 0.15);  border-color: rgba(239, 68, 68, 0.3);  }
-
-  /* Legacy aliases — map old glass classes to liquid-glass visuals */
   .glass-card,
   .chart-container {
-    position: relative;
-    border-radius: 20px;
-    overflow: hidden;
-    isolation: isolate;
-    background: rgba(255, 255, 255, 0.08);
-    backdrop-filter: blur(28px) saturate(180%) brightness(1.06);
-    -webkit-backdrop-filter: blur(28px) saturate(180%) brightness(1.06);
-    border: 1px solid rgba(255,255,255,0.18);
-    box-shadow:
-      0 2px 4px rgba(0,0,0,0.04),
-      0 8px 24px rgba(0,0,0,0.10),
-      0 24px 48px rgba(0,0,0,0.08),
-      inset 0 1px 0 rgba(255,255,255,0.2);
-    transition: transform 220ms cubic-bezier(0.16,1,0.3,1),
-                box-shadow 220ms cubic-bezier(0.16,1,0.3,1);
+    background: hsl(var(--card));
+    border: 1px solid hsl(var(--border));
+    border-radius: 16px;
+    box-shadow: var(--shadow-card);
+    transition: box-shadow 200ms cubic-bezier(0.16,1,0.3,1),
+                transform 200ms cubic-bezier(0.16,1,0.3,1);
   }
   .glass-card:hover,
   .chart-container:hover {
-    transform: translateY(-2px) scale(1.005);
-    box-shadow:
-      0 4px 8px rgba(0,0,0,0.06),
-      0 16px 40px rgba(0,0,0,0.14),
-      0 40px 80px rgba(0,0,0,0.10),
-      inset 0 1px 0 rgba(255,255,255,0.25);
+    box-shadow: var(--shadow-elevated);
+    transform: translateY(-1px);
   }
-
   .chart-container {
     padding: 1.25rem 1.5rem;
   }
 
   .glass-card-interactive {
-    position: relative;
-    border-radius: 20px;
-    overflow: hidden;
-    isolation: isolate;
-    background: rgba(255, 255, 255, 0.08);
-    backdrop-filter: blur(28px) saturate(180%) brightness(1.06);
-    -webkit-backdrop-filter: blur(28px) saturate(180%) brightness(1.06);
-    border: 1px solid rgba(255,255,255,0.18);
-    box-shadow:
-      0 2px 4px rgba(0,0,0,0.04),
-      0 8px 24px rgba(0,0,0,0.10);
+    background: hsl(var(--card));
+    border: 1px solid hsl(var(--border));
+    border-radius: 16px;
+    box-shadow: var(--shadow-card);
     cursor: pointer;
-    transition: transform 220ms cubic-bezier(0.16,1,0.3,1),
-                box-shadow 220ms cubic-bezier(0.16,1,0.3,1);
+    transition: box-shadow 200ms cubic-bezier(0.16,1,0.3,1),
+                transform 200ms cubic-bezier(0.16,1,0.3,1);
   }
   .glass-card-interactive:hover {
-    transform: translateY(-2px) scale(1.005);
-    box-shadow:
-      0 4px 8px rgba(0,0,0,0.06),
-      0 16px 40px rgba(0,0,0,0.14),
-      0 40px 80px rgba(0,0,0,0.10),
-      inset 0 1px 0 rgba(255,255,255,0.25);
+    box-shadow: var(--shadow-elevated);
+    transform: translateY(-1px);
   }
   .glass-card-interactive:active {
     transform: translateY(0) scale(0.995);
@@ -422,4 +441,22 @@
     0% { background-position: 200% 0; }
     100% { background-position: -200% 0; }
   }
+
+  /* Gradient text accent */
+  .text-gradient-accent {
+    background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--chart-purple)));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Gradient button */
+  .btn-gradient {
+    background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--chart-purple)));
+    color: white;
+    border: none;
+    transition: opacity var(--transition-base) ease, transform var(--transition-fast) ease;
+  }
+  .btn-gradient:hover { opacity: 0.9; }
+  .btn-gradient:active { transform: scale(0.98); }
 }
