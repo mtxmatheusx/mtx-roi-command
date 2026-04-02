@@ -27,17 +27,24 @@ export default function AppSidebar() {
 
   const navGroups: NavGroup[] = [
     {
-      label: "Analytics",
+      label: "Ads & Tráfego",
       items: [
         { to: "/", label: t("nav.dashboard"), icon: BarChart3, end: true },
         { to: "/campanhas", label: t("nav.campaigns"), icon: Target },
+        { to: "/lancar-campanha", label: "Lançar & Publicar", icon: Rocket },
         { to: "/diagnostico", label: t("nav.diagnostic"), icon: Brain },
+      ],
+    },
+    {
+      label: "Analytics & CRO",
+      items: [
+        { to: "/simulador", label: t("nav.simulator"), icon: Zap },
+        { to: "/auditoria-meta", label: t("nav.auditMeta"), icon: Shield },
       ],
     },
     {
       label: "Criação",
       items: [
-        { to: "/lancar-campanha", label: "Lançar & Publicar", icon: Rocket },
         { to: "/laboratorio-estrategico", label: "Laboratório Estratégico", icon: Beaker },
         { to: "/criativos", label: t("nav.creatives"), icon: ImageIcon },
         { to: "/laboratorio-visual", label: "Laboratório Visual", icon: Wand2 },
@@ -45,16 +52,20 @@ export default function AppSidebar() {
       ],
     },
     {
+      label: "Automação",
+      items: [
+        { to: "/agente-autonomo", label: "Agente Autônomo", icon: Bot },
+      ],
+    },
+    {
       label: "Ferramentas",
       items: [
-        { to: "/simulador", label: t("nav.simulator"), icon: Zap },
-        { to: "/auditoria-meta", label: t("nav.auditMeta"), icon: Shield },
-        { to: "/agente-autonomo", label: "Agente Autônomo", icon: Bot },
         { to: "/feedback-copy", label: "Feedbacks de Copy", icon: MessageSquare },
         { to: "/brand-identity", label: "Briefing & ID Visual", icon: Palette },
         { to: "/feed-preview", label: "Preview do Feed", icon: Grid3X3 },
         { to: "/google-drive", label: "Pastas Google Drive", icon: FolderPlus },
         { to: "/kanban", label: "Quadro de Tarefas", icon: KanbanSquare },
+        { to: "/skills", label: "Skills Hub", icon: Brain },
       ],
     },
   ];
