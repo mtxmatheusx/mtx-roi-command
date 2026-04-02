@@ -169,7 +169,7 @@ export default function DashboardTab(props: DashboardTabProps) {
                 Limite {freqLabels[budgetFrequency]} de {formatCurrency(budgetMaximo)} atingido. Escala suspensa.
               </div>
             )}
-            <div className="glass-card p-4 flex items-center gap-4">
+            <div className="glass p-4 flex items-center gap-4">
               <span className="text-xs text-muted-foreground whitespace-nowrap font-medium">
                 {formatCurrency(spendNoPeriodo)} / {formatCurrency(budgetMaximo)}
               </span>
@@ -190,7 +190,7 @@ export default function DashboardTab(props: DashboardTabProps) {
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-            className="glass-card p-6 sm:p-10 text-center relative overflow-hidden"
+            className="glass-strong p-6 sm:p-10 text-center relative overflow-hidden"
           >
             <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.015] via-transparent to-success/[0.015] pointer-events-none" />
             <div className="relative">
@@ -252,7 +252,7 @@ export default function DashboardTab(props: DashboardTabProps) {
 
           {/* Automation Log */}
           <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
-            className="glass-card overflow-hidden">
+            className="glass overflow-hidden">
             <div className="px-6 py-4 border-b border-border flex items-center gap-2.5">
               <div className="w-6 h-6 rounded-md bg-success/10 flex items-center justify-center">
                 <Activity className="w-3.5 h-3.5 text-success" />

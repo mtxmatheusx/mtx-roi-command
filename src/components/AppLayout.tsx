@@ -8,11 +8,11 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 export default function AppLayout({ children }: { children: ReactNode }) {
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full">
+        <div className="min-h-screen flex w-full glass-bg">
         <AppSidebar />
 
         <div className="flex-1 flex flex-col min-w-0">
-          <header className="sticky top-0 z-30 flex items-center justify-between px-4 sm:px-8 h-14 border-b border-border/80 bg-card/70 backdrop-blur-xl backdrop-saturate-150">
+          <header className="sticky top-0 z-30 flex items-center justify-between px-4 sm:px-8 h-14 glass border-b border-white/10" style={{ borderRadius: 0 }}>
             <SidebarTrigger className="-ml-2" />
             <div className="ml-auto">
               <LanguageSelector />
