@@ -19,6 +19,7 @@ interface CampaignInsight {
   created_time: string;
   age_days: number;
   today: WindowMetrics;
+  yesterday: WindowMetrics;
   d7: WindowMetrics;
   d15: WindowMetrics;
   d30: WindowMetrics;
