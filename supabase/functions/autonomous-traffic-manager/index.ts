@@ -61,14 +61,22 @@ function getTimeframeRanges() {
   return { today, d7Since, d15Since, d30Since, wtdSince, mtdSince };
 }
 
-function parseMetrics(ins: any) {
-  if (!ins) return { spend: 0, purchases: 0, revenue: 0, ctr: 0, frequency: 0, cpm: 0, impressions: 0 };
+function parseMetrics(ins: any, campaignId?: string) {
+  if (!ins) return { spend: 0, purchases: 0, revenue: 0, ctr: 0, frequency: 0, cpm: 0, impressions: 0, apiRoas: 0 };
+  if (campaignId) {
+    console.log('[RAW insights]', campaignId, JSON.stringify({
+      spend: ins.spend, ctr: ins.ctr, cpm: ins.cpm, frequency: ins.frequency, impressions: ins.impressions,
+      actions: ins.actions, action_values: ins.action_values, purchase_roas: ins.purchase_roas
+    }));
+  }
   const spend = parseFloat(ins.spend || "0");
   const impressions = parseInt(ins.impressions || "0", 10);
   const purchases = (ins.actions || []).filter((a: any) => a.action_type === "purchase" || a.action_type === "omni_purchase").reduce((s: number, a: any) => s + parseInt(a.value || "0", 10), 0);
   const revenue = (ins.action_values || []).filter((a: any) => a.action_type === "purchase" || a.action_type === "omni_purchase").reduce((s: number, a: any) => s + parseFloat(a.value || "0"), 0);
-  const cpm = impressions > 0 ? (spend / impressions) * 1000 : 0;
-  return { spend, purchases, revenue, ctr: parseFloat(ins.ctr || "0"), frequency: parseFloat(ins.frequency || "0"), cpm, impressions };
+  const cpm = parseFloat(ins.cpm || "0");
+  const ctr = parseFloat(ins.ctr || "0");
+  const apiRoas = Array.isArray(ins.purchase_roas) && ins.purchase_roas.length > 0 ? parseFloat(ins.purchase_roas[0].value || "0") : 0;
+  return { spend, purchases, revenue, ctr, frequency: parseFloat(ins.frequency || "0"), cpm, impressions, apiRoas };
 }
 
 function determineTrend(dtdRoas: number, wtdRoas: number, mtdRoas: number): string {
@@ -430,7 +438,7 @@ async function duplicateAdset(adsetId: string, accessToken: string, newName?: st
 // ─── Meta API Fetchers ─────────────────────────────────────
 
 async function fetchInsightsForRange(accountId: string, accessToken: string, since: string, until: string): Promise<Map<string, any>> {
-  const url = `https://graph.facebook.com/v23.0/${accountId}/insights?fields=campaign_id,spend,actions,action_values,ctr,frequency,impressions,cpm&time_range={"since":"${since}","until":"${until}"}&level=campaign&limit=500&access_token=${accessToken}`;
+  const url = `https://graph.facebook.com/v23.0/${accountId}/insights?fields=campaign_id,spend,actions,action_values,purchase_roas,ctr,frequency,impressions,cpm&time_range={"since":"${since}","until":"${until}"}&level=campaign&limit=500&access_token=${accessToken}`;
   try {
     const resp = await fetch(url);
     const data = await resp.json();
@@ -441,7 +449,7 @@ async function fetchInsightsForRange(accountId: string, accessToken: string, sin
 }
 
 async function fetchInsightsByPreset(accountId: string, accessToken: string, datePreset: string): Promise<Map<string, any>> {
-  const url = `https://graph.facebook.com/v23.0/${accountId}/insights?fields=campaign_id,spend,actions,action_values,ctr,frequency,impressions,cpm&date_preset=${datePreset}&level=campaign&limit=500&access_token=${accessToken}`;
+  const url = `https://graph.facebook.com/v23.0/${accountId}/insights?fields=campaign_id,spend,actions,action_values,purchase_roas,ctr,frequency,impressions,cpm&date_preset=${datePreset}&level=campaign&limit=500&access_token=${accessToken}`;
   try {
     const resp = await fetch(url);
     const data = await resp.json();
@@ -449,6 +457,67 @@ async function fetchInsightsByPreset(accountId: string, accessToken: string, dat
     for (const row of (data.data || [])) map.set(row.campaign_id, row);
     return map;
   } catch (_e) { return new Map(); }
+}
+
+// ─── Gemini Email Analysis (dedicated call) ────────────────
+
+async function generateGeminiEmailAnalysis(
+  apiKey: string, profileName: string, profileConfig: any, campaigns: CampaignInsight[]
+): Promise<string> {
+  const fmtW = (w: WindowMetrics) => `Vendas:${w.purchases} ValorVendas:R$${w.revenue.toFixed(2)} Gasto:R$${w.spend.toFixed(2)} CPA:R$${w.cpa.toFixed(2)} ROAS:${w.roas.toFixed(2)}x CPM:R$${w.cpm.toFixed(2)} CTR:${w.ctr.toFixed(2)}%`;
+  const campaignsText = campaigns.map(c =>
+    `Campanha: "${c.name}" | Budget: R$${c.daily_budget.toFixed(0)} | Idade: ${c.age_days} dias | Trend: ${c.trend}
+  Hoje:   ${fmtW(c.today)}
+  Ontem:  ${fmtW(c.yesterday)}
+  7d:     ${fmtW(c.d7)}
+  15d:    ${fmtW(c.d15)}
+  30d:    ${fmtW(c.d30)}`
+  ).join("\n\n");
+
+  const prompt = `Você é um especialista sênior em tráfego pago com 10 anos de experiência em Meta Ads. Analise os dados abaixo com profundidade técnica e responda em português.
+
+PERFIL: ${profileName}
+Metas: CPA Meta R$ ${profileConfig.cpa_meta} | CPA Máx Tolerável R$ ${profileConfig.cpa_max_toleravel} | ROAS Mínimo ${profileConfig.roas_min_escala}x
+
+${campaignsText}
+
+Para cada campanha ativa, avalie:
+1. Saúde geral (Hoje vs Ontem vs 7d vs 30d)
+2. Tendência de ROAS e CPA — melhorando ou piorando?
+3. Eficiência de entrega (CPM e CTR indicam fadiga?)
+4. Recomendação clara: escalar / manter / reduzir / pausar
+5. Justificativa técnica da recomendação
+
+Ao final, um diagnóstico geral da conta:
+- O que está funcionando bem
+- O que preocupa
+- Próxima ação prioritária
+
+Seja direto, use números, compare com as metas do cliente. NÃO seja genérico. Cada recomendação deve ser específica para os dados apresentados.
+
+RESPONDA EM HTML PURO (sem markdown, sem \`\`\`, sem code blocks). Use <h3>, <p>, <ul>, <li>, <strong>. Cores: use style="color:#00ff88" para positivo, style="color:#ff4444" para negativo, style="color:#ffaa00" para atenção.`;
+
+  try {
+    const resp = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ role: "user", parts: [{ text: prompt }] }],
+          generationConfig: { maxOutputTokens: 2048 },
+        }),
+      }
+    );
+    if (!resp.ok) { console.error("[Gemini Email Analysis] error", resp.status); return ""; }
+    const result = await resp.json();
+    const text = result.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    // Strip markdown code fences if present
+    return text.replace(/```html?\n?/gi, "").replace(/```/g, "").trim();
+  } catch (e) {
+    console.error("[Gemini Email Analysis] exception:", e);
+    return "";
+  }
 }
 
 // ─── Main Handler ──────────────────────────────────────────
@@ -501,15 +570,16 @@ serve(async (req) => {
           const adsetsList = adsetResp.data || [];
 
           const campaignInsights: CampaignInsight[] = (campaignResp.data || []).map((c: any) => {
-            const tdy = parseMetrics(todayMap.get(c.id));
-            const yest = parseMetrics(yesterdayMap.get(c.id));
-            const s7 = parseMetrics(d7Map.get(c.id));
-            const s15 = parseMetrics(d15Map.get(c.id));
-            const s30 = parseMetrics(d30Map.get(c.id));
+            const tdy = parseMetrics(todayMap.get(c.id), c.id);
+            const yest = parseMetrics(yesterdayMap.get(c.id), c.id);
+            const s7 = parseMetrics(d7Map.get(c.id), c.id);
+            const s15 = parseMetrics(d15Map.get(c.id), c.id);
+            const s30 = parseMetrics(d30Map.get(c.id), c.id);
             const ageDays = campaignAgeDays(c.created_time);
 
             const buildWindow = (m: any): WindowMetrics => {
-              const roas = m.spend > 0 ? m.revenue / m.spend : 0;
+              // Prefer API-provided ROAS (purchase_roas), fallback to calculated
+              const roas = m.apiRoas > 0 ? m.apiRoas : (m.spend > 0 ? m.revenue / m.spend : 0);
               const cpa = m.purchases > 0 ? m.spend / m.purchases : (m.spend > 0 ? m.spend : 0);
               return { spend: m.spend, purchases: m.purchases, revenue: m.revenue, roas, cpa, cpm: m.cpm, ctr: m.ctr };
             };
@@ -572,6 +642,7 @@ serve(async (req) => {
           profileResult.timeframes = { dtd: today, wtd: wtdSince, mtd: mtdSince };
           profileResult.campaign_insights = campaignInsights;
           profileResult.cpa_meta = profile.cpa_meta;
+          profileResult.cpa_max_toleravel = profile.cpa_max_toleravel;
           profileResult.roas_min_escala = profile.roas_min_escala;
 
           // Log all decisions to emergency_logs
@@ -656,7 +727,18 @@ serve(async (req) => {
           if (snap?.[0]) reportLink = `https://mtx-roi-command.lovable.app/relatorio?token=${snap[0].token}`;
         } catch {}
 
-        const statusColor = actions.length === 0 ? "#00ff88" : actions.some((a: any) => a.action === "pause") ? "#ff4444" : "#ffaa00";
+        // Generate dedicated Gemini analysis for the email
+        let geminiEmailAnalysis = "";
+        if (GEMINI_KEY && r.campaign_insights?.length > 0) {
+          try {
+            geminiEmailAnalysis = await generateGeminiEmailAnalysis(
+              GEMINI_KEY, profileName,
+              { cpa_meta: r.cpa_meta || 0, cpa_max_toleravel: r.cpa_max_toleravel || 0, roas_min_escala: r.roas_min_escala || 0 },
+              r.campaign_insights
+            );
+          } catch (e) { console.error("[Gemini Email Analysis] failed:", e); }
+        }
+
         const statusText = actions.length === 0 ? "SAUDÁVEL" : actions.some((a: any) => a.action === "pause") ? "INTERVENÇÃO" : "OTIMIZADO";
 
         const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><meta name="color-scheme" content="dark"><meta name="supported-color-schemes" content="dark"></head>
@@ -723,12 +805,16 @@ serve(async (req) => {
     const fmtP = (v: number) => v > 0 ? `${v.toFixed(2)}%` : "—";
 
     const rows = insights.map(c => {
-      const windows = [
-        { label: "Hoje", ...c.today },
-        { label: "Ontem", ...c.yesterday },
-        { label: "7 dias", ...c.d7 },
-        { label: "15 dias", ...c.d15 },
-        { label: "30 dias", ...c.d30 },
+      const w = [c.today, c.yesterday, c.d7, c.d15, c.d30];
+      const wLabels = ["Hoje", "Ontem", "7d", "15d", "30d"];
+      const metricRows = [
+        { label: "Vendas", vals: w.map(x => `<td style="padding:7px 4px;text-align:center;color:${x.purchases > 0 ? "#00ff88" : "#888888"};font-weight:700;font-variant-numeric:tabular-nums;">${x.purchases}</td>`) },
+        { label: "Valor Vendas", vals: w.map(x => `<td style="padding:7px 4px;text-align:center;color:${x.revenue > 0 ? "#00ff88" : "#888888"};font-weight:600;font-variant-numeric:tabular-nums;">${fmtR(x.revenue)}</td>`) },
+        { label: "Gasto", vals: w.map(x => `<td style="padding:7px 4px;text-align:center;color:#ffffff;font-weight:600;font-variant-numeric:tabular-nums;">${fmtR(x.spend)}</td>`) },
+        { label: "CPA", vals: w.map(x => `<td style="padding:7px 4px;text-align:center;color:${cpaColor(x.cpa)};font-weight:600;font-variant-numeric:tabular-nums;">${fmtR(x.cpa)}</td>`) },
+        { label: "ROAS", vals: w.map(x => `<td style="padding:7px 4px;text-align:center;color:${roasColor(x.roas)};font-weight:600;font-variant-numeric:tabular-nums;">${fmtX(x.roas)}</td>`) },
+        { label: "CPM", vals: w.map(x => `<td style="padding:7px 4px;text-align:center;color:#888888;font-variant-numeric:tabular-nums;">${fmtR(x.cpm)}</td>`) },
+        { label: "CTR", vals: w.map(x => `<td style="padding:7px 4px;text-align:center;color:${x.ctr >= 1.0 ? "#00ff88" : x.ctr >= 0.8 ? "#ffaa00" : "#888888"};font-variant-numeric:tabular-nums;">${fmtP(x.ctr)}</td>`) },
       ];
       return `
         <div style="background:#111111;border:1px solid #1e1e1e;border-radius:8px;margin-bottom:12px;overflow:hidden;">
@@ -736,25 +822,15 @@ serve(async (req) => {
             <div style="font-size:13px;font-weight:700;color:#ffffff;">${c.name}</div>
             <div style="font-size:11px;color:#888888;margin-top:2px;">Budget: R$ ${c.daily_budget.toFixed(0)} · Trend: ${c.trend.toUpperCase()}</div>
           </div>
-          <table width="100%" cellpadding="0" cellspacing="0" style="font-size:12px;">
+          <table width="100%" cellpadding="0" cellspacing="0" style="font-size:11px;">
             <tr style="border-bottom:1px solid #1e1e1e;">
-              <th style="padding:8px 6px;text-align:left;color:#888888;font-weight:600;font-size:10px;text-transform:uppercase;letter-spacing:0.5px;">Janela</th>
-              <th style="padding:8px 4px;text-align:center;color:#888888;font-weight:600;font-size:10px;text-transform:uppercase;">Vendas</th>
-              <th style="padding:8px 4px;text-align:center;color:#888888;font-weight:600;font-size:10px;text-transform:uppercase;">Gasto</th>
-              <th style="padding:8px 4px;text-align:center;color:#888888;font-weight:600;font-size:10px;text-transform:uppercase;">CPA</th>
-              <th style="padding:8px 4px;text-align:center;color:#888888;font-weight:600;font-size:10px;text-transform:uppercase;">ROAS</th>
-              <th style="padding:8px 4px;text-align:center;color:#888888;font-weight:600;font-size:10px;text-transform:uppercase;">CPM</th>
-              <th style="padding:8px 4px;text-align:center;color:#888888;font-weight:600;font-size:10px;text-transform:uppercase;">CTR</th>
+              <th style="padding:8px 6px;text-align:left;color:#888888;font-weight:600;font-size:9px;text-transform:uppercase;letter-spacing:0.5px;">Métrica</th>
+              ${wLabels.map(l => `<th style="padding:8px 3px;text-align:center;color:#888888;font-weight:600;font-size:9px;text-transform:uppercase;">${l}</th>`).join("")}
             </tr>
-            ${windows.map(w => `
+            ${metricRows.map(mr => `
             <tr style="border-bottom:1px solid #1a1a1a;">
-              <td style="padding:8px 6px;color:#ffffff;font-weight:600;font-size:11px;">${w.label}</td>
-              <td style="padding:8px 4px;text-align:center;color:${w.purchases > 0 ? "#00ff88" : "#888888"};font-weight:700;font-variant-numeric:tabular-nums;">${w.purchases}</td>
-              <td style="padding:8px 4px;text-align:center;color:#ffffff;font-weight:600;font-variant-numeric:tabular-nums;">${fmtR(w.spend)}</td>
-              <td style="padding:8px 4px;text-align:center;color:${cpaColor(w.cpa)};font-weight:600;font-variant-numeric:tabular-nums;">${fmtR(w.cpa)}</td>
-              <td style="padding:8px 4px;text-align:center;color:${roasColor(w.roas)};font-weight:600;font-variant-numeric:tabular-nums;">${fmtX(w.roas)}</td>
-              <td style="padding:8px 4px;text-align:center;color:#888888;font-variant-numeric:tabular-nums;">${fmtR(w.cpm)}</td>
-              <td style="padding:8px 4px;text-align:center;color:${w.ctr >= 1.0 ? "#00ff88" : w.ctr >= 0.8 ? "#ffaa00" : "#888888"};font-variant-numeric:tabular-nums;">${fmtP(w.ctr)}</td>
+              <td style="padding:7px 6px;color:#ffffff;font-weight:600;font-size:10px;">${mr.label}</td>
+              ${mr.vals.join("")}
             </tr>`).join("")}
           </table>
         </div>`;
@@ -768,12 +844,12 @@ serve(async (req) => {
     </div>`;
   })()}
 
-  ${r.ai_summary ? `
-  <!-- Claude Analysis -->
+  ${geminiEmailAnalysis ? `
+  <!-- Gemini Deep Analysis -->
   <div style="padding:0 24px 20px;">
-    <div style="font-size:10px;color:#888888;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:12px;">Análise do Gemini</div>
-    <div style="background:#111111;border:1px solid #1e1e1e;border-radius:8px;padding:16px;">
-      <div style="font-size:13px;color:#cccccc;line-height:1.6;">${r.ai_summary.slice(0, 600)}</div>
+    <div style="font-size:10px;color:#888888;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:12px;">🤖 Análise do Gemini</div>
+    <div style="background:linear-gradient(135deg,#0f1a0f 0%,#111111 100%);border:1px solid #00ff8833;border-radius:8px;padding:20px;">
+      <div style="font-size:13px;color:#cccccc;line-height:1.7;">${geminiEmailAnalysis}</div>
     </div>
   </div>` : ""}
 
