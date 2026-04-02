@@ -771,9 +771,9 @@ serve(async (req) => {
     return new Response(JSON.stringify({
       results,
       timestamp: new Date().toISOString(),
-      ai_enabled: !!ANTHROPIC_KEY,
-      engine: ANTHROPIC_KEY ? "claude-opus-4-5" : "static-rules",
-      version: "v4-claude",
+      ai_enabled: !!GEMINI_KEY,
+      engine: GEMINI_KEY ? "gemini-2.0-flash" : "static-rules",
+      version: "v4-gemini",
       hour_brt: currentHour,
       email_enabled: !!RESEND_API_KEY,
     }), {
