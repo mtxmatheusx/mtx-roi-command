@@ -22,8 +22,12 @@ export default function ScaleSimulator({ initialCpa = 200, initialTicket = 697 }
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-card rounded-lg border border-border p-6"
+      className="liquid-glass"
     >
+      <div className="lg-distortion" />
+      <div className="lg-overlay" />
+      <div className="lg-specular" />
+      <div className="lg-content">
       <div className="flex items-center gap-3 mb-6">
         <div className="p-2 rounded-lg bg-primary/10">
           <Zap className="w-5 h-5 text-primary" />
