@@ -685,9 +685,9 @@ serve(async (req) => {
 
     const rows = insights.map(c => {
       const windows = [
-        { label: "DTD", purchases: c.dtd_purchases, cpa: c.dtd_cpa, roas: c.dtd_roas, cpm: c.dtd_spend > 0 ? 0 : 0, ctr: c.ctr },
-        { label: "WTD", purchases: c.wtd_purchases, cpa: c.wtd_cpa, roas: c.wtd_roas, cpm: 0, ctr: c.ctr },
-        { label: "MTD", purchases: c.mtd_purchases, cpa: c.mtd_cpa, roas: c.mtd_roas, cpm: 0, ctr: c.ctr },
+        { label: "DTD", purchases: c.dtd_purchases, cpa: c.dtd_cpa, roas: c.dtd_roas, cpm: c.dtd_cpm, ctr: c.dtd_ctr },
+        { label: "WTD", purchases: c.wtd_purchases, cpa: c.wtd_cpa, roas: c.wtd_roas, cpm: c.wtd_cpm, ctr: c.wtd_ctr },
+        { label: "MTD", purchases: c.mtd_purchases, cpa: c.mtd_cpa, roas: c.mtd_roas, cpm: c.mtd_cpm, ctr: c.mtd_ctr },
       ];
       return `
         <div style="background:#111111;border:1px solid #1e1e1e;border-radius:8px;margin-bottom:12px;overflow:hidden;">
@@ -697,11 +697,12 @@ serve(async (req) => {
           </div>
           <table width="100%" cellpadding="0" cellspacing="0" style="font-size:12px;">
             <tr style="border-bottom:1px solid #1e1e1e;">
-              <th style="padding:8px 12px;text-align:left;color:#888888;font-weight:600;font-size:10px;text-transform:uppercase;letter-spacing:0.5px;">Janela</th>
-              <th style="padding:8px 8px;text-align:center;color:#888888;font-weight:600;font-size:10px;text-transform:uppercase;">Vendas</th>
-              <th style="padding:8px 8px;text-align:center;color:#888888;font-weight:600;font-size:10px;text-transform:uppercase;">CPA</th>
-              <th style="padding:8px 8px;text-align:center;color:#888888;font-weight:600;font-size:10px;text-transform:uppercase;">ROAS</th>
-              <th style="padding:8px 8px;text-align:center;color:#888888;font-weight:600;font-size:10px;text-transform:uppercase;">CTR</th>
+              <th style="padding:8px 8px;text-align:left;color:#888888;font-weight:600;font-size:10px;text-transform:uppercase;letter-spacing:0.5px;">Janela</th>
+              <th style="padding:8px 6px;text-align:center;color:#888888;font-weight:600;font-size:10px;text-transform:uppercase;">Vendas</th>
+              <th style="padding:8px 6px;text-align:center;color:#888888;font-weight:600;font-size:10px;text-transform:uppercase;">CPA</th>
+              <th style="padding:8px 6px;text-align:center;color:#888888;font-weight:600;font-size:10px;text-transform:uppercase;">ROAS</th>
+              <th style="padding:8px 6px;text-align:center;color:#888888;font-weight:600;font-size:10px;text-transform:uppercase;">CPM</th>
+              <th style="padding:8px 6px;text-align:center;color:#888888;font-weight:600;font-size:10px;text-transform:uppercase;">CTR</th>
             </tr>
             ${windows.map(w => `
             <tr style="border-bottom:1px solid #1a1a1a;">
