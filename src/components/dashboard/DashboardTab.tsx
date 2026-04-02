@@ -180,6 +180,7 @@ export default function DashboardTab(props: DashboardTabProps) {
               <Progress value={pct} className={`h-2 flex-1 rounded-full ${exceeded ? "[&>div]:bg-destructive" : pct > 80 ? "[&>div]:bg-warning" : "[&>div]:bg-success"}`} />
               <span className="text-xs font-bold text-foreground">{pct.toFixed(0)}%</span>
               <span className="text-[10px] text-muted-foreground">{freqLabels[budgetFrequency]}</span>
+              </div>
             </div>
           </div>
         );
