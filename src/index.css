@@ -8,8 +8,8 @@
   :root {
     /* ═══ Apple × Notion Design System ═══ */
 
-    /* Surfaces */
-    --background: 40 11% 100%;
+    /* Surfaces — warm gray base for glass effect */
+    --background: 34 11% 93%;
     --foreground: 0 0% 10%;
 
     --card: 0 0% 100%;
