@@ -238,7 +238,7 @@ export default function CampanhasPage() {
                     </thead>
                     <tbody>
                       {adsData.map((ad: any, i: number) => (
-                        <tr key={i} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
+                        <tr key={i} className="border-b border-white/5 hover:bg-white/5 transition-colors">
                           <td className="px-6 py-3">
                             <div className="flex items-center gap-3">
                               {ad.thumbnailUrl && (
