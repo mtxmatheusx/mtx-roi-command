@@ -61,14 +61,22 @@ function getTimeframeRanges() {
   return { today, d7Since, d15Since, d30Since, wtdSince, mtdSince };
 }
 
-function parseMetrics(ins: any) {
-  if (!ins) return { spend: 0, purchases: 0, revenue: 0, ctr: 0, frequency: 0, cpm: 0, impressions: 0 };
+function parseMetrics(ins: any, campaignId?: string) {
+  if (!ins) return { spend: 0, purchases: 0, revenue: 0, ctr: 0, frequency: 0, cpm: 0, impressions: 0, apiRoas: 0 };
+  if (campaignId) {
+    console.log('[RAW insights]', campaignId, JSON.stringify({
+      spend: ins.spend, ctr: ins.ctr, cpm: ins.cpm, frequency: ins.frequency, impressions: ins.impressions,
+      actions: ins.actions, action_values: ins.action_values, purchase_roas: ins.purchase_roas
+    }));
+  }
   const spend = parseFloat(ins.spend || "0");
   const impressions = parseInt(ins.impressions || "0", 10);
   const purchases = (ins.actions || []).filter((a: any) => a.action_type === "purchase" || a.action_type === "omni_purchase").reduce((s: number, a: any) => s + parseInt(a.value || "0", 10), 0);
   const revenue = (ins.action_values || []).filter((a: any) => a.action_type === "purchase" || a.action_type === "omni_purchase").reduce((s: number, a: any) => s + parseFloat(a.value || "0"), 0);
-  const cpm = impressions > 0 ? (spend / impressions) * 1000 : 0;
-  return { spend, purchases, revenue, ctr: parseFloat(ins.ctr || "0"), frequency: parseFloat(ins.frequency || "0"), cpm, impressions };
+  const cpm = parseFloat(ins.cpm || "0");
+  const ctr = parseFloat(ins.ctr || "0");
+  const apiRoas = Array.isArray(ins.purchase_roas) && ins.purchase_roas.length > 0 ? parseFloat(ins.purchase_roas[0].value || "0") : 0;
+  return { spend, purchases, revenue, ctr, frequency: parseFloat(ins.frequency || "0"), cpm, impressions, apiRoas };
 }
 
 function determineTrend(dtdRoas: number, wtdRoas: number, mtdRoas: number): string {
