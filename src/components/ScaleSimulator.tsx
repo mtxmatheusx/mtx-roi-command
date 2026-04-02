@@ -54,7 +54,10 @@ export default function ScaleSimulator({ initialCpa = 200, initialTicket = 697 }
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-muted rounded-lg p-4">
+        <div className="liquid-glass">
+          <div className="lg-overlay" />
+          <div className="lg-specular" />
+          <div className="lg-content">
           <p className="text-xs text-muted-foreground mb-1">Vendas Previstas</p>
           <p className="text-2xl font-semibold">{purchases}</p>
         </div>
