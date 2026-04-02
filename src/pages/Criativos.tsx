@@ -236,7 +236,7 @@ export default function CriativosPage() {
           {assets.length > 0 && (
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
               {assets.map((asset) => (
-                <div key={asset.id} className="group relative bg-secondary rounded-lg overflow-hidden border border-border">
+                <div key={asset.id} className="group relative liquid-glass overflow-hidden !rounded-lg">
                   {asset.file_type === "image" ? (
                     <img src={asset.file_url} alt={asset.description || asset.file_name} className="w-full h-24 object-cover" />
                   ) : (
@@ -324,7 +324,7 @@ export default function CriativosPage() {
             const Icon = typeIcon[creative.type] || Video;
             return (
               <motion.div key={creative.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
-                className={`bg-card rounded-lg border overflow-hidden ${isWinner ? "border-success/30" : "border-border"}`}>
+                className={`liquid-glass overflow-hidden !rounded-lg ${isWinner ? "ring-1 ring-success/30" : ""}`}>
                 {/* Thumbnail or placeholder */}
                 {creative.thumbnailUrl ? (
                   <div className="h-40 bg-secondary overflow-hidden relative">

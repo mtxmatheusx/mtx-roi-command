@@ -600,7 +600,7 @@ function ChartCard({ title, icon, delay, children }: { title: string; icon: Reac
 function CustomTooltip({ active, payload, label, suffix = "" }: any) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="bg-card border border-border rounded-lg shadow-lg px-3 py-2 text-xs">
+    <div className="bg-black/60 border border-white/10 rounded-lg shadow-lg backdrop-blur-xl px-3 py-2 text-xs">
       <p className="font-medium text-foreground mb-1">{label}</p>
       {payload.map((p: any, i: number) => (
         <div key={i} className="flex items-center gap-2">

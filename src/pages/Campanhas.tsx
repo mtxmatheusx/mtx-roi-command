@@ -90,15 +90,19 @@ export default function CampanhasPage() {
               <CampaignsTable campaigns={campaigns} />
 
               {/* Full funnel detail table */}
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }} className="bg-card rounded-xl border border-border overflow-hidden mt-8">
-                <div className="p-6 border-b border-border">
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }} className="liquid-glass mt-8">
+                <div className="lg-distortion" />
+                <div className="lg-overlay" />
+                <div className="lg-specular" />
+                <div className="lg-content !p-0">
+                <div className="p-6 border-b border-white/10">
                   <h2 className="text-lg font-bold">Funil Detalhado</h2>
                   <p className="text-sm text-muted-foreground">Métricas de topo, meio e fundo de funil</p>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="border-b border-border text-muted-foreground text-xs uppercase tracking-wider">
+                      <tr className="border-b border-white/10 text-muted-foreground text-xs uppercase tracking-wider">
                         <th className="text-left px-6 py-3 font-medium">Campanha</th>
                         <th className="text-right px-3 py-3 font-medium">CPM</th>
                         <th className="text-right px-3 py-3 font-medium">CTR</th>
@@ -116,7 +120,7 @@ export default function CampanhasPage() {
                     </thead>
                     <tbody>
                       {campaigns.map((c) => (
-                        <tr key={c.id} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
+                        <tr key={c.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
                           <td className="px-6 py-3 font-medium max-w-[200px] truncate">{c.name}</td>
                           <td className="text-right px-3 py-3 text-muted-foreground">{formatCurrency(c.cpm)}</td>
                           <td className={`text-right px-3 py-3 ${c.ctr < 1 ? 'text-destructive' : 'text-foreground'}`}>{formatPercent(c.ctr)}</td>
@@ -137,13 +141,18 @@ export default function CampanhasPage() {
                     </tbody>
                   </table>
                 </div>
+                </div>
               </motion.div>
             </>
           )}
 
           {viewLevel === "adsets" && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-card rounded-xl border border-border overflow-hidden">
-              <div className="p-6 border-b border-border">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="liquid-glass">
+              <div className="lg-distortion" />
+              <div className="lg-overlay" />
+              <div className="lg-specular" />
+              <div className="lg-content !p-0">
+              <div className="p-6 border-b border-white/10">
                 <h2 className="text-lg font-bold flex items-center gap-2">
                   Conjuntos de Anúncios
                   <Badge variant="secondary" className="text-xs">{campaigns.length} campanhas</Badge>
@@ -153,7 +162,7 @@ export default function CampanhasPage() {
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-border text-muted-foreground text-xs uppercase tracking-wider">
+                    <tr className="border-b border-white/10 text-muted-foreground text-xs uppercase tracking-wider">
                       <th className="text-left px-6 py-3 font-medium">Campanha / Conjunto</th>
                       <th className="text-right px-3 py-3 font-medium">Status</th>
                       <th className="text-right px-3 py-3 font-medium">Investimento</th>
@@ -165,7 +174,7 @@ export default function CampanhasPage() {
                   </thead>
                   <tbody>
                     {campaigns.map((c) => (
-                      <tr key={c.id} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
+                      <tr key={c.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
                         <td className="px-6 py-3">
                           <div className="font-medium max-w-[250px] truncate">{c.name}</div>
                           <div className="text-xs text-muted-foreground mt-0.5">ID: {c.id}</div>
@@ -191,12 +200,17 @@ export default function CampanhasPage() {
                   </tbody>
                 </table>
               </div>
+              </div>
             </motion.div>
           )}
 
           {viewLevel === "ads" && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-card rounded-xl border border-border overflow-hidden">
-              <div className="p-6 border-b border-border">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="liquid-glass">
+              <div className="lg-distortion" />
+              <div className="lg-overlay" />
+              <div className="lg-specular" />
+              <div className="lg-content !p-0">
+              <div className="p-6 border-b border-white/10">
                 <h2 className="text-lg font-bold flex items-center gap-2">
                   Anúncios Individuais
                   <Badge variant="secondary" className="text-xs">{adsData.length} anúncios</Badge>
@@ -211,7 +225,7 @@ export default function CampanhasPage() {
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="border-b border-border text-muted-foreground text-xs uppercase tracking-wider">
+                      <tr className="border-b border-white/10 text-muted-foreground text-xs uppercase tracking-wider">
                         <th className="text-left px-6 py-3 font-medium">Anúncio</th>
                         <th className="text-right px-3 py-3 font-medium">Investimento</th>
                         <th className="text-right px-3 py-3 font-medium">Impressões</th>
@@ -225,7 +239,7 @@ export default function CampanhasPage() {
                     </thead>
                     <tbody>
                       {adsData.map((ad: any, i: number) => (
-                        <tr key={i} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
+                        <tr key={i} className="border-b border-white/5 hover:bg-white/5 transition-colors">
                           <td className="px-6 py-3">
                             <div className="flex items-center gap-3">
                               {ad.thumbnailUrl && (
@@ -254,6 +268,7 @@ export default function CampanhasPage() {
                   </table>
                 </div>
               )}
+              </div>
             </motion.div>
           )}
         </>

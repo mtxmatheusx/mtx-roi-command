@@ -33,22 +33,26 @@ export default function CampaignsTable({ campaigns, disableScale }: CampaignsTab
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="bg-card rounded-lg border border-border overflow-hidden"
+      className="liquid-glass"
     >
-      <div className="p-5 border-b border-border flex items-center justify-between">
-        <div>
-          <h2 className="text-base font-semibold">Campanhas Ativas</h2>
-          <p className="text-sm text-muted-foreground">Monitoramento em tempo real</p>
+      <div className="lg-distortion" />
+      <div className="lg-overlay" />
+      <div className="lg-specular" />
+      <div className="lg-content !p-0">
+        <div className="p-5 border-b border-white/10 flex items-center justify-between">
+          <div>
+            <h2 className="text-base font-semibold">Campanhas Ativas</h2>
+            <p className="text-sm text-muted-foreground">Monitoramento em tempo real</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Switch id="active-only" checked={showActiveOnly} onCheckedChange={setShowActiveOnly} />
+            <Label htmlFor="active-only" className="text-xs text-muted-foreground cursor-pointer">Apenas ativas</Label>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Switch id="active-only" checked={showActiveOnly} onCheckedChange={setShowActiveOnly} />
-          <Label htmlFor="active-only" className="text-xs text-muted-foreground cursor-pointer">Apenas ativas</Label>
-        </div>
-      </div>
       <div className="overflow-x-auto -mx-px">
         <table className="w-full text-sm min-w-[700px]">
           <thead>
-            <tr className="border-b border-border text-muted-foreground">
+            <tr className="border-b border-white/10 text-muted-foreground">
               <th className="text-left px-5 py-3 font-medium text-xs">Campanha</th>
               <th className="text-left px-4 py-3 font-medium text-xs">Status</th>
               <th className="text-left px-4 py-3 font-medium text-xs">Alerta</th>
@@ -66,7 +70,7 @@ export default function CampaignsTable({ campaigns, disableScale }: CampaignsTab
               const cpaAboveMeta = c.purchases > 0 && c.costPerPurchase > c.cpaMeta * 1.2;
               const isActive = c.status === 'active' || c.status === 'scaling';
               return (
-                <tr key={c.id} className="border-b border-border hover:bg-muted/50 transition-colors">
+                <tr key={c.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
                   <td className="px-5 py-3 font-medium max-w-[250px] truncate">{c.name}</td>
                   <td className="px-4 py-3">
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${
@@ -115,6 +119,7 @@ export default function CampaignsTable({ campaigns, disableScale }: CampaignsTab
             })}
           </tbody>
         </table>
+      </div>
       </div>
     </motion.div>
   );
