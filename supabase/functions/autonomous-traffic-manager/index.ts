@@ -454,7 +454,7 @@ serve(async (req) => {
       return new Response(JSON.stringify({ message: "No profiles with autonomous features enabled", timestamp: new Date().toISOString() }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const { today, wtdSince, mtdSince } = getTimeframeRanges();
+    const { today, d7Since, d15Since, d30Since, wtdSince, mtdSince } = getTimeframeRanges();
     const currentHour = currentHourBRT();
 
     console.log(`[MTX Agent v4 — Gemini] Running at ${currentHour}:00 BRT | Profiles: ${profiles.length}`);
