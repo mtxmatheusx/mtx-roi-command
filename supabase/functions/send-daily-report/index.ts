@@ -21,20 +21,20 @@ interface PeriodMetrics {
 interface ClientData {
   nome: string; accountId: string; profileId: string; roi: number; cpaMeta: number
   metricas: {
-    vendas: [number, number, number, number]
-    custoVenda: [number, number, number, number]
-    roi: [number, number, number, number]
-    cpa: [number, number, number, number]
-    cpm: [number, number, number, number]
-    ctr: [number, number, number, number]
-    lucro: [number, number, number, number]
-    spend: [number, number, number, number]
+    vendas: [number, number, number, number, number]
+    custoVenda: [number, number, number, number, number]
+    roi: [number, number, number, number, number]
+    cpa: [number, number, number, number, number]
+    cpm: [number, number, number, number, number]
+    ctr: [number, number, number, number, number]
+    lucro: [number, number, number, number, number]
+    spend: [number, number, number, number, number]
   }
   alertas: string[]
   agentActions: number
 }
 
-const DATE_PRESETS = ['today', 'last_7d', 'last_14d', 'last_30d'] as const
+const DATE_PRESETS = ['today', 'yesterday', 'last_7d', 'last_14d', 'last_30d'] as const
 
 async function fetchMetaInsights(adAccountId: string, accessToken: string, datePreset: string): Promise<PeriodMetrics> {
   const empty: PeriodMetrics = { sales: 0, spend: 0, revenue: 0, costPerSale: 0, roi: 0, cpa: 0, cpm: 0, ctr: 0, profit: 0, dataVerified: false }
@@ -70,7 +70,7 @@ async function generateGeminiAnalysis(clients: ClientData[], reportType: string)
   try {
     const summary = clients.map(c => {
       const m = c.metricas
-      return `${c.nome}: Hoje ${m.vendas[0]}v ROI ${m.roi[0]}% CPA R$${m.cpa[0]} | 7d ${m.vendas[1]}v ROI ${m.roi[1]}% | 30d ${m.vendas[3]}v ROI ${m.roi[3]}%`
+      return `${c.nome}: Hoje ${m.vendas[0]}v ROI ${m.roi[0]}% CPA R$${m.cpa[0]} | Ontem ${m.vendas[1]}v ROI ${m.roi[1]}% | 7d ${m.vendas[2]}v ROI ${m.roi[2]}% | 30d ${m.vendas[4]}v ROI ${m.roi[4]}%`
     }).join('\n')
     const timeCtx = reportType === 'morning' ? 'Relatório matinal. Prioridades do dia.' : reportType === 'midday' ? 'Meio-dia (parcial). Alertas urgentes.' : 'Fechamento. Resumo + planejamento amanhã.'
     const prompt = `Analista de performance MTX. ${timeCtx}\n\nClientes:\n${summary}\n\nAnálise técnica (máx 200 palavras): Diagnóstico, alertas críticos (ROI<80%), 2-3 recomendações, projeção mensal. Seja direto.`
@@ -113,18 +113,18 @@ function generateEmailHTML(data: {
 
   const roiColor = (v: number) => v >= 150 ? '#1a7f37' : v >= 80 ? '#b25c00' : '#c0392b'
 
-  const periods = ['Hoje', '7 dias', '15 dias', '30 dias']
+  const periods = ['Hoje', 'Ontem', '7 dias', '15 dias', '30 dias']
 
   const kpiPanel = (label: string, emoji: string, values: number[], format: (v: number) => string, colorFn?: (v: number) => string) => {
     return `
     <div style="margin-bottom:8px;">
       <div style="font-size:11px;font-weight:600;color:#ababab;margin-bottom:6px;">${emoji} ${label}</div>
-      <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate;border-spacing:6px 0;">
+      <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate;border-spacing:4px 0;">
         <tr>
           ${values.map((v, i) => `
-            <td width="25%" style="background:${i === 0 ? '#f0f7ff' : '#f7f7f5'};border:1px solid ${i === 0 ? '#c5dcf7' : '#e8e8e5'};border-radius:10px;padding:10px 6px;text-align:center;vertical-align:top;">
-              <div style="font-size:9px;font-weight:600;color:${i === 0 ? '#0051a2' : '#ababab'};text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;">${periods[i]}</div>
-              <div style="font-size:14px;font-weight:700;color:${colorFn ? colorFn(v) : '#1a1a1a'};letter-spacing:-.3px;font-variant-numeric:tabular-nums;">${format(v)}</div>
+            <td width="20%" style="background:${i === 0 ? '#f0f7ff' : '#f7f7f5'};border:1px solid ${i === 0 ? '#c5dcf7' : '#e8e8e5'};border-radius:10px;padding:9px 4px;text-align:center;vertical-align:top;">
+              <div style="font-size:8px;font-weight:600;color:${i === 0 ? '#0051a2' : '#ababab'};text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px;">${periods[i]}</div>
+              <div style="font-size:13px;font-weight:700;color:${colorFn ? colorFn(v) : '#1a1a1a'};letter-spacing:-.3px;font-variant-numeric:tabular-nums;">${format(v)}</div>
             </td>
           `).join('')}
         </tr>
@@ -338,18 +338,18 @@ Deno.serve(async (req) => {
             agentActions = logs?.length || 0
           } catch {}
 
-          const [today, d7, d15, d30] = periodResults
+          const [today, yesterday, d7, d15, d30] = periodResults
           const cpaMeta = Number(profile.cpa_meta) || 45
 
           const metricas: ClientData['metricas'] = {
-            vendas: [today.sales, d7.sales, d15.sales, d30.sales],
-            custoVenda: [r(today.costPerSale), r(d7.costPerSale), r(d15.costPerSale), r(d30.costPerSale)],
-            roi: [r(today.roi), r(d7.roi), r(d15.roi), r(d30.roi)],
-            cpa: [r(today.cpa), r(d7.cpa), r(d15.cpa), r(d30.cpa)],
-            cpm: [r(today.cpm), r(d7.cpm), r(d15.cpm), r(d30.cpm)],
-            ctr: [r(today.ctr), r(d7.ctr), r(d15.ctr), r(d30.ctr)],
-            lucro: [r(today.profit), r(d7.profit), r(d15.profit), r(d30.profit)],
-            spend: [r(today.spend), r(d7.spend), r(d15.spend), r(d30.spend)],
+            vendas: [today.sales, yesterday.sales, d7.sales, d15.sales, d30.sales],
+            custoVenda: [r(today.costPerSale), r(yesterday.costPerSale), r(d7.costPerSale), r(d15.costPerSale), r(d30.costPerSale)],
+            roi: [r(today.roi), r(yesterday.roi), r(d7.roi), r(d15.roi), r(d30.roi)],
+            cpa: [r(today.cpa), r(yesterday.cpa), r(d7.cpa), r(d15.cpa), r(d30.cpa)],
+            cpm: [r(today.cpm), r(yesterday.cpm), r(d7.cpm), r(d15.cpm), r(d30.cpm)],
+            ctr: [r(today.ctr), r(yesterday.ctr), r(d7.ctr), r(d15.ctr), r(d30.ctr)],
+            lucro: [r(today.profit), r(yesterday.profit), r(d7.profit), r(d15.profit), r(d30.profit)],
+            spend: [r(today.spend), r(yesterday.spend), r(d7.spend), r(d15.spend), r(d30.spend)],
           }
 
           const alertas = generateAlerts(metricas, cpaMeta, profile.name)
