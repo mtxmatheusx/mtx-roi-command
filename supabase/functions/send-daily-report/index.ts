@@ -101,7 +101,7 @@ const fmtInt = (n: number) => Math.round(n).toString()
 
 function generateEmailHTML(data: {
   periodo: string; horaLabel: string; dataHora: string
-  totalVendas: number; roiMedio: number; spendTotal: number; cpaMedio: number
+  totalVendas: number; roiMedio: number; spendTotal: number; cpaMedio: number; lucroTotal: number
   clientes: ClientData[]; geminiAnalysis: string
 }): string {
 
