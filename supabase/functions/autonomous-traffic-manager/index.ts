@@ -439,6 +439,21 @@ async function fetchInsightsForRange(accountId: string, accessToken: string, sin
   } catch { return new Map(); }
 }
 
+async function fetchInsightsByPreset(accountId: string, accessToken: string, datePreset: string): Promise<Map<string, any>> {
+  const url = `https://graph.facebook.com/v23.0/${accountId}/insights?fields=campaign_id,spend,actions,action_values,ctr,frequency,impressions,cpm&date_preset=${datePreset}&level=campaign&limit=500&access_token=${accessToken}`;
+  try {
+    const resp = await fetch(url);
+    const data = await resp.json();
+    const map = new Map<string, any>();
+    for (const row of (data.data || [])) map.set(row.campaign_id, row);
+    return map;
+  } catch { return new Map(); }
+}
+    for (const row of (data.data || [])) map.set(row.campaign_id, row);
+    return map;
+  } catch { return new Map(); }
+}
+
 // ─── Main Handler ──────────────────────────────────────────
 
 serve(async (req) => {
