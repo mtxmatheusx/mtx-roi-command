@@ -267,25 +267,27 @@ export default function DashboardTab(props: DashboardTabProps) {
             <div className="lg-overlay" />
             <div className="lg-specular" />
             <div className="lg-content !p-0 overflow-hidden">
-              <div className="w-6 h-6 rounded-md bg-success/10 flex items-center justify-center">
-                <Activity className="w-3.5 h-3.5 text-success" />
-              </div>
-              <h2 className="text-sm font-semibold text-foreground">Log de Automação</h2>
-              <span className="text-[10px] text-muted-foreground font-medium bg-muted px-2 py-0.5 rounded-full ml-1">{logs.length}</span>
-            </div>
-            <div className="max-h-64 overflow-y-auto">
-              {logs.length === 0 ? (
-                <p className="p-6 text-sm text-muted-foreground">Nenhum log registrado ainda.</p>
-              ) : (
-                <div className="divide-y divide-border">
-                  {logs.map((log, i) => (
-                    <div key={i} className={`px-6 py-3 text-sm flex items-start gap-3 transition-colors ${log.type === "action" ? "bg-destructive/3" : "hover:bg-muted/50"}`}>
-                      <span className="text-[10px] text-muted-foreground whitespace-nowrap font-mono mt-0.5">{log.time}</span>
-                      <span className={log.type === "action" ? "text-destructive font-medium" : "text-muted-foreground"}>{log.message}</span>
-                    </div>
-                  ))}
+              <div className="px-6 py-4 border-b border-border flex items-center gap-2.5">
+                <div className="w-6 h-6 rounded-md bg-success/10 flex items-center justify-center">
+                  <Activity className="w-3.5 h-3.5 text-success" />
                 </div>
-              )}
+                <h2 className="text-sm font-semibold text-foreground">Log de Automação</h2>
+                <span className="text-[10px] text-muted-foreground font-medium bg-muted px-2 py-0.5 rounded-full ml-1">{logs.length}</span>
+              </div>
+              <div className="max-h-64 overflow-y-auto">
+                {logs.length === 0 ? (
+                  <p className="p-6 text-sm text-muted-foreground">Nenhum log registrado ainda.</p>
+                ) : (
+                  <div className="divide-y divide-border">
+                    {logs.map((log, i) => (
+                      <div key={i} className={`px-6 py-3 text-sm flex items-start gap-3 transition-colors ${log.type === "action" ? "bg-destructive/3" : "hover:bg-muted/50"}`}>
+                        <span className="text-[10px] text-muted-foreground whitespace-nowrap font-mono mt-0.5">{log.time}</span>
+                        <span className={log.type === "action" ? "text-destructive font-medium" : "text-muted-foreground"}>{log.message}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </motion.div>
 
