@@ -337,8 +337,8 @@ function buildEmailHtml(clients: ClientReport[], type: string, email: string, ge
   return `<!DOCTYPE html>
 <html lang="pt-BR">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
-<body style="margin:0;padding:0;background:#000;font-family:'DM Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">
-<div style="max-width:640px;margin:0 auto;background:#0a0a0a;">
+<body style="margin:0;padding:0;background:linear-gradient(135deg,#0f1729 0%,#1a0f29 100%);font-family:'DM Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">
+<div style="max-width:640px;margin:0 auto;background:linear-gradient(180deg,rgba(15,23,41,0.95) 0%,rgba(26,15,41,0.95) 100%);">
 
   <!-- ═══ HEADER ═══ -->
   <div style="background:linear-gradient(135deg,#0a0a0a 0%,#1a0a2e 50%,#0a0a1a 100%);padding:40px 24px 32px;text-align:center;border-bottom:1px solid #222;">
