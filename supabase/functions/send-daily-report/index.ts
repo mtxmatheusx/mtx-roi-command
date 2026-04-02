@@ -233,21 +233,29 @@ function generateEmailHTML(data: {
   <div style="background:#fff;border-left:1px solid #e8e8e5;border-right:1px solid #e8e8e5;padding:20px 32px;border-bottom:1px solid #f0f0ee;">
     <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate;border-spacing:8px 0;">
       <tr>
-        <td width="24%" style="background:#f7f7f5;border:1px solid #e8e8e5;border-radius:12px;padding:14px 8px;text-align:center;">
-          <div style="font-size:10px;font-weight:600;color:#ababab;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">🛍️ Vendas</div>
-          <div style="font-size:20px;font-weight:700;color:#1a1a1a;letter-spacing:-.5px;font-variant-numeric:tabular-nums;">${data.totalVendas}</div>
+        <td width="19%" style="background:${data.lucroTotal >= 0 ? '#edfaf1' : '#fff0ef'};border:1px solid ${data.lucroTotal >= 0 ? 'rgba(52,199,89,0.25)' : 'rgba(255,59,48,0.25)'};border-radius:12px;padding:14px 6px;text-align:center;">
+          <div style="font-size:9px;font-weight:600;color:#ababab;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">💰 Lucro</div>
+          <div style="font-size:18px;font-weight:700;color:${data.lucroTotal >= 0 ? '#1a7f37' : '#c0392b'};letter-spacing:-.5px;font-variant-numeric:tabular-nums;">R$${fmt(data.lucroTotal)}</div>
         </td>
-        <td width="24%" style="background:#f7f7f5;border:1px solid #e8e8e5;border-radius:12px;padding:14px 8px;text-align:center;">
-          <div style="font-size:10px;font-weight:600;color:#ababab;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">📈 ROI Médio</div>
-          <div style="font-size:20px;font-weight:700;color:${data.roiMedio >= 150 ? '#1a7f37' : data.roiMedio >= 80 ? '#b25c00' : '#c0392b'};letter-spacing:-.5px;font-variant-numeric:tabular-nums;">${fmt(data.roiMedio)}%</div>
+        <td width="1%"></td>
+        <td width="19%" style="background:#f7f7f5;border:1px solid #e8e8e5;border-radius:12px;padding:14px 6px;text-align:center;">
+          <div style="font-size:9px;font-weight:600;color:#ababab;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">🛍️ Vendas</div>
+          <div style="font-size:18px;font-weight:700;color:#1a1a1a;letter-spacing:-.5px;font-variant-numeric:tabular-nums;">${data.totalVendas}</div>
         </td>
-        <td width="24%" style="background:#f7f7f5;border:1px solid #e8e8e5;border-radius:12px;padding:14px 8px;text-align:center;">
-          <div style="font-size:10px;font-weight:600;color:#ababab;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">💳 Spend</div>
-          <div style="font-size:20px;font-weight:700;color:#1a1a1a;letter-spacing:-.5px;font-variant-numeric:tabular-nums;">R$${fmt(data.spendTotal)}</div>
+        <td width="1%"></td>
+        <td width="19%" style="background:#f7f7f5;border:1px solid #e8e8e5;border-radius:12px;padding:14px 6px;text-align:center;">
+          <div style="font-size:9px;font-weight:600;color:#ababab;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">📈 ROI</div>
+          <div style="font-size:18px;font-weight:700;color:${data.roiMedio >= 150 ? '#1a7f37' : data.roiMedio >= 80 ? '#b25c00' : '#c0392b'};letter-spacing:-.5px;font-variant-numeric:tabular-nums;">${fmt(data.roiMedio)}%</div>
         </td>
-        <td width="24%" style="background:#f7f7f5;border:1px solid #e8e8e5;border-radius:12px;padding:14px 8px;text-align:center;">
-          <div style="font-size:10px;font-weight:600;color:#ababab;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">🎯 CPA</div>
-          <div style="font-size:20px;font-weight:700;color:#1a1a1a;letter-spacing:-.5px;font-variant-numeric:tabular-nums;">R$${fmt(data.cpaMedio)}</div>
+        <td width="1%"></td>
+        <td width="19%" style="background:#f7f7f5;border:1px solid #e8e8e5;border-radius:12px;padding:14px 6px;text-align:center;">
+          <div style="font-size:9px;font-weight:600;color:#ababab;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">💳 Spend</div>
+          <div style="font-size:18px;font-weight:700;color:#1a1a1a;letter-spacing:-.5px;font-variant-numeric:tabular-nums;">R$${fmt(data.spendTotal)}</div>
+        </td>
+        <td width="1%"></td>
+        <td width="19%" style="background:#f7f7f5;border:1px solid #e8e8e5;border-radius:12px;padding:14px 6px;text-align:center;">
+          <div style="font-size:9px;font-weight:600;color:#ababab;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">🎯 CPA</div>
+          <div style="font-size:18px;font-weight:700;color:#1a1a1a;letter-spacing:-.5px;font-variant-numeric:tabular-nums;">R$${fmt(data.cpaMedio)}</div>
         </td>
       </tr>
     </table>
