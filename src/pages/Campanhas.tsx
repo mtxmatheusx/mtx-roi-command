@@ -120,7 +120,7 @@ export default function CampanhasPage() {
                     </thead>
                     <tbody>
                       {campaigns.map((c) => (
-                        <tr key={c.id} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
+                        <tr key={c.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
                           <td className="px-6 py-3 font-medium max-w-[200px] truncate">{c.name}</td>
                           <td className="text-right px-3 py-3 text-muted-foreground">{formatCurrency(c.cpm)}</td>
                           <td className={`text-right px-3 py-3 ${c.ctr < 1 ? 'text-destructive' : 'text-foreground'}`}>{formatPercent(c.ctr)}</td>
