@@ -59,7 +59,7 @@ async function fetchMetaInsights(adAccountId: string, accessToken: string, dateP
     const cpm = rows.length > 0 ? rows.reduce((s: number, r: any) => s + parseFloat(r.cpm || '0'), 0) / rows.length : 0
     const ctr = rows.length > 0 ? rows.reduce((s: number, r: any) => s + parseFloat(r.ctr || '0'), 0) / rows.length : 0
     const costPerSale = totalSales > 0 ? totalSpend / totalSales : 0
-    const roi = totalSpend > 0 ? ((totalRevenue - totalSpend) / totalSpend) * 100 : 0
+    const roi = totalSpend > 0 ? totalRevenue / totalSpend : 0 // ROAS (ex: 24.5x)
     const cpa = purchaseCampaigns > 0 ? totalCostPerPurchase / purchaseCampaigns : (totalSales > 0 ? totalSpend / totalSales : 0)
     const profit = totalRevenue - totalSpend
     return { sales: totalSales, spend: totalSpend, revenue: totalRevenue, costPerSale, roi, cpa, cpm, ctr, profit, dataVerified: true }
