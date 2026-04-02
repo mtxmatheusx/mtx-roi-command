@@ -706,11 +706,12 @@ serve(async (req) => {
             </tr>
             ${windows.map(w => `
             <tr style="border-bottom:1px solid #1a1a1a;">
-              <td style="padding:8px 12px;color:#ffffff;font-weight:600;">${w.label}</td>
-              <td style="padding:8px 8px;text-align:center;color:${w.purchases > 0 ? "#00ff88" : "#888888"};font-weight:700;font-variant-numeric:tabular-nums;">${w.purchases}</td>
-              <td style="padding:8px 8px;text-align:center;color:${cpaColor(w.cpa)};font-weight:600;font-variant-numeric:tabular-nums;">${fmtR(w.cpa)}</td>
-              <td style="padding:8px 8px;text-align:center;color:${roasColor(w.roas)};font-weight:600;font-variant-numeric:tabular-nums;">${fmtX(w.roas)}</td>
-              <td style="padding:8px 8px;text-align:center;color:${w.ctr >= 1.0 ? "#00ff88" : w.ctr >= 0.8 ? "#ffaa00" : "#888888"};font-variant-numeric:tabular-nums;">${fmtP(w.ctr)}</td>
+              <td style="padding:8px 8px;color:#ffffff;font-weight:600;">${w.label}</td>
+              <td style="padding:8px 6px;text-align:center;color:${w.purchases > 0 ? "#00ff88" : "#888888"};font-weight:700;font-variant-numeric:tabular-nums;">${w.purchases}</td>
+              <td style="padding:8px 6px;text-align:center;color:${cpaColor(w.cpa)};font-weight:600;font-variant-numeric:tabular-nums;">${fmtR(w.cpa)}</td>
+              <td style="padding:8px 6px;text-align:center;color:${roasColor(w.roas)};font-weight:600;font-variant-numeric:tabular-nums;">${fmtX(w.roas)}</td>
+              <td style="padding:8px 6px;text-align:center;color:#888888;font-variant-numeric:tabular-nums;">${fmtR(w.cpm)}</td>
+              <td style="padding:8px 6px;text-align:center;color:${w.ctr >= 1.0 ? "#00ff88" : w.ctr >= 0.8 ? "#ffaa00" : "#888888"};font-variant-numeric:tabular-nums;">${fmtP(w.ctr)}</td>
             </tr>`).join("")}
           </table>
         </div>`;
