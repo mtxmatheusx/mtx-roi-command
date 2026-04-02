@@ -138,7 +138,7 @@ Gere uma análise técnica em português (máx 300 palavras) com:
 
 Use dados concretos dos números fornecidos. Seja direto, técnico e acionável. Não use linguagem genérica.`
 
-    const res = await fetch('https://api.lovable.dev/v1/chat/completions', {
+    const res = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
