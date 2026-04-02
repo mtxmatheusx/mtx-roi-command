@@ -221,20 +221,20 @@ function kpiCard(label: string, value: string, color: string, subtitle?: string)
 
 function periodPanel(label: string, emoji: string, p: PeriodMetrics, cpaMeta: number): string {
   return `
-  <div style="background:#0d1117;border:1px solid #1a1a2e;border-radius:14px;padding:20px;margin-bottom:16px;">
+  <div style="background:linear-gradient(135deg,rgba(255,255,255,0.10) 0%,rgba(255,255,255,0.04) 100%);border:1px solid rgba(255,255,255,0.15);border-radius:18px;padding:20px;margin-bottom:16px;box-shadow:0 8px 32px rgba(0,0,0,0.2),inset 0 1px 0 rgba(255,255,255,0.08);">
     <div style="display:flex;align-items:center;margin-bottom:16px;">
       <span style="font-size:16px;margin-right:8px;">${emoji}</span>
       <span style="font-size:14px;font-weight:700;color:#fff;text-transform:uppercase;letter-spacing:0.5px;">${label}</span>
-      ${p.dataVerified ? '<span style="margin-left:auto;font-size:9px;color:#00ff88;background:#00ff8815;padding:2px 8px;border-radius:10px;">✓ Verificado</span>' : ''}
+      ${p.dataVerified ? '<span style="margin-left:auto;font-size:9px;color:#00ff88;background:rgba(0,255,136,0.1);padding:2px 8px;border-radius:10px;">✓ Verificado</span>' : ''}
     </div>
     
     <!-- Hero: Lucro Líquido -->
-    <div style="text-align:center;padding:12px 0 16px;border-bottom:1px solid #1a1a2e;margin-bottom:14px;">
-      <div style="font-size:10px;color:#666;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:4px;">Lucro Líquido</div>
+    <div style="text-align:center;padding:12px 0 16px;border-bottom:1px solid rgba(255,255,255,0.08);margin-bottom:14px;">
+      <div style="font-size:10px;color:#888;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:4px;">Lucro Líquido</div>
       <div style="font-size:32px;font-weight:900;color:${profitColor(p.profit)};font-variant-numeric:tabular-nums;">
         ${p.profit >= 0 ? '+' : ''}R$ ${fmt(p.profit)}
       </div>
-      <div style="font-size:11px;color:#555;margin-top:4px;">Receita R$ ${fmtK(p.revenue)} − Spend R$ ${fmtK(p.spend)}</div>
+      <div style="font-size:11px;color:#777;margin-top:4px;">Receita R$ ${fmtK(p.revenue)} − Spend R$ ${fmtK(p.spend)}</div>
     </div>
 
     <!-- KPI Grid 2x3 -->
