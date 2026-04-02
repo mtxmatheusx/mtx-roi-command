@@ -14,9 +14,9 @@ interface CampaignInsight {
   daily_budget: number;
   created_time: string;
   age_days: number;
-  dtd_spend: number; dtd_purchases: number; dtd_revenue: number; dtd_roas: number; dtd_cpa: number;
-  wtd_spend: number; wtd_purchases: number; wtd_revenue: number; wtd_roas: number; wtd_cpa: number;
-  mtd_spend: number; mtd_purchases: number; mtd_revenue: number; mtd_roas: number; mtd_cpa: number;
+  dtd_spend: number; dtd_purchases: number; dtd_revenue: number; dtd_roas: number; dtd_cpa: number; dtd_cpm: number; dtd_ctr: number;
+  wtd_spend: number; wtd_purchases: number; wtd_revenue: number; wtd_roas: number; wtd_cpa: number; wtd_cpm: number; wtd_ctr: number;
+  mtd_spend: number; mtd_purchases: number; mtd_revenue: number; mtd_roas: number; mtd_cpa: number; mtd_cpm: number; mtd_ctr: number;
   ctr: number; frequency: number;
   trend: string;
 }
@@ -48,11 +48,13 @@ function getTimeframeRanges() {
 }
 
 function parseMetrics(ins: any) {
-  if (!ins) return { spend: 0, purchases: 0, revenue: 0, ctr: 0, frequency: 0 };
+  if (!ins) return { spend: 0, purchases: 0, revenue: 0, ctr: 0, frequency: 0, cpm: 0, impressions: 0 };
   const spend = parseFloat(ins.spend || "0");
+  const impressions = parseInt(ins.impressions || "0", 10);
   const purchases = (ins.actions || []).filter((a: any) => a.action_type === "purchase" || a.action_type === "omni_purchase").reduce((s: number, a: any) => s + parseInt(a.value || "0", 10), 0);
   const revenue = (ins.action_values || []).filter((a: any) => a.action_type === "purchase" || a.action_type === "omni_purchase").reduce((s: number, a: any) => s + parseFloat(a.value || "0"), 0);
-  return { spend, purchases, revenue, ctr: parseFloat(ins.ctr || "0"), frequency: parseFloat(ins.frequency || "0") };
+  const cpm = impressions > 0 ? (spend / impressions) * 1000 : 0;
+  return { spend, purchases, revenue, ctr: parseFloat(ins.ctr || "0"), frequency: parseFloat(ins.frequency || "0"), cpm, impressions };
 }
 
 function determineTrend(dtdRoas: number, wtdRoas: number, mtdRoas: number): string {
@@ -412,7 +414,7 @@ async function duplicateAdset(adsetId: string, accessToken: string, newName?: st
 // ─── Meta API Fetchers ─────────────────────────────────────
 
 async function fetchInsightsForRange(accountId: string, accessToken: string, since: string, until: string): Promise<Map<string, any>> {
-  const url = `https://graph.facebook.com/v23.0/${accountId}/insights?fields=campaign_id,spend,actions,action_values,ctr,frequency&time_range={"since":"${since}","until":"${until}"}&level=campaign&limit=500&access_token=${accessToken}`;
+  const url = `https://graph.facebook.com/v23.0/${accountId}/insights?fields=campaign_id,spend,actions,action_values,ctr,frequency,impressions,cpm&time_range={"since":"${since}","until":"${until}"}&level=campaign&limit=500&access_token=${accessToken}`;
   try {
     const resp = await fetch(url);
     const data = await resp.json();
@@ -484,10 +486,13 @@ serve(async (req) => {
               created_time: c.created_time || "", age_days: ageDays,
               dtd_spend: dtd.spend, dtd_purchases: dtd.purchases, dtd_revenue: dtd.revenue,
               dtd_roas: dtdRoas, dtd_cpa: dtd.purchases > 0 ? dtd.spend / dtd.purchases : (dtd.spend > 0 ? dtd.spend : 0),
+              dtd_cpm: dtd.cpm, dtd_ctr: dtd.ctr,
               wtd_spend: wtd.spend, wtd_purchases: wtd.purchases, wtd_revenue: wtd.revenue,
               wtd_roas: wtdRoas, wtd_cpa: wtd.purchases > 0 ? wtd.spend / wtd.purchases : (wtd.spend > 0 ? wtd.spend : 0),
+              wtd_cpm: wtd.cpm, wtd_ctr: wtd.ctr,
               mtd_spend: mtd.spend, mtd_purchases: mtd.purchases, mtd_revenue: mtd.revenue,
               mtd_roas: mtdRoas, mtd_cpa: mtd.purchases > 0 ? mtd.spend / mtd.purchases : (mtd.spend > 0 ? mtd.spend : 0),
+              mtd_cpm: mtd.cpm, mtd_ctr: mtd.ctr,
               ctr: wtd.ctr, frequency: wtd.frequency,
               trend: determineTrend(dtdRoas, wtdRoas, mtdRoas),
             };
@@ -526,6 +531,9 @@ serve(async (req) => {
           profileResult.ai_summary = aiSummary;
           profileResult.campaigns_analyzed = campaignInsights.length;
           profileResult.timeframes = { dtd: today, wtd: wtdSince, mtd: mtdSince };
+          profileResult.campaign_insights = campaignInsights;
+          profileResult.cpa_meta = profile.cpa_meta;
+          profileResult.roas_min_escala = profile.roas_min_escala;
 
           // Log all decisions to emergency_logs
           for (const decision of decisions) {
@@ -620,7 +628,7 @@ serve(async (req) => {
   <div style="background:linear-gradient(135deg,#0a0a0a 0%,#111111 100%);padding:32px 24px 24px;border-bottom:1px solid #1e1e1e;">
     <div style="font-size:10px;color:#00ff88;text-transform:uppercase;letter-spacing:2px;font-weight:600;margin-bottom:4px;">MTX Assessoria Estratégica</div>
     <div style="font-size:22px;font-weight:800;color:#ffffff;margin-bottom:2px;">🤖 Agente Autônomo</div>
-    <div style="font-size:11px;color:#888888;">Engine Claude Opus 4.5 · Tool-Use Loop</div>
+    <div style="font-size:11px;color:#888888;">Engine Gemini 2.0 Flash · Tool-Use Loop</div>
   </div>
 
   <!-- Destaque -->
@@ -662,10 +670,65 @@ serve(async (req) => {
     ${actionsHtml}
   </div>
 
+  <!-- Campaign Metrics Table -->
+  ${(() => {
+    const insights: CampaignInsight[] = r.campaign_insights || [];
+    if (insights.length === 0) return "";
+    const cpaMeta = r.cpa_meta || 0;
+    const roasMin = r.roas_min_escala || 0;
+    const metricColor = (val: number, good: boolean) => good ? "#00ff88" : val === 0 ? "#888888" : "#ff4444";
+    const cpaColor = (v: number) => v === 0 ? "#888888" : v <= cpaMeta ? "#00ff88" : v <= cpaMeta * 1.15 ? "#ffaa00" : "#ff4444";
+    const roasColor = (v: number) => v === 0 ? "#888888" : v >= roasMin ? "#00ff88" : v >= roasMin * 0.8 ? "#ffaa00" : "#ff4444";
+    const fmtR = (v: number) => v > 0 ? `R$ ${v.toFixed(2)}` : "—";
+    const fmtX = (v: number) => v > 0 ? `${v.toFixed(2)}x` : "—";
+    const fmtP = (v: number) => v > 0 ? `${v.toFixed(2)}%` : "—";
+
+    const rows = insights.map(c => {
+      const windows = [
+        { label: "DTD", purchases: c.dtd_purchases, cpa: c.dtd_cpa, roas: c.dtd_roas, cpm: c.dtd_cpm, ctr: c.dtd_ctr },
+        { label: "WTD", purchases: c.wtd_purchases, cpa: c.wtd_cpa, roas: c.wtd_roas, cpm: c.wtd_cpm, ctr: c.wtd_ctr },
+        { label: "MTD", purchases: c.mtd_purchases, cpa: c.mtd_cpa, roas: c.mtd_roas, cpm: c.mtd_cpm, ctr: c.mtd_ctr },
+      ];
+      return `
+        <div style="background:#111111;border:1px solid #1e1e1e;border-radius:8px;margin-bottom:12px;overflow:hidden;">
+          <div style="padding:12px 16px;border-bottom:1px solid #1e1e1e;">
+            <div style="font-size:13px;font-weight:700;color:#ffffff;">${c.name}</div>
+            <div style="font-size:11px;color:#888888;margin-top:2px;">Budget: R$ ${c.daily_budget.toFixed(0)} · Status: ${c.effective_status} · Trend: ${c.trend.toUpperCase()}</div>
+          </div>
+          <table width="100%" cellpadding="0" cellspacing="0" style="font-size:12px;">
+            <tr style="border-bottom:1px solid #1e1e1e;">
+              <th style="padding:8px 8px;text-align:left;color:#888888;font-weight:600;font-size:10px;text-transform:uppercase;letter-spacing:0.5px;">Janela</th>
+              <th style="padding:8px 6px;text-align:center;color:#888888;font-weight:600;font-size:10px;text-transform:uppercase;">Vendas</th>
+              <th style="padding:8px 6px;text-align:center;color:#888888;font-weight:600;font-size:10px;text-transform:uppercase;">CPA</th>
+              <th style="padding:8px 6px;text-align:center;color:#888888;font-weight:600;font-size:10px;text-transform:uppercase;">ROAS</th>
+              <th style="padding:8px 6px;text-align:center;color:#888888;font-weight:600;font-size:10px;text-transform:uppercase;">CPM</th>
+              <th style="padding:8px 6px;text-align:center;color:#888888;font-weight:600;font-size:10px;text-transform:uppercase;">CTR</th>
+            </tr>
+            ${windows.map(w => `
+            <tr style="border-bottom:1px solid #1a1a1a;">
+              <td style="padding:8px 8px;color:#ffffff;font-weight:600;">${w.label}</td>
+              <td style="padding:8px 6px;text-align:center;color:${w.purchases > 0 ? "#00ff88" : "#888888"};font-weight:700;font-variant-numeric:tabular-nums;">${w.purchases}</td>
+              <td style="padding:8px 6px;text-align:center;color:${cpaColor(w.cpa)};font-weight:600;font-variant-numeric:tabular-nums;">${fmtR(w.cpa)}</td>
+              <td style="padding:8px 6px;text-align:center;color:${roasColor(w.roas)};font-weight:600;font-variant-numeric:tabular-nums;">${fmtX(w.roas)}</td>
+              <td style="padding:8px 6px;text-align:center;color:#888888;font-variant-numeric:tabular-nums;">${fmtR(w.cpm)}</td>
+              <td style="padding:8px 6px;text-align:center;color:${w.ctr >= 1.0 ? "#00ff88" : w.ctr >= 0.8 ? "#ffaa00" : "#888888"};font-variant-numeric:tabular-nums;">${fmtP(w.ctr)}</td>
+            </tr>`).join("")}
+          </table>
+        </div>`;
+    }).join("");
+
+    return `
+    <div style="padding:0 24px 20px;">
+      <div style="font-size:10px;color:#888888;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:12px;">Métricas por Campanha</div>
+      ${rows}
+      <div style="font-size:10px;color:#444444;margin-top:4px;">🟢 Acima da meta · 🟡 Atenção · 🔴 Abaixo da meta · Meta CPA: R$ ${cpaMeta} · ROAS mín: ${roasMin}x</div>
+    </div>`;
+  })()}
+
   ${r.ai_summary ? `
   <!-- Claude Analysis -->
   <div style="padding:0 24px 20px;">
-    <div style="font-size:10px;color:#888888;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:12px;">Análise do Claude</div>
+    <div style="font-size:10px;color:#888888;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:12px;">Análise do Gemini</div>
     <div style="background:#111111;border:1px solid #1e1e1e;border-radius:8px;padding:16px;">
       <div style="font-size:13px;color:#cccccc;line-height:1.6;">${r.ai_summary.slice(0, 600)}</div>
     </div>
@@ -715,9 +778,9 @@ serve(async (req) => {
     return new Response(JSON.stringify({
       results,
       timestamp: new Date().toISOString(),
-      ai_enabled: !!ANTHROPIC_KEY,
-      engine: ANTHROPIC_KEY ? "claude-opus-4-5" : "static-rules",
-      version: "v4-claude",
+      ai_enabled: !!GEMINI_KEY,
+      engine: GEMINI_KEY ? "gemini-2.0-flash" : "static-rules",
+      version: "v4-gemini",
       hour_brt: currentHour,
       email_enabled: !!RESEND_API_KEY,
     }), {
