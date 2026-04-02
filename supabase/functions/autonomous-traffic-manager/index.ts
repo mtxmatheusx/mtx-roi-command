@@ -449,7 +449,7 @@ async function fetchInsightsForRange(accountId: string, accessToken: string, sin
 }
 
 async function fetchInsightsByPreset(accountId: string, accessToken: string, datePreset: string): Promise<Map<string, any>> {
-  const url = `https://graph.facebook.com/v23.0/${accountId}/insights?fields=campaign_id,spend,actions,action_values,ctr,frequency,impressions,cpm&date_preset=${datePreset}&level=campaign&limit=500&access_token=${accessToken}`;
+  const url = `https://graph.facebook.com/v23.0/${accountId}/insights?fields=campaign_id,spend,actions,action_values,purchase_roas,ctr,frequency,impressions,cpm&date_preset=${datePreset}&level=campaign&limit=500&access_token=${accessToken}`;
   try {
     const resp = await fetch(url);
     const data = await resp.json();
