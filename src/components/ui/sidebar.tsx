@@ -141,11 +141,15 @@ const Sidebar = React.forwardRef<
   if (collapsible === "none") {
     return (
       <div
-        className={cn("flex h-full w-[--sidebar-width] flex-col glass-dark text-sidebar-foreground", className)}
+        className={cn("flex h-full w-[--sidebar-width] flex-col liquid-glass-dark text-sidebar-foreground", className)}
         ref={ref}
         {...props}
       >
-        {children}
+        <div className="lg-overlay" />
+        <div className="lg-specular" />
+        <div className="lg-content !p-0 flex flex-col h-full">
+          {children}
+        </div>
       </div>
     );
   }
@@ -156,7 +160,7 @@ const Sidebar = React.forwardRef<
         <SheetContent
           data-sidebar="sidebar"
           data-mobile="true"
-          className="w-[--sidebar-width] glass-dark p-0 text-sidebar-foreground [&>button]:hidden"
+          className="w-[--sidebar-width] liquid-glass-dark p-0 text-sidebar-foreground [&>button]:hidden"
           style={
             {
               "--sidebar-width": SIDEBAR_WIDTH_MOBILE,
@@ -206,9 +210,13 @@ const Sidebar = React.forwardRef<
       >
         <div
           data-sidebar="sidebar"
-          className="flex h-full w-full flex-col glass-dark group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:border group-data-[variant=floating]:border-sidebar-border group-data-[variant=floating]:shadow"
+          className="flex h-full w-full flex-col liquid-glass-dark group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:border group-data-[variant=floating]:border-sidebar-border group-data-[variant=floating]:shadow"
         >
-          {children}
+          <div className="lg-overlay" />
+          <div className="lg-specular" />
+          <div className="lg-content !p-0 flex flex-col h-full">
+            {children}
+          </div>
         </div>
       </div>
     </div>

@@ -2,8 +2,15 @@ import * as React from "react";
 
 import { cn } from "@/lib/utils";
 
-const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(({ className, ...props }, ref) => (
-  <div ref={ref} className={cn("glass text-card-foreground", className)} {...props} />
+const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(({ className, children, ...props }, ref) => (
+  <div ref={ref} className={cn("liquid-glass text-card-foreground", className)} {...props}>
+    <div className="lg-distortion" />
+    <div className="lg-overlay" />
+    <div className="lg-specular" />
+    <div className="lg-content">
+      {children}
+    </div>
+  </div>
 ));
 Card.displayName = "Card";
 

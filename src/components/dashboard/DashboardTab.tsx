@@ -169,13 +169,18 @@ export default function DashboardTab(props: DashboardTabProps) {
                 Limite {freqLabels[budgetFrequency]} de {formatCurrency(budgetMaximo)} atingido. Escala suspensa.
               </div>
             )}
-            <div className="glass p-4 flex items-center gap-4">
+            <div className="liquid-glass">
+              <div className="lg-distortion" />
+              <div className="lg-overlay" />
+              <div className="lg-specular" />
+              <div className="lg-content flex items-center gap-4">
               <span className="text-xs text-muted-foreground whitespace-nowrap font-medium">
                 {formatCurrency(spendNoPeriodo)} / {formatCurrency(budgetMaximo)}
               </span>
               <Progress value={pct} className={`h-2 flex-1 rounded-full ${exceeded ? "[&>div]:bg-destructive" : pct > 80 ? "[&>div]:bg-warning" : "[&>div]:bg-success"}`} />
               <span className="text-xs font-bold text-foreground">{pct.toFixed(0)}%</span>
               <span className="text-[10px] text-muted-foreground">{freqLabels[budgetFrequency]}</span>
+              </div>
             </div>
           </div>
         );
@@ -190,30 +195,35 @@ export default function DashboardTab(props: DashboardTabProps) {
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-            className="glass-strong p-6 sm:p-10 text-center relative overflow-hidden"
+            className="liquid-glass-strong relative"
           >
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.015] via-transparent to-success/[0.015] pointer-events-none" />
-            <div className="relative">
-              <p className="text-[11px] font-semibold text-muted-foreground tracking-[0.2em] uppercase mb-4">Lucro Líquido Total</p>
-              <p className={`text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tighter hero-number ${totalProfit >= 0 ? "text-success" : "text-destructive"}`}>{formatCurrency(totalProfit)}</p>
-              <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-5 mt-5">
-                <span className="text-sm text-muted-foreground">
-                  Receita <span className="font-semibold text-foreground">{formatCurrency(totalRevenue)}</span>
-                </span>
-                <span className="w-1 h-1 rounded-full bg-border" />
-                <span className="text-sm text-muted-foreground">
-                  Investimento <span className="font-semibold text-foreground">{formatCurrency(totalSpend)}</span>
-                </span>
-                {deltaProfit !== null && isFinite(deltaProfit) && (
-                  <>
-                    <span className="w-1 h-1 rounded-full bg-border" />
-                    <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full transition-colors
-                      ${deltaProfit >= 0 ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"}`}>
-                      {deltaProfit >= 0 ? <TrendingUp className="w-3 h-3" /> : null}
-                      {deltaProfit > 0 ? "+" : ""}{deltaProfit.toFixed(1)}%
-                    </span>
-                  </>
-                )}
+            <div className="lg-distortion" />
+            <div className="lg-overlay" />
+            <div className="lg-specular" />
+            <div className="lg-content p-6 sm:p-10 text-center">
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.015] via-transparent to-success/[0.015] pointer-events-none" />
+              <div className="relative">
+                <p className="text-[11px] font-semibold text-muted-foreground tracking-[0.2em] uppercase mb-4">Lucro Líquido Total</p>
+                <p className={`text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tighter hero-number ${totalProfit >= 0 ? "text-success" : "text-destructive"}`}>{formatCurrency(totalProfit)}</p>
+                <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-5 mt-5">
+                  <span className="text-sm text-muted-foreground">
+                    Receita <span className="font-semibold text-foreground">{formatCurrency(totalRevenue)}</span>
+                  </span>
+                  <span className="w-1 h-1 rounded-full bg-border" />
+                  <span className="text-sm text-muted-foreground">
+                    Investimento <span className="font-semibold text-foreground">{formatCurrency(totalSpend)}</span>
+                  </span>
+                  {deltaProfit !== null && isFinite(deltaProfit) && (
+                    <>
+                      <span className="w-1 h-1 rounded-full bg-border" />
+                      <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full transition-colors
+                        ${deltaProfit >= 0 ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"}`}>
+                        {deltaProfit >= 0 ? <TrendingUp className="w-3 h-3" /> : null}
+                        {deltaProfit > 0 ? "+" : ""}{deltaProfit.toFixed(1)}%
+                      </span>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
           </motion.div>
@@ -252,27 +262,32 @@ export default function DashboardTab(props: DashboardTabProps) {
 
           {/* Automation Log */}
           <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
-            className="glass overflow-hidden">
-            <div className="px-6 py-4 border-b border-border flex items-center gap-2.5">
-              <div className="w-6 h-6 rounded-md bg-success/10 flex items-center justify-center">
-                <Activity className="w-3.5 h-3.5 text-success" />
-              </div>
-              <h2 className="text-sm font-semibold text-foreground">Log de Automação</h2>
-              <span className="text-[10px] text-muted-foreground font-medium bg-muted px-2 py-0.5 rounded-full ml-1">{logs.length}</span>
-            </div>
-            <div className="max-h-64 overflow-y-auto">
-              {logs.length === 0 ? (
-                <p className="p-6 text-sm text-muted-foreground">Nenhum log registrado ainda.</p>
-              ) : (
-                <div className="divide-y divide-border">
-                  {logs.map((log, i) => (
-                    <div key={i} className={`px-6 py-3 text-sm flex items-start gap-3 transition-colors ${log.type === "action" ? "bg-destructive/3" : "hover:bg-muted/50"}`}>
-                      <span className="text-[10px] text-muted-foreground whitespace-nowrap font-mono mt-0.5">{log.time}</span>
-                      <span className={log.type === "action" ? "text-destructive font-medium" : "text-muted-foreground"}>{log.message}</span>
-                    </div>
-                  ))}
+            className="liquid-glass">
+            <div className="lg-distortion" />
+            <div className="lg-overlay" />
+            <div className="lg-specular" />
+            <div className="lg-content !p-0 overflow-hidden">
+              <div className="px-6 py-4 border-b border-border flex items-center gap-2.5">
+                <div className="w-6 h-6 rounded-md bg-success/10 flex items-center justify-center">
+                  <Activity className="w-3.5 h-3.5 text-success" />
                 </div>
-              )}
+                <h2 className="text-sm font-semibold text-foreground">Log de Automação</h2>
+                <span className="text-[10px] text-muted-foreground font-medium bg-muted px-2 py-0.5 rounded-full ml-1">{logs.length}</span>
+              </div>
+              <div className="max-h-64 overflow-y-auto">
+                {logs.length === 0 ? (
+                  <p className="p-6 text-sm text-muted-foreground">Nenhum log registrado ainda.</p>
+                ) : (
+                  <div className="divide-y divide-border">
+                    {logs.map((log, i) => (
+                      <div key={i} className={`px-6 py-3 text-sm flex items-start gap-3 transition-colors ${log.type === "action" ? "bg-destructive/3" : "hover:bg-muted/50"}`}>
+                        <span className="text-[10px] text-muted-foreground whitespace-nowrap font-mono mt-0.5">{log.time}</span>
+                        <span className={log.type === "action" ? "text-destructive font-medium" : "text-muted-foreground"}>{log.message}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </motion.div>
 
