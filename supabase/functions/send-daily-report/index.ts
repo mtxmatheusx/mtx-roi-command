@@ -354,9 +354,9 @@ function buildEmailHtml(clients: ClientReport[], type: string, email: string, ge
 
   <!-- ═══ HERO CONSOLIDADO ═══ -->
   <div style="padding:24px;">
-    <div style="background:linear-gradient(145deg,#0a0e14 0%,#111827 50%,#0a0e14 100%);border:1px solid rgba(255,255,255,0.06);border-top-color:rgba(255,255,255,0.1);border-radius:18px;padding:24px;margin-bottom:24px;box-shadow:0 8px 30px -8px rgba(0,0,0,0.45),inset 0 1px 0 0 rgba(255,255,255,0.06);">
+    <div style="background:linear-gradient(135deg,rgba(255,255,255,0.14) 0%,rgba(255,255,255,0.06) 100%);border:1px solid rgba(255,255,255,0.2);border-radius:20px;padding:24px;margin-bottom:24px;box-shadow:0 16px 48px rgba(0,0,0,0.25),inset 0 1px 0 rgba(255,255,255,0.12);">
       <div style="text-align:center;margin-bottom:20px;">
-        <div style="font-size:10px;color:#666;text-transform:uppercase;letter-spacing:2px;">Lucro Líquido Total (Hoje)</div>
+        <div style="font-size:10px;color:#888;text-transform:uppercase;letter-spacing:2px;">Lucro Líquido Total (Hoje)</div>
         <div style="font-size:42px;font-weight:900;color:${profitColor(totalProfit)};margin-top:8px;font-variant-numeric:tabular-nums;">
           ${totalProfit >= 0 ? '+' : ''}R$ ${fmt(totalProfit)}
         </div>
