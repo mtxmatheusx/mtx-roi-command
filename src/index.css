@@ -8,8 +8,8 @@
   :root {
     /* ═══ Apple × Notion Design System ═══ */
 
-    /* Surfaces */
-    --background: 40 11% 100%;
+    /* Surfaces — warm gray base for glass effect */
+    --background: 34 11% 93%;
     --foreground: 0 0% 10%;
 
     --card: 0 0% 100%;
@@ -96,7 +96,7 @@
   }
 
   .dark {
-    --background: 0 0% 10%;
+    --background: 0 0% 8%;
     --foreground: 0 0% 91%;
 
     --card: 0 0% 12%;
@@ -321,87 +321,133 @@
     box-shadow: var(--shadow-heavy);
   }
 
-  /* ═══ Legacy liquid-glass mappings ═══ */
-  /* Map old liquid-glass to clean notion-card for backwards compat */
-  .liquid-glass {
-    background: hsl(var(--card));
-    border: 1px solid hsl(var(--border));
+  /* ═══ Apple Glassmorphism — real translucent cards ═══ */
+  .liquid-glass,
+  .glass-card,
+  .notion-card {
+    background: rgba(255, 255, 255, 0.78);
+    backdrop-filter: blur(20px) saturate(160%) brightness(1.02);
+    -webkit-backdrop-filter: blur(20px) saturate(160%) brightness(1.02);
+    border: 1px solid rgba(255, 255, 255, 0.70);
+    border-top-color: rgba(255, 255, 255, 0.92);
     border-radius: 16px;
-    box-shadow: var(--shadow-card);
+    box-shadow:
+      0 1px 0 rgba(255,255,255,0.80) inset,
+      0 4px 12px rgba(0,0,0,0.06),
+      0 1px 3px rgba(0,0,0,0.04);
     position: relative;
     overflow: hidden;
     transition: box-shadow 200ms cubic-bezier(0.16,1,0.3,1),
                 transform 200ms cubic-bezier(0.16,1,0.3,1);
   }
-  .liquid-glass:hover {
-    box-shadow: var(--shadow-elevated);
+  .liquid-glass:hover,
+  .glass-card:hover,
+  .notion-card:hover {
+    box-shadow:
+      0 1px 0 rgba(255,255,255,0.80) inset,
+      0 12px 32px rgba(0,0,0,0.08),
+      0 4px 8px rgba(0,0,0,0.04);
     transform: translateY(-1px);
   }
 
-  .liquid-glass-strong {
-    background: hsl(var(--card));
-    border: 1px solid hsl(var(--border));
+  .liquid-glass-strong,
+  .notion-card-strong {
+    background: rgba(255, 255, 255, 0.82);
+    backdrop-filter: blur(24px) saturate(170%) brightness(1.03);
+    -webkit-backdrop-filter: blur(24px) saturate(170%) brightness(1.03);
+    border: 1px solid rgba(255, 255, 255, 0.75);
+    border-top-color: rgba(255, 255, 255, 0.95);
     border-radius: 20px;
-    box-shadow: var(--shadow-float);
+    box-shadow:
+      0 1px 0 rgba(255,255,255,0.85) inset,
+      0 12px 32px rgba(0,0,0,0.08),
+      0 4px 8px rgba(0,0,0,0.04);
     position: relative;
     overflow: hidden;
   }
 
-  /* Hide legacy glass layers — no longer needed */
-  .lg-distortion,
-  .lg-overlay,
-  .lg-specular {
-    display: none;
+  .chart-container {
+    background: rgba(255, 255, 255, 0.78);
+    backdrop-filter: blur(20px) saturate(160%) brightness(1.02);
+    -webkit-backdrop-filter: blur(20px) saturate(160%) brightness(1.02);
+    border: 1px solid rgba(255, 255, 255, 0.70);
+    border-top-color: rgba(255, 255, 255, 0.92);
+    border-radius: 16px;
+    box-shadow:
+      0 1px 0 rgba(255,255,255,0.80) inset,
+      0 4px 12px rgba(0,0,0,0.06);
+    padding: 1.25rem 1.5rem;
+    transition: box-shadow 200ms cubic-bezier(0.16,1,0.3,1),
+                transform 200ms cubic-bezier(0.16,1,0.3,1);
   }
-  .lg-content {
-    position: relative;
-    padding: 1.25rem;
+  .chart-container:hover {
+    box-shadow:
+      0 1px 0 rgba(255,255,255,0.80) inset,
+      0 12px 32px rgba(0,0,0,0.08),
+      0 4px 8px rgba(0,0,0,0.04);
+    transform: translateY(-1px);
   }
 
-  /* Legacy aliases */
-  .liquid-glass::after,
-  .liquid-glass-strong::after {
-    display: none;
+  .glass-card-interactive {
+    background: rgba(255, 255, 255, 0.75);
+    backdrop-filter: blur(20px) saturate(160%);
+    -webkit-backdrop-filter: blur(20px) saturate(160%);
+    border: 1px solid rgba(255, 255, 255, 0.65);
+    border-top-color: rgba(255, 255, 255, 0.90);
+    border-radius: 16px;
+    box-shadow:
+      0 1px 0 rgba(255,255,255,0.75) inset,
+      0 4px 12px rgba(0,0,0,0.06);
+    cursor: pointer;
+    transition: box-shadow 200ms cubic-bezier(0.16,1,0.3,1),
+                transform 200ms cubic-bezier(0.16,1,0.3,1);
   }
+  .glass-card-interactive:hover {
+    box-shadow:
+      0 1px 0 rgba(255,255,255,0.80) inset,
+      0 12px 32px rgba(0,0,0,0.08);
+    transform: translateY(-1px);
+  }
+  .glass-card-interactive:active {
+    transform: translateY(0) scale(0.995);
+  }
+
+  /* Hide legacy glass sublayers */
+  .lg-distortion, .lg-overlay, .lg-specular { display: none; }
+  .lg-content { position: relative; padding: 1.25rem; }
+  .liquid-glass::after, .liquid-glass-strong::after { display: none; }
 
   .glass-bg {
     background: hsl(var(--background));
     min-height: 100svh;
   }
 
-  .glass-card,
-  .chart-container {
-    background: hsl(var(--card));
-    border: 1px solid hsl(var(--border));
-    border-radius: 16px;
-    box-shadow: var(--shadow-card);
-    transition: box-shadow 200ms cubic-bezier(0.16,1,0.3,1),
-                transform 200ms cubic-bezier(0.16,1,0.3,1);
+  /* ═══ Dark mode glass variants ═══ */
+  .dark .liquid-glass,
+  .dark .glass-card,
+  .dark .notion-card {
+    background: rgba(30, 30, 30, 0.80);
+    border-color: rgba(255,255,255,0.08);
+    border-top-color: rgba(255,255,255,0.14);
+    box-shadow:
+      0 1px 0 rgba(255,255,255,0.06) inset,
+      0 4px 12px rgba(0,0,0,0.30);
   }
-  .glass-card:hover,
-  .chart-container:hover {
-    box-shadow: var(--shadow-elevated);
-    transform: translateY(-1px);
+  .dark .liquid-glass-strong,
+  .dark .notion-card-strong {
+    background: rgba(30, 30, 30, 0.85);
+    border-color: rgba(255,255,255,0.10);
+    border-top-color: rgba(255,255,255,0.16);
+    box-shadow:
+      0 1px 0 rgba(255,255,255,0.08) inset,
+      0 12px 32px rgba(0,0,0,0.35);
   }
-  .chart-container {
-    padding: 1.25rem 1.5rem;
-  }
-
-  .glass-card-interactive {
-    background: hsl(var(--card));
-    border: 1px solid hsl(var(--border));
-    border-radius: 16px;
-    box-shadow: var(--shadow-card);
-    cursor: pointer;
-    transition: box-shadow 200ms cubic-bezier(0.16,1,0.3,1),
-                transform 200ms cubic-bezier(0.16,1,0.3,1);
-  }
-  .glass-card-interactive:hover {
-    box-shadow: var(--shadow-elevated);
-    transform: translateY(-1px);
-  }
-  .glass-card-interactive:active {
-    transform: translateY(0) scale(0.995);
+  .dark .chart-container,
+  .dark .glass-card-interactive {
+    background: rgba(30, 30, 30, 0.80);
+    border-color: rgba(255,255,255,0.08);
+    border-top-color: rgba(255,255,255,0.14);
+    box-shadow: 0 1px 0 rgba(255,255,255,0.06) inset, 0 4px 12px rgba(0,0,0,0.30);
   }
 
   /* Gradient divider */
