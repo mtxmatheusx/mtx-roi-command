@@ -324,7 +324,7 @@ export default function CriativosPage() {
             const Icon = typeIcon[creative.type] || Video;
             return (
               <motion.div key={creative.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
-                className={`bg-card rounded-lg border overflow-hidden ${isWinner ? "border-success/30" : "border-border"}`}>
+                className={`liquid-glass overflow-hidden !rounded-lg ${isWinner ? "ring-1 ring-success/30" : ""}`}>
                 {/* Thumbnail or placeholder */}
                 {creative.thumbnailUrl ? (
                   <div className="h-40 bg-secondary overflow-hidden relative">
