@@ -70,7 +70,7 @@ async function generateGeminiAnalysis(clients: ClientData[], reportType: string)
   try {
     const summary = clients.map(c => {
       const m = c.metricas
-      return `${c.nome}: Hoje ${m.vendas[0]}v ROI ${m.roi[0]}% CPA R$${m.cpa[0]} | 7d ${m.vendas[1]}v ROI ${m.roi[1]}% | 30d ${m.vendas[3]}v ROI ${m.roi[3]}%`
+      return `${c.nome}: Hoje ${m.vendas[0]}v ROI ${m.roi[0]}% CPA R$${m.cpa[0]} | Ontem ${m.vendas[1]}v ROI ${m.roi[1]}% | 7d ${m.vendas[2]}v ROI ${m.roi[2]}% | 30d ${m.vendas[4]}v ROI ${m.roi[4]}%`
     }).join('\n')
     const timeCtx = reportType === 'morning' ? 'Relatório matinal. Prioridades do dia.' : reportType === 'midday' ? 'Meio-dia (parcial). Alertas urgentes.' : 'Fechamento. Resumo + planejamento amanhã.'
     const prompt = `Analista de performance MTX. ${timeCtx}\n\nClientes:\n${summary}\n\nAnálise técnica (máx 200 palavras): Diagnóstico, alertas críticos (ROI<80%), 2-3 recomendações, projeção mensal. Seja direto.`
