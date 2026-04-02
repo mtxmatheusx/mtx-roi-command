@@ -479,9 +479,15 @@ function buildEmailHtml(clients: ClientReport[], type: string, email: string, ge
           </tr>
         </table>
       </div>
-    </div>
 
-    <!-- Footer -->
+      <!-- Análise Gemini -->
+      <div style="background:#111;border-radius:12px;padding:20px;margin-top:16px;border-left:4px solid #a855f7;">
+        <h3 style="color:#a855f7;margin:0 0 16px;font-size:14px;text-transform:uppercase;letter-spacing:1px;">🤖 Análise do Gemini</h3>
+        <div style="color:#ccc;font-size:13px;line-height:1.7;">
+          ${geminiAnalysis.replace(/\*\*(.*?)\*\*/g, '<strong style="color:#fff;">$1</strong>').replace(/\n/g, '<br>')}
+        </div>
+      </div>
+    </div>
     <div style="background:#050505;padding:24px;text-align:center;border-top:1px solid #222;">
       <a href="https://mtx-roi-command.lovable.app" style="display:inline-block;background:linear-gradient(135deg,#ff3b3b,#ff6b35);color:#fff;text-decoration:none;padding:14px 36px;border-radius:8px;font-weight:700;font-size:14px;">
         Abrir MTX →
