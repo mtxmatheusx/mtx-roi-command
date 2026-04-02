@@ -87,7 +87,7 @@ CPA Meta: R$${c.cpaMeta} | Agente: ${c.agentActions} ações 24h
 | Métrica     | Hoje       | Ontem      | 7 dias     | 15 dias    | 30 dias    |
 |-------------|------------|------------|------------|------------|------------|
 | Vendas      | ${m.vendas[0]} | ${m.vendas[1]} | ${m.vendas[2]} | ${m.vendas[3]} | ${m.vendas[4]} |
-| ROI %       | ${m.roi[0]}% | ${m.roi[1]}% | ${m.roi[2]}% | ${m.roi[3]}% | ${m.roi[4]}% |
+| ROAS (x)    | ${m.roi[0]}x | ${m.roi[1]}x | ${m.roi[2]}x | ${m.roi[3]}x | ${m.roi[4]}x |
 | CPA R$      | ${m.cpa[0]} | ${m.cpa[1]} | ${m.cpa[2]} | ${m.cpa[3]} | ${m.cpa[4]} |
 | CPM R$      | ${m.cpm[0]} | ${m.cpm[1]} | ${m.cpm[2]} | ${m.cpm[3]} | ${m.cpm[4]} |
 | CTR %       | ${m.ctr[0]}% | ${m.ctr[1]}% | ${m.ctr[2]}% | ${m.ctr[3]}% | ${m.ctr[4]}% |
