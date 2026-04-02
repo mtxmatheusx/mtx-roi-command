@@ -478,7 +478,7 @@ async function fetchInsightsByPreset(accountId: string, accessToken: string, dat
 // ─── Gemini Email Analysis (dedicated call) ────────────────
 
 async function generateGeminiEmailAnalysis(
-  apiKey: string, profileName: string, profileConfig: any, campaigns: CampaignInsight[]
+  apiKey: string, profileName: string, profileConfig: any, campaigns: CampaignInsight[], skillsContext = ""
 ): Promise<string> {
   const fmtW = (w: WindowMetrics) => `Vendas:${w.purchases} ValorVendas:R$${w.revenue.toFixed(2)} Gasto:R$${w.spend.toFixed(2)} CPA:R$${w.cpa.toFixed(2)} ROAS:${w.roas.toFixed(2)}x CPM:R$${w.cpm.toFixed(2)} CTR:${w.ctr.toFixed(2)}%`;
   const campaignsText = campaigns.map(c =>
