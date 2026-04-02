@@ -726,7 +726,18 @@ serve(async (req) => {
           if (snap?.[0]) reportLink = `https://mtx-roi-command.lovable.app/relatorio?token=${snap[0].token}`;
         } catch {}
 
-        const statusColor = actions.length === 0 ? "#00ff88" : actions.some((a: any) => a.action === "pause") ? "#ff4444" : "#ffaa00";
+        // Generate dedicated Gemini analysis for the email
+        let geminiEmailAnalysis = "";
+        if (GEMINI_KEY && r.campaign_insights?.length > 0) {
+          try {
+            geminiEmailAnalysis = await generateGeminiEmailAnalysis(
+              GEMINI_KEY, profileName,
+              { cpa_meta: r.cpa_meta || 0, cpa_max_toleravel: r.cpa_max_toleravel || 0, roas_min_escala: r.roas_min_escala || 0 },
+              r.campaign_insights
+            );
+          } catch (e) { console.error("[Gemini Email Analysis] failed:", e); }
+        }
+
         const statusText = actions.length === 0 ? "SAUDÁVEL" : actions.some((a: any) => a.action === "pause") ? "INTERVENÇÃO" : "OTIMIZADO";
 
         const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><meta name="color-scheme" content="dark"><meta name="supported-color-schemes" content="dark"></head>
