@@ -103,6 +103,45 @@ export async function fetchMasterContext(
     }
   }
 
+  // Carga 3: Active agent skills
+  let skillsBlock = "";
+  try {
+    const { data: skills } = await sb
+      .from("agent_skills")
+      .select("name, platform, content")
+      .eq("active", true)
+      .order("name");
+
+    if (skills && skills.length > 0) {
+      const skillsList = skills.map((s: any) => 
+        `### SKILL: ${s.name} (${s.platform})\n${s.content}`
+      ).join("\n\n---\n\n");
+      
+      skillsBlock = `\n## BASE DE CONHECIMENTO ESPECIALIZADA (${skills.length} SKILLS ATIVAS)
+
+INSTRUÇÃO: Quando o usuário fizer uma pergunta, identifique qual(is) skill(s) são relevantes e use o conhecimento delas para responder com profundidade. Combine múltiplas skills quando a pergunta cruzar domínios (ex: "campanha Meta Ads para e-commerce" → use skills de meta-ads + e-commerce + klaviyo).
+
+ROTEAMENTO DE SKILLS:
+- Pagamento/cobrança/cartão recusado → stripe
+- Email marketing e-commerce / pós-compra → klaviyo  
+- Email marketing B2B / CRM → activecampaign
+- Anúncios Meta/Facebook/Instagram → paid-ads-meta, ad-creative, copywriting
+- Anúncios Google → google-ads
+- Anúncios TikTok → tiktok-ads
+- Anúncios LinkedIn → linkedin-ads
+- SEO / indexação → seo-audit, google-search-console, programmatic-seo
+- Analytics / comportamento → google-analytics-4, analytics-tracking
+- CRO / conversão → page-cro, hotjar, optimizely
+- Automação → n8n-automation, make-zapier
+- WhatsApp → evolution-api
+- Formulários / quiz → typeform
+
+${skillsList}`;
+    }
+  } catch (e) {
+    console.warn("Failed to fetch agent skills:", e);
+  }
+
   // Build the system prompt block
   const profileBlock = {
     nome: profile.name,
@@ -158,6 +197,11 @@ Se o ROAS está caindo, suas sugestões devem focar em urgência/retargeting. Se
     systemPromptBlock += `\n## MÉTRICAS DA META ADS
 Dados da Meta não disponíveis neste momento. Baseie-se nas configurações do perfil.
 `;
+  }
+
+  // Append skills block
+  if (skillsBlock) {
+    systemPromptBlock += skillsBlock;
   }
 
   return {
