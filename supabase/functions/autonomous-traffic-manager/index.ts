@@ -642,6 +642,7 @@ serve(async (req) => {
           profileResult.timeframes = { dtd: today, wtd: wtdSince, mtd: mtdSince };
           profileResult.campaign_insights = campaignInsights;
           profileResult.cpa_meta = profile.cpa_meta;
+          profileResult.cpa_max_toleravel = profile.cpa_max_toleravel;
           profileResult.roas_min_escala = profile.roas_min_escala;
 
           // Log all decisions to emergency_logs
