@@ -7,6 +7,10 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+interface WindowMetrics {
+  spend: number; purchases: number; revenue: number; roas: number; cpa: number; cpm: number; ctr: number;
+}
+
 interface CampaignInsight {
   id: string;
   name: string;
@@ -14,6 +18,11 @@ interface CampaignInsight {
   daily_budget: number;
   created_time: string;
   age_days: number;
+  today: WindowMetrics;
+  d7: WindowMetrics;
+  d15: WindowMetrics;
+  d30: WindowMetrics;
+  // Legacy aliases used by Gemini prompt and static rules
   dtd_spend: number; dtd_purchases: number; dtd_revenue: number; dtd_roas: number; dtd_cpa: number; dtd_cpm: number; dtd_ctr: number;
   wtd_spend: number; wtd_purchases: number; wtd_revenue: number; wtd_roas: number; wtd_cpa: number; wtd_cpm: number; wtd_ctr: number;
   mtd_spend: number; mtd_purchases: number; mtd_revenue: number; mtd_roas: number; mtd_cpa: number; mtd_cpm: number; mtd_ctr: number;
@@ -39,12 +48,16 @@ function dateStr(d: Date): string { return d.toISOString().slice(0, 10); }
 function getTimeframeRanges() {
   const now = new Date();
   const today = dateStr(now);
+  const d7Since = dateStr(new Date(now.getTime() - 7 * 86400000));
+  const d15Since = dateStr(new Date(now.getTime() - 15 * 86400000));
+  const d30Since = dateStr(new Date(now.getTime() - 30 * 86400000));
+  // Keep legacy WTD/MTD for Gemini prompt compatibility
   const dayOfWeek = now.getDay();
   const mondayOffset = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
   const monday = new Date(now); monday.setDate(now.getDate() - mondayOffset);
   const wtdSince = dateStr(monday);
   const mtdSince = `${today.slice(0, 7)}-01`;
-  return { today, wtdSince, mtdSince };
+  return { today, d7Since, d15Since, d30Since, wtdSince, mtdSince };
 }
 
 function parseMetrics(ins: any) {
@@ -221,11 +234,11 @@ HORA BRT: ${currentHour}:00 | PERÍODO: ${isNighttime ? "NOTURNO" : currentHour 
 ## REGRA ABSOLUTA: Não pausar campanhas com menos de ${MIN_DAYS_BEFORE_PAUSE} dias de vida. Converter em reduce_budget.
 
 ## ANÁLISE MULTI-TEMPORAL OBRIGATÓRIA
-Cruze sempre DTD (hoje) + WTD (semana) + MTD (mês):
-- DTD ruim + WTD/MTD bons → NÃO agir, flutuação pontual
-- DTD e WTD ruins + MTD bom → reduce_budget
-- 3 janelas ruins + idade >= ${MIN_DAYS_BEFORE_PAUSE} dias → pause_campaign
-- DTD excelente + WTD positivo + trend improving → scale_campaign
+Cruze sempre Hoje + 7d + 15d + 30d:
+- Hoje ruim + 7d/30d bons → NÃO agir, flutuação pontual
+- Hoje e 7d ruins + 30d bom → reduce_budget
+- Todas as janelas ruins + idade >= ${MIN_DAYS_BEFORE_PAUSE} dias → pause_campaign
+- Hoje excelente + 7d positivo + trend improving → scale_campaign
 - Frequência > 3.5 ou CTR < 0.8% → generate_creative (fadiga)
 - 0 campanhas ativas ou ROAS geral < mínimo há 3+ dias → create_new_campaign
 
@@ -244,9 +257,10 @@ Responda sempre em português com justificativa técnica clara.`;
   const campaignsText = campaigns.map(c =>
     `━━ "${c.name}" [${c.trend.toUpperCase()}] | Idade: ${c.age_days} dias${c.age_days < MIN_DAYS_BEFORE_PAUSE ? " 🛡️ PROTEGIDA" : ""}
    Budget: R$${c.daily_budget.toFixed(0)} | Status: ${c.effective_status}
-   DTD → Spend: R$${c.dtd_spend.toFixed(0)} | Vendas: ${c.dtd_purchases} | ROAS: ${c.dtd_roas.toFixed(2)}x | CPA: R$${c.dtd_cpa.toFixed(0)}
-   WTD → Spend: R$${c.wtd_spend.toFixed(0)} | Vendas: ${c.wtd_purchases} | ROAS: ${c.wtd_roas.toFixed(2)}x | CPA: R$${c.wtd_cpa.toFixed(0)}
-   MTD → Spend: R$${c.mtd_spend.toFixed(0)} | Vendas: ${c.mtd_purchases} | ROAS: ${c.mtd_roas.toFixed(2)}x | CPA: R$${c.mtd_cpa.toFixed(0)}
+   Hoje  → Spend: R$${c.today.spend.toFixed(0)} | Vendas: ${c.today.purchases} | ROAS: ${c.today.roas.toFixed(2)}x | CPA: R$${c.today.cpa.toFixed(0)}
+   7d    → Spend: R$${c.d7.spend.toFixed(0)} | Vendas: ${c.d7.purchases} | ROAS: ${c.d7.roas.toFixed(2)}x | CPA: R$${c.d7.cpa.toFixed(0)}
+   15d   → Spend: R$${c.d15.spend.toFixed(0)} | Vendas: ${c.d15.purchases} | ROAS: ${c.d15.roas.toFixed(2)}x | CPA: R$${c.d15.cpa.toFixed(0)}
+   30d   → Spend: R$${c.d30.spend.toFixed(0)} | Vendas: ${c.d30.purchases} | ROAS: ${c.d30.roas.toFixed(2)}x | CPA: R$${c.d30.cpa.toFixed(0)}
    CTR: ${c.ctr.toFixed(2)}% | Frequência: ${c.frequency.toFixed(2)}`
   ).join("\n\n");
 
@@ -441,7 +455,7 @@ serve(async (req) => {
       return new Response(JSON.stringify({ message: "No profiles with autonomous features enabled", timestamp: new Date().toISOString() }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const { today, wtdSince, mtdSince } = getTimeframeRanges();
+    const { today, d7Since, d15Since, d30Since, wtdSince, mtdSince } = getTimeframeRanges();
     const currentHour = currentHourBRT();
 
     console.log(`[MTX Agent v4 — Gemini] Running at ${currentHour}:00 BRT | Profiles: ${profiles.length}`);
@@ -457,14 +471,15 @@ serve(async (req) => {
 
         try {
           const campaignUrl = `https://graph.facebook.com/v23.0/${profile.ad_account_id}/campaigns?fields=id,name,effective_status,daily_budget,created_time&effective_status=["ACTIVE"]&access_token=${accessToken}&limit=100`;
-          const adsetUrl = `https://graph.facebook.com/v23.0/${profile.ad_account_id}/adsets?fields=id,name,daily_budget,effective_status,campaign_id,insights.time_range({"since":"${wtdSince}","until":"${today}"}){spend,actions,action_values,ctr,frequency}&effective_status=["ACTIVE"]&access_token=${accessToken}&limit=100`;
+          const adsetUrl = `https://graph.facebook.com/v23.0/${profile.ad_account_id}/adsets?fields=id,name,daily_budget,effective_status,campaign_id,insights.time_range({"since":"${d7Since}","until":"${today}"}){spend,actions,action_values,ctr,frequency}&effective_status=["ACTIVE"]&access_token=${accessToken}&limit=100`;
 
-          const [campaignResp, adsetResp, dtdMap, wtdMap, mtdMap] = await Promise.all([
+          const [campaignResp, adsetResp, todayMap, d7Map, d15Map, d30Map] = await Promise.all([
             fetch(campaignUrl).then(r => r.json()),
             fetch(adsetUrl).then(r => r.json()),
             fetchInsightsForRange(profile.ad_account_id, accessToken, today, today),
-            fetchInsightsForRange(profile.ad_account_id, accessToken, wtdSince, today),
-            fetchInsightsForRange(profile.ad_account_id, accessToken, mtdSince, today),
+            fetchInsightsForRange(profile.ad_account_id, accessToken, d7Since, today),
+            fetchInsightsForRange(profile.ad_account_id, accessToken, d15Since, today),
+            fetchInsightsForRange(profile.ad_account_id, accessToken, d30Since, today),
           ]);
 
           if (campaignResp.error) { profileResult.error = campaignResp.error.message; return profileResult; }
@@ -472,29 +487,37 @@ serve(async (req) => {
           const adsetsList = adsetResp.data || [];
 
           const campaignInsights: CampaignInsight[] = (campaignResp.data || []).map((c: any) => {
-            const dtd = parseMetrics(dtdMap.get(c.id));
-            const wtd = parseMetrics(wtdMap.get(c.id));
-            const mtd = parseMetrics(mtdMap.get(c.id));
-            const dtdRoas = dtd.spend > 0 ? dtd.revenue / dtd.spend : 0;
-            const wtdRoas = wtd.spend > 0 ? wtd.revenue / wtd.spend : 0;
-            const mtdRoas = mtd.spend > 0 ? mtd.revenue / mtd.spend : 0;
+            const tdy = parseMetrics(todayMap.get(c.id));
+            const s7 = parseMetrics(d7Map.get(c.id));
+            const s15 = parseMetrics(d15Map.get(c.id));
+            const s30 = parseMetrics(d30Map.get(c.id));
             const ageDays = campaignAgeDays(c.created_time);
+
+            const buildWindow = (m: any): WindowMetrics => {
+              const roas = m.spend > 0 ? m.revenue / m.spend : 0;
+              const cpa = m.purchases > 0 ? m.spend / m.purchases : (m.spend > 0 ? m.spend : 0);
+              return { spend: m.spend, purchases: m.purchases, revenue: m.revenue, roas, cpa, cpm: m.cpm, ctr: m.ctr };
+            };
+
+            const todayW = buildWindow(tdy);
+            const d7W = buildWindow(s7);
+            const d15W = buildWindow(s15);
+            const d30W = buildWindow(s30);
 
             return {
               id: c.id, name: c.name, effective_status: c.effective_status,
               daily_budget: parseInt(c.daily_budget || "0", 10) / 100,
               created_time: c.created_time || "", age_days: ageDays,
-              dtd_spend: dtd.spend, dtd_purchases: dtd.purchases, dtd_revenue: dtd.revenue,
-              dtd_roas: dtdRoas, dtd_cpa: dtd.purchases > 0 ? dtd.spend / dtd.purchases : (dtd.spend > 0 ? dtd.spend : 0),
-              dtd_cpm: dtd.cpm, dtd_ctr: dtd.ctr,
-              wtd_spend: wtd.spend, wtd_purchases: wtd.purchases, wtd_revenue: wtd.revenue,
-              wtd_roas: wtdRoas, wtd_cpa: wtd.purchases > 0 ? wtd.spend / wtd.purchases : (wtd.spend > 0 ? wtd.spend : 0),
-              wtd_cpm: wtd.cpm, wtd_ctr: wtd.ctr,
-              mtd_spend: mtd.spend, mtd_purchases: mtd.purchases, mtd_revenue: mtd.revenue,
-              mtd_roas: mtdRoas, mtd_cpa: mtd.purchases > 0 ? mtd.spend / mtd.purchases : (mtd.spend > 0 ? mtd.spend : 0),
-              mtd_cpm: mtd.cpm, mtd_ctr: mtd.ctr,
-              ctr: wtd.ctr, frequency: wtd.frequency,
-              trend: determineTrend(dtdRoas, wtdRoas, mtdRoas),
+              today: todayW, d7: d7W, d15: d15W, d30: d30W,
+              // Legacy aliases for Gemini/static rules (map today->dtd, 7d->wtd, 30d->mtd)
+              dtd_spend: todayW.spend, dtd_purchases: todayW.purchases, dtd_revenue: todayW.revenue,
+              dtd_roas: todayW.roas, dtd_cpa: todayW.cpa, dtd_cpm: todayW.cpm, dtd_ctr: todayW.ctr,
+              wtd_spend: d7W.spend, wtd_purchases: d7W.purchases, wtd_revenue: d7W.revenue,
+              wtd_roas: d7W.roas, wtd_cpa: d7W.cpa, wtd_cpm: d7W.cpm, wtd_ctr: d7W.ctr,
+              mtd_spend: d30W.spend, mtd_purchases: d30W.purchases, mtd_revenue: d30W.revenue,
+              mtd_roas: d30W.roas, mtd_cpa: d30W.cpa, mtd_cpm: d30W.cpm, mtd_ctr: d30W.ctr,
+              ctr: d7W.ctr, frequency: s7.frequency || 0,
+              trend: determineTrend(todayW.roas, d7W.roas, d30W.roas),
             };
           });
 
@@ -685,33 +708,36 @@ serve(async (req) => {
 
     const rows = insights.map(c => {
       const windows = [
-        { label: "DTD", purchases: c.dtd_purchases, cpa: c.dtd_cpa, roas: c.dtd_roas, cpm: c.dtd_cpm, ctr: c.dtd_ctr },
-        { label: "WTD", purchases: c.wtd_purchases, cpa: c.wtd_cpa, roas: c.wtd_roas, cpm: c.wtd_cpm, ctr: c.wtd_ctr },
-        { label: "MTD", purchases: c.mtd_purchases, cpa: c.mtd_cpa, roas: c.mtd_roas, cpm: c.mtd_cpm, ctr: c.mtd_ctr },
+        { label: "Hoje", ...c.today },
+        { label: "7 dias", ...c.d7 },
+        { label: "15 dias", ...c.d15 },
+        { label: "30 dias", ...c.d30 },
       ];
       return `
         <div style="background:#111111;border:1px solid #1e1e1e;border-radius:8px;margin-bottom:12px;overflow:hidden;">
           <div style="padding:12px 16px;border-bottom:1px solid #1e1e1e;">
             <div style="font-size:13px;font-weight:700;color:#ffffff;">${c.name}</div>
-            <div style="font-size:11px;color:#888888;margin-top:2px;">Budget: R$ ${c.daily_budget.toFixed(0)} · Status: ${c.effective_status} · Trend: ${c.trend.toUpperCase()}</div>
+            <div style="font-size:11px;color:#888888;margin-top:2px;">Budget: R$ ${c.daily_budget.toFixed(0)} · Trend: ${c.trend.toUpperCase()}</div>
           </div>
           <table width="100%" cellpadding="0" cellspacing="0" style="font-size:12px;">
             <tr style="border-bottom:1px solid #1e1e1e;">
-              <th style="padding:8px 8px;text-align:left;color:#888888;font-weight:600;font-size:10px;text-transform:uppercase;letter-spacing:0.5px;">Janela</th>
-              <th style="padding:8px 6px;text-align:center;color:#888888;font-weight:600;font-size:10px;text-transform:uppercase;">Vendas</th>
-              <th style="padding:8px 6px;text-align:center;color:#888888;font-weight:600;font-size:10px;text-transform:uppercase;">CPA</th>
-              <th style="padding:8px 6px;text-align:center;color:#888888;font-weight:600;font-size:10px;text-transform:uppercase;">ROAS</th>
-              <th style="padding:8px 6px;text-align:center;color:#888888;font-weight:600;font-size:10px;text-transform:uppercase;">CPM</th>
-              <th style="padding:8px 6px;text-align:center;color:#888888;font-weight:600;font-size:10px;text-transform:uppercase;">CTR</th>
+              <th style="padding:8px 6px;text-align:left;color:#888888;font-weight:600;font-size:10px;text-transform:uppercase;letter-spacing:0.5px;">Janela</th>
+              <th style="padding:8px 4px;text-align:center;color:#888888;font-weight:600;font-size:10px;text-transform:uppercase;">Vendas</th>
+              <th style="padding:8px 4px;text-align:center;color:#888888;font-weight:600;font-size:10px;text-transform:uppercase;">Gasto</th>
+              <th style="padding:8px 4px;text-align:center;color:#888888;font-weight:600;font-size:10px;text-transform:uppercase;">CPA</th>
+              <th style="padding:8px 4px;text-align:center;color:#888888;font-weight:600;font-size:10px;text-transform:uppercase;">ROAS</th>
+              <th style="padding:8px 4px;text-align:center;color:#888888;font-weight:600;font-size:10px;text-transform:uppercase;">CPM</th>
+              <th style="padding:8px 4px;text-align:center;color:#888888;font-weight:600;font-size:10px;text-transform:uppercase;">CTR</th>
             </tr>
             ${windows.map(w => `
             <tr style="border-bottom:1px solid #1a1a1a;">
-              <td style="padding:8px 8px;color:#ffffff;font-weight:600;">${w.label}</td>
-              <td style="padding:8px 6px;text-align:center;color:${w.purchases > 0 ? "#00ff88" : "#888888"};font-weight:700;font-variant-numeric:tabular-nums;">${w.purchases}</td>
-              <td style="padding:8px 6px;text-align:center;color:${cpaColor(w.cpa)};font-weight:600;font-variant-numeric:tabular-nums;">${fmtR(w.cpa)}</td>
-              <td style="padding:8px 6px;text-align:center;color:${roasColor(w.roas)};font-weight:600;font-variant-numeric:tabular-nums;">${fmtX(w.roas)}</td>
-              <td style="padding:8px 6px;text-align:center;color:#888888;font-variant-numeric:tabular-nums;">${fmtR(w.cpm)}</td>
-              <td style="padding:8px 6px;text-align:center;color:${w.ctr >= 1.0 ? "#00ff88" : w.ctr >= 0.8 ? "#ffaa00" : "#888888"};font-variant-numeric:tabular-nums;">${fmtP(w.ctr)}</td>
+              <td style="padding:8px 6px;color:#ffffff;font-weight:600;font-size:11px;">${w.label}</td>
+              <td style="padding:8px 4px;text-align:center;color:${w.purchases > 0 ? "#00ff88" : "#888888"};font-weight:700;font-variant-numeric:tabular-nums;">${w.purchases}</td>
+              <td style="padding:8px 4px;text-align:center;color:#ffffff;font-weight:600;font-variant-numeric:tabular-nums;">${fmtR(w.spend)}</td>
+              <td style="padding:8px 4px;text-align:center;color:${cpaColor(w.cpa)};font-weight:600;font-variant-numeric:tabular-nums;">${fmtR(w.cpa)}</td>
+              <td style="padding:8px 4px;text-align:center;color:${roasColor(w.roas)};font-weight:600;font-variant-numeric:tabular-nums;">${fmtX(w.roas)}</td>
+              <td style="padding:8px 4px;text-align:center;color:#888888;font-variant-numeric:tabular-nums;">${fmtR(w.cpm)}</td>
+              <td style="padding:8px 4px;text-align:center;color:${w.ctr >= 1.0 ? "#00ff88" : w.ctr >= 0.8 ? "#ffaa00" : "#888888"};font-variant-numeric:tabular-nums;">${fmtP(w.ctr)}</td>
             </tr>`).join("")}
           </table>
         </div>`;
