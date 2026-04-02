@@ -509,15 +509,16 @@ serve(async (req) => {
           const adsetsList = adsetResp.data || [];
 
           const campaignInsights: CampaignInsight[] = (campaignResp.data || []).map((c: any) => {
-            const tdy = parseMetrics(todayMap.get(c.id));
-            const yest = parseMetrics(yesterdayMap.get(c.id));
-            const s7 = parseMetrics(d7Map.get(c.id));
-            const s15 = parseMetrics(d15Map.get(c.id));
-            const s30 = parseMetrics(d30Map.get(c.id));
+            const tdy = parseMetrics(todayMap.get(c.id), c.id);
+            const yest = parseMetrics(yesterdayMap.get(c.id), c.id);
+            const s7 = parseMetrics(d7Map.get(c.id), c.id);
+            const s15 = parseMetrics(d15Map.get(c.id), c.id);
+            const s30 = parseMetrics(d30Map.get(c.id), c.id);
             const ageDays = campaignAgeDays(c.created_time);
 
             const buildWindow = (m: any): WindowMetrics => {
-              const roas = m.spend > 0 ? m.revenue / m.spend : 0;
+              // Prefer API-provided ROAS (purchase_roas), fallback to calculated
+              const roas = m.apiRoas > 0 ? m.apiRoas : (m.spend > 0 ? m.revenue / m.spend : 0);
               const cpa = m.purchases > 0 ? m.spend / m.purchases : (m.spend > 0 ? m.spend : 0);
               return { spend: m.spend, purchases: m.purchases, revenue: m.revenue, roas, cpa, cpm: m.cpm, ctr: m.ctr };
             };
