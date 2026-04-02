@@ -223,6 +223,20 @@ const GEMINI_TOOLS = [{
 
 // ─── Gemini Agent (Function-Calling Loop) ──────────────────
 
+async function loadSkillsContext(supabase: any, platform = "meta"): Promise<string> {
+  try {
+    const { data: skills } = await supabase
+      .from("agent_skills")
+      .select("content")
+      .eq("platform", platform)
+      .eq("active", true);
+    return skills?.map((s: any) => s.content).join("\n\n") || "";
+  } catch (e) {
+    console.error("[Skills] Failed to load:", e);
+    return "";
+  }
+}
+
 async function executeGeminiAgent(
   apiKey: string,
   profileName: string,
@@ -237,10 +251,12 @@ async function executeGeminiAgent(
   const decisions: Decision[] = [];
   const isNighttime = currentHour >= 22 || currentHour < 6;
 
-  const systemPrompt = `Você é o MTX Autonomous Agent v4 — gestor de tráfego sênior da agência MTX Assessoria Estratégica.
+  const skillsContext = await loadSkillsContext(supabase, "meta");
+
+  const systemPrompt = `Você é o MTX Autonomous Agent v4 — gestor de tráfego sênior da agência MTX Assessoria Estratégica com 10 anos de experiência em Meta Ads.
 HORA BRT: ${currentHour}:00 | PERÍODO: ${isNighttime ? "NOTURNO" : currentHour < 12 ? "MANHÃ" : "TARDE/NOITE"}
 
-## REGRA ABSOLUTA: Não pausar campanhas com menos de ${MIN_DAYS_BEFORE_PAUSE} dias de vida. Converter em reduce_budget.
+${skillsContext ? `## KNOWLEDGE BASE DE TRÁFEGO PAGO\n${skillsContext}\n\n` : ""}## REGRA ABSOLUTA: Não pausar campanhas com menos de ${MIN_DAYS_BEFORE_PAUSE} dias de vida. Converter em reduce_budget.
 
 ## ANÁLISE MULTI-TEMPORAL OBRIGATÓRIA
 Cruze sempre Hoje + 7d + 15d + 30d:
