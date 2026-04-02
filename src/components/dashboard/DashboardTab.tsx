@@ -169,11 +169,8 @@ export default function DashboardTab(props: DashboardTabProps) {
                 Limite {freqLabels[budgetFrequency]} de {formatCurrency(budgetMaximo)} atingido. Escala suspensa.
               </div>
             )}
-            <div className="liquid-glass">
-              <div className="lg-distortion" />
-              <div className="lg-overlay" />
-              <div className="lg-specular" />
-              <div className="lg-content flex items-center gap-4">
+            <div className="bg-card border border-border rounded-2xl shadow-[var(--shadow-card)]">
+              <div className="p-4 flex items-center gap-4">
               <span className="text-xs text-muted-foreground whitespace-nowrap font-medium">
                 {formatCurrency(spendNoPeriodo)} / {formatCurrency(budgetMaximo)}
               </span>
