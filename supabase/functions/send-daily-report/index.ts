@@ -315,8 +315,8 @@ function generateEmailHTML(data: {
         </td>
         <td width="1%"></td>
         <td width="19%" style="background:#f7f7f5;border:1px solid #e8e8e5;border-radius:12px;padding:14px 6px;text-align:center;">
-          <div style="font-size:9px;font-weight:600;color:#ababab;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">📈 ROI</div>
-          <div style="font-size:18px;font-weight:700;color:${data.roiMedio >= 150 ? '#1a7f37' : data.roiMedio >= 80 ? '#b25c00' : '#c0392b'};letter-spacing:-.5px;font-variant-numeric:tabular-nums;">${fmt(data.roiMedio)}%</div>
+          <div style="font-size:9px;font-weight:600;color:#ababab;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">📈 ROAS</div>
+          <div style="font-size:18px;font-weight:700;color:${data.roiMedio >= 3 ? '#1a7f37' : data.roiMedio >= 1.5 ? '#b25c00' : '#c0392b'};letter-spacing:-.5px;font-variant-numeric:tabular-nums;">${fmt(data.roiMedio)}x</div>
         </td>
         <td width="1%"></td>
         <td width="19%" style="background:#f7f7f5;border:1px solid #e8e8e5;border-radius:12px;padding:14px 6px;text-align:center;">
