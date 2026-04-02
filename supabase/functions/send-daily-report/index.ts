@@ -41,7 +41,7 @@ async function fetchMetaInsights(
 
   try {
     const fields = 'campaign_name,spend,actions,action_values,cost_per_action_type,cpm,ctr'
-    const filtering = JSON.stringify([{ field: 'effective_status', operator: 'IN', value: ['ACTIVE'] }])
+    const filtering = JSON.stringify([{ field: 'campaign.effective_status', operator: 'IN', value: ['ACTIVE'] }])
     const url = `${META_BASE}/${adAccountId}/insights?level=campaign&fields=${fields}&date_preset=${datePreset}&filtering=${encodeURIComponent(filtering)}&limit=500&access_token=${accessToken}`
 
     const res = await fetch(url)
