@@ -70,7 +70,7 @@ export default function CampaignsTable({ campaigns, disableScale }: CampaignsTab
               const cpaAboveMeta = c.purchases > 0 && c.costPerPurchase > c.cpaMeta * 1.2;
               const isActive = c.status === 'active' || c.status === 'scaling';
               return (
-                <tr key={c.id} className="border-b border-border hover:bg-muted/50 transition-colors">
+                <tr key={c.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
                   <td className="px-5 py-3 font-medium max-w-[250px] truncate">{c.name}</td>
                   <td className="px-4 py-3">
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${
