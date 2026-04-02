@@ -46,7 +46,8 @@ async function fetchMetaInsights(
 
     const res = await fetch(url)
     if (!res.ok) {
-      console.error(`Meta API error for ${adAccountId} (${datePreset}): ${res.status}`)
+      const errBody = await res.text()
+      console.error(`Meta API error for ${adAccountId} (${datePreset}): ${res.status} - ${errBody}`)
       return empty
     }
 
