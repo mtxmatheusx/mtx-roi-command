@@ -119,12 +119,12 @@ function generateEmailHTML(data: {
     return `
     <div style="margin-bottom:8px;">
       <div style="font-size:11px;font-weight:600;color:#ababab;margin-bottom:6px;">${emoji} ${label}</div>
-      <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate;border-spacing:6px 0;">
+      <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate;border-spacing:4px 0;">
         <tr>
           ${values.map((v, i) => `
-            <td width="25%" style="background:${i === 0 ? '#f0f7ff' : '#f7f7f5'};border:1px solid ${i === 0 ? '#c5dcf7' : '#e8e8e5'};border-radius:10px;padding:10px 6px;text-align:center;vertical-align:top;">
-              <div style="font-size:9px;font-weight:600;color:${i === 0 ? '#0051a2' : '#ababab'};text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;">${periods[i]}</div>
-              <div style="font-size:14px;font-weight:700;color:${colorFn ? colorFn(v) : '#1a1a1a'};letter-spacing:-.3px;font-variant-numeric:tabular-nums;">${format(v)}</div>
+            <td width="20%" style="background:${i === 0 ? '#f0f7ff' : '#f7f7f5'};border:1px solid ${i === 0 ? '#c5dcf7' : '#e8e8e5'};border-radius:10px;padding:9px 4px;text-align:center;vertical-align:top;">
+              <div style="font-size:8px;font-weight:600;color:${i === 0 ? '#0051a2' : '#ababab'};text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px;">${periods[i]}</div>
+              <div style="font-size:13px;font-weight:700;color:${colorFn ? colorFn(v) : '#1a1a1a'};letter-spacing:-.3px;font-variant-numeric:tabular-nums;">${format(v)}</div>
             </td>
           `).join('')}
         </tr>
