@@ -438,7 +438,7 @@ async function duplicateAdset(adsetId: string, accessToken: string, newName?: st
 // ─── Meta API Fetchers ─────────────────────────────────────
 
 async function fetchInsightsForRange(accountId: string, accessToken: string, since: string, until: string): Promise<Map<string, any>> {
-  const url = `https://graph.facebook.com/v23.0/${accountId}/insights?fields=campaign_id,spend,actions,action_values,ctr,frequency,impressions,cpm&time_range={"since":"${since}","until":"${until}"}&level=campaign&limit=500&access_token=${accessToken}`;
+  const url = `https://graph.facebook.com/v23.0/${accountId}/insights?fields=campaign_id,spend,actions,action_values,purchase_roas,ctr,frequency,impressions,cpm&time_range={"since":"${since}","until":"${until}"}&level=campaign&limit=500&access_token=${accessToken}`;
   try {
     const resp = await fetch(url);
     const data = await resp.json();
