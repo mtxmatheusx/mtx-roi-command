@@ -204,8 +204,12 @@ export default function CampanhasPage() {
           )}
 
           {viewLevel === "ads" && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-card rounded-xl border border-border overflow-hidden">
-              <div className="p-6 border-b border-border">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="liquid-glass">
+              <div className="lg-distortion" />
+              <div className="lg-overlay" />
+              <div className="lg-specular" />
+              <div className="lg-content !p-0">
+              <div className="p-6 border-b border-white/10">
                 <h2 className="text-lg font-bold flex items-center gap-2">
                   Anúncios Individuais
                   <Badge variant="secondary" className="text-xs">{adsData.length} anúncios</Badge>
@@ -220,7 +224,7 @@ export default function CampanhasPage() {
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="border-b border-border text-muted-foreground text-xs uppercase tracking-wider">
+                      <tr className="border-b border-white/10 text-muted-foreground text-xs uppercase tracking-wider">
                         <th className="text-left px-6 py-3 font-medium">Anúncio</th>
                         <th className="text-right px-3 py-3 font-medium">Investimento</th>
                         <th className="text-right px-3 py-3 font-medium">Impressões</th>
