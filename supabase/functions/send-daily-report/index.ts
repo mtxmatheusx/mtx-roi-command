@@ -209,10 +209,10 @@ function recoveryColor(v: number): string { return v >= 80 ? '#00ff88' : v >= 50
 
 function kpiCard(label: string, value: string, color: string, subtitle?: string): string {
   return `<td style="padding:6px;">
-    <div style="background:linear-gradient(145deg,#0f0f0f 0%,#1a1a1a 50%,#0f0f0f 100%);border:1px solid rgba(255,255,255,0.06);border-top-color:rgba(255,255,255,0.1);border-radius:14px;padding:16px 14px;text-align:center;box-shadow:0 4px 24px -4px rgba(0,0,0,0.35),inset 0 1px 0 0 rgba(255,255,255,0.06);">
-      <div style="font-size:10px;color:#666;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">${label}</div>
+    <div style="background:linear-gradient(135deg,rgba(255,255,255,0.12) 0%,rgba(255,255,255,0.06) 100%);border:1px solid rgba(255,255,255,0.18);border-radius:16px;padding:16px 14px;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,0.2),inset 0 1px 0 rgba(255,255,255,0.1);">
+      <div style="font-size:10px;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">${label}</div>
       <div style="font-size:22px;font-weight:800;color:${color};font-variant-numeric:tabular-nums;">${value}</div>
-      ${subtitle ? `<div style="font-size:10px;color:#555;margin-top:4px;">${subtitle}</div>` : ''}
+      ${subtitle ? `<div style="font-size:10px;color:#777;margin-top:4px;">${subtitle}</div>` : ''}
     </div>
   </td>`
 }
@@ -221,20 +221,20 @@ function kpiCard(label: string, value: string, color: string, subtitle?: string)
 
 function periodPanel(label: string, emoji: string, p: PeriodMetrics, cpaMeta: number): string {
   return `
-  <div style="background:#0d1117;border:1px solid #1a1a2e;border-radius:14px;padding:20px;margin-bottom:16px;">
+  <div style="background:linear-gradient(135deg,rgba(255,255,255,0.10) 0%,rgba(255,255,255,0.04) 100%);border:1px solid rgba(255,255,255,0.15);border-radius:18px;padding:20px;margin-bottom:16px;box-shadow:0 8px 32px rgba(0,0,0,0.2),inset 0 1px 0 rgba(255,255,255,0.08);">
     <div style="display:flex;align-items:center;margin-bottom:16px;">
       <span style="font-size:16px;margin-right:8px;">${emoji}</span>
       <span style="font-size:14px;font-weight:700;color:#fff;text-transform:uppercase;letter-spacing:0.5px;">${label}</span>
-      ${p.dataVerified ? '<span style="margin-left:auto;font-size:9px;color:#00ff88;background:#00ff8815;padding:2px 8px;border-radius:10px;">✓ Verificado</span>' : ''}
+      ${p.dataVerified ? '<span style="margin-left:auto;font-size:9px;color:#00ff88;background:rgba(0,255,136,0.1);padding:2px 8px;border-radius:10px;">✓ Verificado</span>' : ''}
     </div>
     
     <!-- Hero: Lucro Líquido -->
-    <div style="text-align:center;padding:12px 0 16px;border-bottom:1px solid #1a1a2e;margin-bottom:14px;">
-      <div style="font-size:10px;color:#666;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:4px;">Lucro Líquido</div>
+    <div style="text-align:center;padding:12px 0 16px;border-bottom:1px solid rgba(255,255,255,0.08);margin-bottom:14px;">
+      <div style="font-size:10px;color:#888;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:4px;">Lucro Líquido</div>
       <div style="font-size:32px;font-weight:900;color:${profitColor(p.profit)};font-variant-numeric:tabular-nums;">
         ${p.profit >= 0 ? '+' : ''}R$ ${fmt(p.profit)}
       </div>
-      <div style="font-size:11px;color:#555;margin-top:4px;">Receita R$ ${fmtK(p.revenue)} − Spend R$ ${fmtK(p.spend)}</div>
+      <div style="font-size:11px;color:#777;margin-top:4px;">Receita R$ ${fmtK(p.revenue)} − Spend R$ ${fmtK(p.spend)}</div>
     </div>
 
     <!-- KPI Grid 2x3 -->
@@ -257,8 +257,8 @@ function periodPanel(label: string, emoji: string, p: PeriodMetrics, cpaMeta: nu
 
 function buildAgentSection(agent: AgentData): string {
   if (agent.totalActions === 0) {
-    return `<div style="background:linear-gradient(145deg,#0a0e14,#111827,#0a0e14);border:1px solid rgba(255,255,255,0.06);border-radius:14px;padding:14px 16px;margin-bottom:16px;box-shadow:inset 0 1px 0 0 rgba(255,255,255,0.04);">
-      <p style="color:#555;margin:0;font-size:12px;">🤖 Agente Autônomo — Sem ações nas últimas 24h</p>
+    return `<div style="background:linear-gradient(135deg,rgba(255,255,255,0.08) 0%,rgba(255,255,255,0.03) 100%);border:1px solid rgba(255,255,255,0.12);border-radius:16px;padding:14px 16px;margin-bottom:16px;box-shadow:0 8px 32px rgba(0,0,0,0.2),inset 0 1px 0 rgba(255,255,255,0.06);">
+      <p style="color:#777;margin:0;font-size:12px;">🤖 Agente Autônomo — Sem ações nas últimas 24h</p>
     </div>`
   }
 
@@ -275,7 +275,7 @@ function buildAgentSection(agent: AgentData): string {
   }).join('')
 
   return `
-  <div style="background:linear-gradient(145deg,#0a0e14 0%,#111827 50%,#0a0e14 100%);border:1px solid rgba(255,255,255,0.06);border-top-color:rgba(255,255,255,0.1);border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 4px 24px -4px rgba(0,0,0,0.35),inset 0 1px 0 0 rgba(255,255,255,0.06);">
+  <div style="background:linear-gradient(135deg,rgba(168,85,247,0.12) 0%,rgba(168,85,247,0.04) 100%);border:1px solid rgba(168,85,247,0.2);border-radius:18px;padding:20px;margin-bottom:16px;box-shadow:0 8px 32px rgba(0,0,0,0.2),inset 0 1px 0 rgba(255,255,255,0.08);">
     <div style="margin-bottom:14px;">
       <span style="font-size:14px;font-weight:700;color:#a855f7;">🤖 Agente Autônomo</span>
       <span style="float:right;font-size:10px;color:#555;">Última exec: ${lastRun}</span>
@@ -337,12 +337,12 @@ function buildEmailHtml(clients: ClientReport[], type: string, email: string, ge
   return `<!DOCTYPE html>
 <html lang="pt-BR">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
-<body style="margin:0;padding:0;background:#000;font-family:'DM Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">
-<div style="max-width:640px;margin:0 auto;background:#0a0a0a;">
+<body style="margin:0;padding:0;background:linear-gradient(135deg,#0f1729 0%,#1a0f29 100%);font-family:'DM Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">
+<div style="max-width:640px;margin:0 auto;background:linear-gradient(180deg,rgba(15,23,41,0.95) 0%,rgba(26,15,41,0.95) 100%);">
 
   <!-- ═══ HEADER ═══ -->
-  <div style="background:linear-gradient(135deg,#0a0a0a 0%,#1a0a2e 50%,#0a0a1a 100%);padding:40px 24px 32px;text-align:center;border-bottom:1px solid #222;">
-    <div style="display:inline-block;background:#ff3b3b18;border:1px solid #ff3b3b30;border-radius:20px;padding:4px 16px;margin-bottom:12px;">
+  <div style="background:linear-gradient(135deg,rgba(255,255,255,0.06) 0%,rgba(255,255,255,0.02) 100%);padding:40px 24px 32px;text-align:center;border-bottom:1px solid rgba(255,255,255,0.1);">
+    <div style="display:inline-block;background:rgba(255,59,59,0.1);border:1px solid rgba(255,59,59,0.2);border-radius:20px;padding:4px 16px;margin-bottom:12px;">
       <span style="font-size:11px;color:#ff3b3b;font-weight:600;letter-spacing:1px;">COMMAND CENTER</span>
     </div>
     <h1 style="color:#fff;margin:0;font-size:32px;font-weight:900;letter-spacing:-1px;">
@@ -354,9 +354,9 @@ function buildEmailHtml(clients: ClientReport[], type: string, email: string, ge
 
   <!-- ═══ HERO CONSOLIDADO ═══ -->
   <div style="padding:24px;">
-    <div style="background:linear-gradient(145deg,#0a0e14 0%,#111827 50%,#0a0e14 100%);border:1px solid rgba(255,255,255,0.06);border-top-color:rgba(255,255,255,0.1);border-radius:18px;padding:24px;margin-bottom:24px;box-shadow:0 8px 30px -8px rgba(0,0,0,0.45),inset 0 1px 0 0 rgba(255,255,255,0.06);">
+    <div style="background:linear-gradient(135deg,rgba(255,255,255,0.14) 0%,rgba(255,255,255,0.06) 100%);border:1px solid rgba(255,255,255,0.2);border-radius:20px;padding:24px;margin-bottom:24px;box-shadow:0 16px 48px rgba(0,0,0,0.25),inset 0 1px 0 rgba(255,255,255,0.12);">
       <div style="text-align:center;margin-bottom:20px;">
-        <div style="font-size:10px;color:#666;text-transform:uppercase;letter-spacing:2px;">Lucro Líquido Total (Hoje)</div>
+        <div style="font-size:10px;color:#888;text-transform:uppercase;letter-spacing:2px;">Lucro Líquido Total (Hoje)</div>
         <div style="font-size:42px;font-weight:900;color:${profitColor(totalProfit)};margin-top:8px;font-variant-numeric:tabular-nums;">
           ${totalProfit >= 0 ? '+' : ''}R$ ${fmt(totalProfit)}
         </div>
@@ -378,7 +378,7 @@ function buildEmailHtml(clients: ClientReport[], type: string, email: string, ge
     ${clientBlocks}
 
     <!-- ═══ GEMINI ANALYSIS ═══ -->
-    <div style="background:linear-gradient(145deg,#0a0a14 0%,#1a0a2e 50%,#0a0a14 100%);border:1px solid rgba(168,85,247,0.15);border-top-color:rgba(168,85,247,0.25);border-radius:18px;padding:24px;margin-top:8px;box-shadow:0 4px 24px -4px rgba(0,0,0,0.35),inset 0 1px 0 0 rgba(168,85,247,0.08);">
+    <div style="background:linear-gradient(135deg,rgba(168,85,247,0.14) 0%,rgba(168,85,247,0.05) 100%);border:1px solid rgba(168,85,247,0.22);border-radius:20px;padding:24px;margin-top:8px;box-shadow:0 8px 32px rgba(0,0,0,0.2),inset 0 1px 0 rgba(255,255,255,0.08);">
       <div style="display:flex;align-items:center;margin-bottom:16px;">
         <div style="width:32px;height:32px;border-radius:8px;background:#a855f720;display:flex;align-items:center;justify-content:center;margin-right:10px;">
           <span style="font-size:16px;">🤖</span>
@@ -395,7 +395,7 @@ function buildEmailHtml(clients: ClientReport[], type: string, email: string, ge
   </div>
 
   <!-- ═══ FOOTER ═══ -->
-  <div style="background:#050505;padding:28px 24px;text-align:center;border-top:1px solid #1a1a2e;">
+  <div style="background:linear-gradient(135deg,rgba(255,255,255,0.04) 0%,rgba(255,255,255,0.01) 100%);padding:28px 24px;text-align:center;border-top:1px solid rgba(255,255,255,0.08);">
     <a href="https://mtx-roi-command.lovable.app" style="display:inline-block;background:linear-gradient(135deg,#ff3b3b,#ff6b35);color:#fff;text-decoration:none;padding:14px 40px;border-radius:10px;font-weight:700;font-size:14px;letter-spacing:0.3px;">
       Abrir MTX Command Center →
     </a>
