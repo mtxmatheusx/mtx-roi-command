@@ -34,7 +34,7 @@ interface ClientData {
   agentActions: number
 }
 
-const DATE_PRESETS = ['today', 'last_7d', 'last_14d', 'last_30d'] as const
+const DATE_PRESETS = ['today', 'yesterday', 'last_7d', 'last_14d', 'last_30d'] as const
 
 async function fetchMetaInsights(adAccountId: string, accessToken: string, datePreset: string): Promise<PeriodMetrics> {
   const empty: PeriodMetrics = { sales: 0, spend: 0, revenue: 0, costPerSale: 0, roi: 0, cpa: 0, cpm: 0, ctr: 0, profit: 0, dataVerified: false }
