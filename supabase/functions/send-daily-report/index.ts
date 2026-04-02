@@ -427,7 +427,7 @@ function buildClientTable(client: ClientReport): string {
   `
 }
 
-function buildEmailHtml(clients: ClientReport[], type: string, email: string): string {
+function buildEmailHtml(clients: ClientReport[], type: string, email: string, geminiAnalysis: string): string {
   const greeting = type === 'morning' ? '☀️ Bom dia' : type === 'midday' ? '📊 Meio-dia' : '🎯 Fechamento'
   const subtitle = type === 'morning' ? 'Dados de ontem (fechamento completo)' : type === 'midday' ? 'Dados parciais de hoje' : 'Fechamento do dia'
 
