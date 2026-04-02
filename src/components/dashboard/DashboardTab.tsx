@@ -252,7 +252,7 @@ export default function DashboardTab(props: DashboardTabProps) {
 
           {/* Automation Log */}
           <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
-            className="glass-card overflow-hidden">
+            className="glass overflow-hidden">
             <div className="px-6 py-4 border-b border-border flex items-center gap-2.5">
               <div className="w-6 h-6 rounded-md bg-success/10 flex items-center justify-center">
                 <Activity className="w-3.5 h-3.5 text-success" />

@@ -31,7 +31,7 @@ export default function MetricCard({ title, value, subtitle, variant = "default"
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay: index * 0.06, ease: [0.22, 1, 0.36, 1] }}
-      className="glass-card p-5 flex flex-col gap-3 group relative overflow-hidden"
+      className="glass p-5 flex flex-col gap-3 group relative overflow-hidden"
     >
       {/* Subtle top accent line for non-default variants */}
       {variant !== "default" && (
