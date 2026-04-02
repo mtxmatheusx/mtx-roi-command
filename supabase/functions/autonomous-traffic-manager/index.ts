@@ -526,6 +526,9 @@ serve(async (req) => {
           profileResult.ai_summary = aiSummary;
           profileResult.campaigns_analyzed = campaignInsights.length;
           profileResult.timeframes = { dtd: today, wtd: wtdSince, mtd: mtdSince };
+          profileResult.campaign_insights = campaignInsights;
+          profileResult.cpa_meta = profile.cpa_meta;
+          profileResult.roas_min_escala = profile.roas_min_escala;
 
           // Log all decisions to emergency_logs
           for (const decision of decisions) {
