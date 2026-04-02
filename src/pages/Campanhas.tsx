@@ -90,15 +90,19 @@ export default function CampanhasPage() {
               <CampaignsTable campaigns={campaigns} />
 
               {/* Full funnel detail table */}
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }} className="bg-card rounded-xl border border-border overflow-hidden mt-8">
-                <div className="p-6 border-b border-border">
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }} className="liquid-glass mt-8">
+                <div className="lg-distortion" />
+                <div className="lg-overlay" />
+                <div className="lg-specular" />
+                <div className="lg-content !p-0">
+                <div className="p-6 border-b border-white/10">
                   <h2 className="text-lg font-bold">Funil Detalhado</h2>
                   <p className="text-sm text-muted-foreground">Métricas de topo, meio e fundo de funil</p>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="border-b border-border text-muted-foreground text-xs uppercase tracking-wider">
+                      <tr className="border-b border-white/10 text-muted-foreground text-xs uppercase tracking-wider">
                         <th className="text-left px-6 py-3 font-medium">Campanha</th>
                         <th className="text-right px-3 py-3 font-medium">CPM</th>
                         <th className="text-right px-3 py-3 font-medium">CTR</th>
