@@ -732,12 +732,16 @@ serve(async (req) => {
     const fmtP = (v: number) => v > 0 ? `${v.toFixed(2)}%` : "—";
 
     const rows = insights.map(c => {
-      const windows = [
-        { label: "Hoje", ...c.today },
-        { label: "Ontem", ...c.yesterday },
-        { label: "7 dias", ...c.d7 },
-        { label: "15 dias", ...c.d15 },
-        { label: "30 dias", ...c.d30 },
+      const w = [c.today, c.yesterday, c.d7, c.d15, c.d30];
+      const wLabels = ["Hoje", "Ontem", "7d", "15d", "30d"];
+      const metricRows = [
+        { label: "Vendas", vals: w.map(x => `<td style="padding:7px 4px;text-align:center;color:${x.purchases > 0 ? "#00ff88" : "#888888"};font-weight:700;font-variant-numeric:tabular-nums;">${x.purchases}</td>`) },
+        { label: "Valor Vendas", vals: w.map(x => `<td style="padding:7px 4px;text-align:center;color:${x.revenue > 0 ? "#00ff88" : "#888888"};font-weight:600;font-variant-numeric:tabular-nums;">${fmtR(x.revenue)}</td>`) },
+        { label: "Gasto", vals: w.map(x => `<td style="padding:7px 4px;text-align:center;color:#ffffff;font-weight:600;font-variant-numeric:tabular-nums;">${fmtR(x.spend)}</td>`) },
+        { label: "CPA", vals: w.map(x => `<td style="padding:7px 4px;text-align:center;color:${cpaColor(x.cpa)};font-weight:600;font-variant-numeric:tabular-nums;">${fmtR(x.cpa)}</td>`) },
+        { label: "ROAS", vals: w.map(x => `<td style="padding:7px 4px;text-align:center;color:${roasColor(x.roas)};font-weight:600;font-variant-numeric:tabular-nums;">${fmtX(x.roas)}</td>`) },
+        { label: "CPM", vals: w.map(x => `<td style="padding:7px 4px;text-align:center;color:#888888;font-variant-numeric:tabular-nums;">${fmtR(x.cpm)}</td>`) },
+        { label: "CTR", vals: w.map(x => `<td style="padding:7px 4px;text-align:center;color:${x.ctr >= 1.0 ? "#00ff88" : x.ctr >= 0.8 ? "#ffaa00" : "#888888"};font-variant-numeric:tabular-nums;">${fmtP(x.ctr)}</td>`) },
       ];
       return `
         <div style="background:#111111;border:1px solid #1e1e1e;border-radius:8px;margin-bottom:12px;overflow:hidden;">
@@ -745,25 +749,15 @@ serve(async (req) => {
             <div style="font-size:13px;font-weight:700;color:#ffffff;">${c.name}</div>
             <div style="font-size:11px;color:#888888;margin-top:2px;">Budget: R$ ${c.daily_budget.toFixed(0)} · Trend: ${c.trend.toUpperCase()}</div>
           </div>
-          <table width="100%" cellpadding="0" cellspacing="0" style="font-size:12px;">
+          <table width="100%" cellpadding="0" cellspacing="0" style="font-size:11px;">
             <tr style="border-bottom:1px solid #1e1e1e;">
-              <th style="padding:8px 6px;text-align:left;color:#888888;font-weight:600;font-size:10px;text-transform:uppercase;letter-spacing:0.5px;">Janela</th>
-              <th style="padding:8px 4px;text-align:center;color:#888888;font-weight:600;font-size:10px;text-transform:uppercase;">Vendas</th>
-              <th style="padding:8px 4px;text-align:center;color:#888888;font-weight:600;font-size:10px;text-transform:uppercase;">Gasto</th>
-              <th style="padding:8px 4px;text-align:center;color:#888888;font-weight:600;font-size:10px;text-transform:uppercase;">CPA</th>
-              <th style="padding:8px 4px;text-align:center;color:#888888;font-weight:600;font-size:10px;text-transform:uppercase;">ROAS</th>
-              <th style="padding:8px 4px;text-align:center;color:#888888;font-weight:600;font-size:10px;text-transform:uppercase;">CPM</th>
-              <th style="padding:8px 4px;text-align:center;color:#888888;font-weight:600;font-size:10px;text-transform:uppercase;">CTR</th>
+              <th style="padding:8px 6px;text-align:left;color:#888888;font-weight:600;font-size:9px;text-transform:uppercase;letter-spacing:0.5px;">Métrica</th>
+              ${wLabels.map(l => `<th style="padding:8px 3px;text-align:center;color:#888888;font-weight:600;font-size:9px;text-transform:uppercase;">${l}</th>`).join("")}
             </tr>
-            ${windows.map(w => `
+            ${metricRows.map(mr => `
             <tr style="border-bottom:1px solid #1a1a1a;">
-              <td style="padding:8px 6px;color:#ffffff;font-weight:600;font-size:11px;">${w.label}</td>
-              <td style="padding:8px 4px;text-align:center;color:${w.purchases > 0 ? "#00ff88" : "#888888"};font-weight:700;font-variant-numeric:tabular-nums;">${w.purchases}</td>
-              <td style="padding:8px 4px;text-align:center;color:#ffffff;font-weight:600;font-variant-numeric:tabular-nums;">${fmtR(w.spend)}</td>
-              <td style="padding:8px 4px;text-align:center;color:${cpaColor(w.cpa)};font-weight:600;font-variant-numeric:tabular-nums;">${fmtR(w.cpa)}</td>
-              <td style="padding:8px 4px;text-align:center;color:${roasColor(w.roas)};font-weight:600;font-variant-numeric:tabular-nums;">${fmtX(w.roas)}</td>
-              <td style="padding:8px 4px;text-align:center;color:#888888;font-variant-numeric:tabular-nums;">${fmtR(w.cpm)}</td>
-              <td style="padding:8px 4px;text-align:center;color:${w.ctr >= 1.0 ? "#00ff88" : w.ctr >= 0.8 ? "#ffaa00" : "#888888"};font-variant-numeric:tabular-nums;">${fmtP(w.ctr)}</td>
+              <td style="padding:7px 6px;color:#ffffff;font-weight:600;font-size:10px;">${mr.label}</td>
+              ${mr.vals.join("")}
             </tr>`).join("")}
           </table>
         </div>`;
