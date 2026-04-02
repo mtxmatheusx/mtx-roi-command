@@ -59,6 +59,30 @@ const NAV: NavGroup[] = [
           { to: "/criativos", label: "Criativos" },
         ],
       },
+      {
+        to: "/skills", icon: Search, label: "Google Ads", badge: null,
+        children: [
+          { to: "/skills", label: "Search & Shopping" },
+          { to: "/skills", label: "Performance Max" },
+          { to: "/skills", label: "Display & YouTube" },
+        ],
+      },
+      {
+        to: "/skills", icon: Zap, label: "TikTok Ads", badge: null,
+        children: [
+          { to: "/skills", label: "Criativos & Spark Ads" },
+          { to: "/skills", label: "Públicos & Segmentação" },
+          { to: "/skills", label: "Relatórios" },
+        ],
+      },
+      {
+        to: "/skills", icon: Users, label: "LinkedIn Ads", badge: null,
+        children: [
+          { to: "/skills", label: "Sponsored Content" },
+          { to: "/skills", label: "Lead Gen Forms" },
+          { to: "/skills", label: "Account-Based (ABM)" },
+        ],
+      },
       { to: "/simulador", icon: Zap, label: "Simulador" },
       { to: "/auditoria-meta", icon: Shield, label: "Auditoria Meta" },
     ],
