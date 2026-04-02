@@ -14,9 +14,9 @@ interface CampaignInsight {
   daily_budget: number;
   created_time: string;
   age_days: number;
-  dtd_spend: number; dtd_purchases: number; dtd_revenue: number; dtd_roas: number; dtd_cpa: number;
-  wtd_spend: number; wtd_purchases: number; wtd_revenue: number; wtd_roas: number; wtd_cpa: number;
-  mtd_spend: number; mtd_purchases: number; mtd_revenue: number; mtd_roas: number; mtd_cpa: number;
+  dtd_spend: number; dtd_purchases: number; dtd_revenue: number; dtd_roas: number; dtd_cpa: number; dtd_cpm: number; dtd_ctr: number;
+  wtd_spend: number; wtd_purchases: number; wtd_revenue: number; wtd_roas: number; wtd_cpa: number; wtd_cpm: number; wtd_ctr: number;
+  mtd_spend: number; mtd_purchases: number; mtd_revenue: number; mtd_roas: number; mtd_cpa: number; mtd_cpm: number; mtd_ctr: number;
   ctr: number; frequency: number;
   trend: string;
 }
