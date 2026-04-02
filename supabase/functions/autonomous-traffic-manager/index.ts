@@ -223,6 +223,20 @@ const GEMINI_TOOLS = [{
 
 // ─── Gemini Agent (Function-Calling Loop) ──────────────────
 
+async function loadSkillsContext(supabase: any, platform = "meta"): Promise<string> {
+  try {
+    const { data: skills } = await supabase
+      .from("agent_skills")
+      .select("content")
+      .eq("platform", platform)
+      .eq("active", true);
+    return skills?.map((s: any) => s.content).join("\n\n") || "";
+  } catch (e) {
+    console.error("[Skills] Failed to load:", e);
+    return "";
+  }
+}
+
 async function executeGeminiAgent(
   apiKey: string,
   profileName: string,
@@ -237,10 +251,12 @@ async function executeGeminiAgent(
   const decisions: Decision[] = [];
   const isNighttime = currentHour >= 22 || currentHour < 6;
 
-  const systemPrompt = `Você é o MTX Autonomous Agent v4 — gestor de tráfego sênior da agência MTX Assessoria Estratégica.
+  const skillsContext = await loadSkillsContext(supabase, "meta");
+
+  const systemPrompt = `Você é o MTX Autonomous Agent v4 — gestor de tráfego sênior da agência MTX Assessoria Estratégica com 10 anos de experiência em Meta Ads.
 HORA BRT: ${currentHour}:00 | PERÍODO: ${isNighttime ? "NOTURNO" : currentHour < 12 ? "MANHÃ" : "TARDE/NOITE"}
 
-## REGRA ABSOLUTA: Não pausar campanhas com menos de ${MIN_DAYS_BEFORE_PAUSE} dias de vida. Converter em reduce_budget.
+${skillsContext ? `## KNOWLEDGE BASE DE TRÁFEGO PAGO\n${skillsContext}\n\n` : ""}## REGRA ABSOLUTA: Não pausar campanhas com menos de ${MIN_DAYS_BEFORE_PAUSE} dias de vida. Converter em reduce_budget.
 
 ## ANÁLISE MULTI-TEMPORAL OBRIGATÓRIA
 Cruze sempre Hoje + 7d + 15d + 30d:
@@ -462,7 +478,7 @@ async function fetchInsightsByPreset(accountId: string, accessToken: string, dat
 // ─── Gemini Email Analysis (dedicated call) ────────────────
 
 async function generateGeminiEmailAnalysis(
-  apiKey: string, profileName: string, profileConfig: any, campaigns: CampaignInsight[]
+  apiKey: string, profileName: string, profileConfig: any, campaigns: CampaignInsight[], skillsContext = ""
 ): Promise<string> {
   const fmtW = (w: WindowMetrics) => `Vendas:${w.purchases} ValorVendas:R$${w.revenue.toFixed(2)} Gasto:R$${w.spend.toFixed(2)} CPA:R$${w.cpa.toFixed(2)} ROAS:${w.roas.toFixed(2)}x CPM:R$${w.cpm.toFixed(2)} CTR:${w.ctr.toFixed(2)}%`;
   const campaignsText = campaigns.map(c =>
@@ -474,7 +490,9 @@ async function generateGeminiEmailAnalysis(
   30d:    ${fmtW(c.d30)}`
   ).join("\n\n");
 
-  const prompt = `Você é um especialista sênior em tráfego pago com 10 anos de experiência em Meta Ads. Analise os dados abaixo com profundidade técnica e responda em português.
+  const prompt = `Você é um especialista sênior em tráfego pago com 10 anos de experiência em Meta Ads. Analise os dados abaixo com profundidade técnica usando as regras da knowledge base e responda em português.
+
+${skillsContext ? `## KNOWLEDGE BASE DE TRÁFEGO PAGO\n${skillsContext}\n\n` : ""}
 
 PERFIL: ${profileName}
 Metas: CPA Meta R$ ${profileConfig.cpa_meta} | CPA Máx Tolerável R$ ${profileConfig.cpa_max_toleravel} | ROAS Mínimo ${profileConfig.roas_min_escala}x
@@ -727,6 +745,9 @@ serve(async (req) => {
           if (snap?.[0]) reportLink = `https://mtx-roi-command.lovable.app/relatorio?token=${snap[0].token}`;
         } catch {}
 
+        // Load skills context for email analysis
+        const emailSkillsCtx = await loadSkillsContext(sb, "meta");
+
         // Generate dedicated Gemini analysis for the email
         let geminiEmailAnalysis = "";
         if (GEMINI_KEY && r.campaign_insights?.length > 0) {
@@ -734,7 +755,8 @@ serve(async (req) => {
             geminiEmailAnalysis = await generateGeminiEmailAnalysis(
               GEMINI_KEY, profileName,
               { cpa_meta: r.cpa_meta || 0, cpa_max_toleravel: r.cpa_max_toleravel || 0, roas_min_escala: r.roas_min_escala || 0 },
-              r.campaign_insights
+              r.campaign_insights,
+              emailSkillsCtx
             );
           } catch (e) { console.error("[Gemini Email Analysis] failed:", e); }
         }
