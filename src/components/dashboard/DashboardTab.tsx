@@ -164,7 +164,7 @@ export default function DashboardTab(props: DashboardTabProps) {
         return (
           <div className="space-y-2">
             {exceeded && (
-              <div className="flex items-center gap-2 p-3.5 rounded-xl bg-destructive/5 border border-destructive/15 text-sm font-medium text-destructive">
+              <div className="flex items-center gap-2 p-3.5 rounded-xl badge-red border text-sm font-medium">
                 <OctagonAlert className="w-4 h-4 shrink-0" />
                 Limite {freqLabels[budgetFrequency]} de {formatCurrency(budgetMaximo)} atingido. Escala suspensa.
               </div>
