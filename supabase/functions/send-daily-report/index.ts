@@ -21,14 +21,14 @@ interface PeriodMetrics {
 interface ClientData {
   nome: string; accountId: string; profileId: string; roi: number; cpaMeta: number
   metricas: {
-    vendas: [number, number, number, number]
-    custoVenda: [number, number, number, number]
-    roi: [number, number, number, number]
-    cpa: [number, number, number, number]
-    cpm: [number, number, number, number]
-    ctr: [number, number, number, number]
-    lucro: [number, number, number, number]
-    spend: [number, number, number, number]
+    vendas: [number, number, number, number, number]
+    custoVenda: [number, number, number, number, number]
+    roi: [number, number, number, number, number]
+    cpa: [number, number, number, number, number]
+    cpm: [number, number, number, number, number]
+    ctr: [number, number, number, number, number]
+    lucro: [number, number, number, number, number]
+    spend: [number, number, number, number, number]
   }
   alertas: string[]
   agentActions: number
