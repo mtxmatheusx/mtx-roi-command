@@ -170,8 +170,11 @@ Deno.serve(async (req) => {
           })
         }
 
+        // Generate Gemini analysis
+        const geminiAnalysis = await generateGeminiAnalysis(clientReports, reportType)
+
         const subject = getSubject(reportType)
-        const html = buildEmailHtml(clientReports, reportType, user.email)
+        const html = buildEmailHtml(clientReports, reportType, user.email, geminiAnalysis)
 
         const resendRes = await fetch('https://api.resend.com/emails', {
           method: 'POST',
