@@ -439,7 +439,7 @@ Deno.serve(async (req) => {
 
         if (!clientDataList.length) { results.push({ user_id: userId, status: 'skipped_no_verified_data' }); continue }
 
-        const geminiAnalysis = await generateGeminiAnalysis(clientDataList, reportType)
+        const geminiAnalysis = await generateGeminiAnalysis(clientDataList, reportType, supabase)
 
         const totalVendas = clientDataList.reduce((s, c) => s + c.metricas.vendas[0], 0)
         const totalSpend = clientDataList.reduce((s, c) => s + c.metricas.cpa[0] * c.metricas.vendas[0], 0) // approximate from CPA × vendas
