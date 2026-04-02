@@ -745,6 +745,9 @@ serve(async (req) => {
           if (snap?.[0]) reportLink = `https://mtx-roi-command.lovable.app/relatorio?token=${snap[0].token}`;
         } catch {}
 
+        // Load skills context for email analysis
+        const emailSkillsCtx = await loadSkillsContext(sb, "meta");
+
         // Generate dedicated Gemini analysis for the email
         let geminiEmailAnalysis = "";
         if (GEMINI_KEY && r.campaign_insights?.length > 0) {
@@ -752,7 +755,8 @@ serve(async (req) => {
             geminiEmailAnalysis = await generateGeminiEmailAnalysis(
               GEMINI_KEY, profileName,
               { cpa_meta: r.cpa_meta || 0, cpa_max_toleravel: r.cpa_max_toleravel || 0, roas_min_escala: r.roas_min_escala || 0 },
-              r.campaign_insights
+              r.campaign_insights,
+              emailSkillsCtx
             );
           } catch (e) { console.error("[Gemini Email Analysis] failed:", e); }
         }
