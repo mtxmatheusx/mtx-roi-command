@@ -174,7 +174,7 @@ export default function CampanhasPage() {
                   </thead>
                   <tbody>
                     {campaigns.map((c) => (
-                      <tr key={c.id} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
+                      <tr key={c.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
                         <td className="px-6 py-3">
                           <div className="font-medium max-w-[250px] truncate">{c.name}</div>
                           <div className="text-xs text-muted-foreground mt-0.5">ID: {c.id}</div>
