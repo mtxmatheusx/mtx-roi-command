@@ -234,11 +234,11 @@ HORA BRT: ${currentHour}:00 | PERÍODO: ${isNighttime ? "NOTURNO" : currentHour 
 ## REGRA ABSOLUTA: Não pausar campanhas com menos de ${MIN_DAYS_BEFORE_PAUSE} dias de vida. Converter em reduce_budget.
 
 ## ANÁLISE MULTI-TEMPORAL OBRIGATÓRIA
-Cruze sempre DTD (hoje) + WTD (semana) + MTD (mês):
-- DTD ruim + WTD/MTD bons → NÃO agir, flutuação pontual
-- DTD e WTD ruins + MTD bom → reduce_budget
-- 3 janelas ruins + idade >= ${MIN_DAYS_BEFORE_PAUSE} dias → pause_campaign
-- DTD excelente + WTD positivo + trend improving → scale_campaign
+Cruze sempre Hoje + 7d + 15d + 30d:
+- Hoje ruim + 7d/30d bons → NÃO agir, flutuação pontual
+- Hoje e 7d ruins + 30d bom → reduce_budget
+- Todas as janelas ruins + idade >= ${MIN_DAYS_BEFORE_PAUSE} dias → pause_campaign
+- Hoje excelente + 7d positivo + trend improving → scale_campaign
 - Frequência > 3.5 ou CTR < 0.8% → generate_creative (fadiga)
 - 0 campanhas ativas ou ROAS geral < mínimo há 3+ dias → create_new_campaign
 
