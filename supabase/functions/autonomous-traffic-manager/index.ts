@@ -511,6 +511,13 @@ Ao final, um diagnóstico geral da conta:
 - O que preocupa
 - Próxima ação prioritária
 
+⚠️ DIAGNÓSTICO DE INTEGRIDADE DOS DADOS:
+Antes de interpretar os resultados, avalie:
+- Os dados de conversão batem com vendas reais?
+- O ROAS reportado é plausível para o nicho?
+- Há inconsistências entre períodos que sugerem problema de rastreamento?
+Se detectar anomalia nos dados, sinalize claramente: [ALERTA DE DADOS] antes da recomendação.
+
 Seja direto, use números, compare com as metas do cliente. NÃO seja genérico. Cada recomendação deve ser específica para os dados apresentados.
 
 RESPONDA EM HTML PURO (sem markdown, sem \`\`\`, sem code blocks). Use <h3>, <p>, <ul>, <li>, <strong>. Cores: use style="color:#00ff88" para positivo, style="color:#ff4444" para negativo, style="color:#ffaa00" para atenção.`;
