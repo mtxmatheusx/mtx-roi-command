@@ -199,6 +199,11 @@ Dados da Meta não disponíveis neste momento. Baseie-se nas configurações do 
 `;
   }
 
+  // Append skills block
+  if (skillsBlock) {
+    systemPromptBlock += skillsBlock;
+  }
+
   return {
     profile,
     metaMetrics,
