@@ -275,7 +275,7 @@ function buildAgentSection(agent: AgentData): string {
   }).join('')
 
   return `
-  <div style="background:#0d1117;border:1px solid #1a1a2e;border-radius:14px;padding:20px;margin-bottom:16px;">
+  <div style="background:linear-gradient(145deg,#0a0e14 0%,#111827 50%,#0a0e14 100%);border:1px solid rgba(255,255,255,0.06);border-top-color:rgba(255,255,255,0.1);border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 4px 24px -4px rgba(0,0,0,0.35),inset 0 1px 0 0 rgba(255,255,255,0.06);">
     <div style="margin-bottom:14px;">
       <span style="font-size:14px;font-weight:700;color:#a855f7;">🤖 Agente Autônomo</span>
       <span style="float:right;font-size:10px;color:#555;">Última exec: ${lastRun}</span>
