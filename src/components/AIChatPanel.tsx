@@ -609,9 +609,12 @@ export default function AIChatPanel() {
       )}
 
       {open && (
-        <div className="fixed bottom-0 right-0 z-50 w-full sm:w-[420px] h-[600px] sm:h-[680px] sm:bottom-6 sm:right-6 bg-card border border-border rounded-t-xl sm:rounded-xl shadow-2xl flex flex-col overflow-hidden">
+        <div className="fixed bottom-0 right-0 z-50 w-full sm:w-[420px] h-[600px] sm:h-[680px] sm:bottom-6 sm:right-6 liquid-glass rounded-t-xl sm:rounded-xl shadow-2xl flex flex-col overflow-hidden">
+          <div className="lg-overlay" />
+          <div className="lg-specular" />
+          <div className="lg-content !p-0 flex flex-col h-full">
           {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-card">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
                 <Brain className="h-4 w-4 text-primary" />
