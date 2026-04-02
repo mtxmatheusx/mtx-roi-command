@@ -324,10 +324,7 @@
   .glass-yellow { background: rgba(234, 179, 8, 0.15);  border-color: rgba(234, 179, 8, 0.3);  }
   .glass-red    { background: rgba(239, 68, 68, 0.15);  border-color: rgba(239, 68, 68, 0.3);  }
 
-  /* Legacy glass aliases — backward compat */
-  .glass { @apply liquid-glass; }
-  .glass-strong { @apply liquid-glass-strong; }
-  .glass-dark { @apply liquid-glass-dark; }
+  /* Legacy aliases removed — components now use liquid-glass directly */
 
   /* Gradient divider */
   .divider-subtle {
