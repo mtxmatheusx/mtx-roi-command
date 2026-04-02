@@ -341,8 +341,8 @@ function buildEmailHtml(clients: ClientReport[], type: string, email: string, ge
 <div style="max-width:640px;margin:0 auto;background:linear-gradient(180deg,rgba(15,23,41,0.95) 0%,rgba(26,15,41,0.95) 100%);">
 
   <!-- ═══ HEADER ═══ -->
-  <div style="background:linear-gradient(135deg,#0a0a0a 0%,#1a0a2e 50%,#0a0a1a 100%);padding:40px 24px 32px;text-align:center;border-bottom:1px solid #222;">
-    <div style="display:inline-block;background:#ff3b3b18;border:1px solid #ff3b3b30;border-radius:20px;padding:4px 16px;margin-bottom:12px;">
+  <div style="background:linear-gradient(135deg,rgba(255,255,255,0.06) 0%,rgba(255,255,255,0.02) 100%);padding:40px 24px 32px;text-align:center;border-bottom:1px solid rgba(255,255,255,0.1);">
+    <div style="display:inline-block;background:rgba(255,59,59,0.1);border:1px solid rgba(255,59,59,0.2);border-radius:20px;padding:4px 16px;margin-bottom:12px;">
       <span style="font-size:11px;color:#ff3b3b;font-weight:600;letter-spacing:1px;">COMMAND CENTER</span>
     </div>
     <h1 style="color:#fff;margin:0;font-size:32px;font-weight:900;letter-spacing:-1px;">
