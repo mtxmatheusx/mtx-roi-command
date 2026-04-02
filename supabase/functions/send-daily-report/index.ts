@@ -153,13 +153,13 @@ Máximo 400 palavras. Seja direto, técnico e acionável. Use **negrito** para d
 
 function generateAlerts(m: ClientData['metricas'], cpaMeta: number, nome: string): string[] {
   const alerts: string[] = []
-  // Today alerts
-  if (m.roi[0] < 80) alerts.push(`ROI hoje em ${m.roi[0]}% — abaixo do mínimo saudável (80%).`)
+  // Today alerts (ROAS: 1.0 = breakeven, 3.0 = good)
+  if (m.roi[0] > 0 && m.roi[0] < 1.5) alerts.push(`ROAS hoje em ${fmt(m.roi[0])}x — abaixo do mínimo saudável (1.5x).`)
   if (m.vendas[0] === 0 && m.vendas[2] > 0) alerts.push(`Zero vendas hoje, mas ${m.vendas[2]} nos últimos 7 dias. Verificar campanhas.`)
   if (cpaMeta > 0 && m.cpa[0] > cpaMeta * 1.3) alerts.push(`CPA hoje (R$${m.cpa[0]}) está ${Math.round(((m.cpa[0] - cpaMeta) / cpaMeta) * 100)}% acima da meta (R$${cpaMeta}).`)
   if (m.ctr[0] < 1) alerts.push(`CTR em ${m.ctr[0]}% — abaixo de 1%. Considerar refresh de criativos.`)
   // Trend alerts (cross-period)
-  if (m.roi[2] > 0 && m.roi[0] < m.roi[2] * 0.7) alerts.push(`ROI hoje (${m.roi[0]}%) caiu ${Math.round((1 - m.roi[0] / m.roi[2]) * 100)}% vs média 7d (${m.roi[2]}%). Tendência de queda.`)
+  if (m.roi[2] > 0 && m.roi[0] < m.roi[2] * 0.7) alerts.push(`ROAS hoje (${fmt(m.roi[0])}x) caiu ${Math.round((1 - m.roi[0] / m.roi[2]) * 100)}% vs média 7d (${fmt(m.roi[2])}x). Tendência de queda.`)
   if (m.cpa[2] > 0 && m.cpa[0] > m.cpa[2] * 1.4) alerts.push(`CPA hoje R$${m.cpa[0]} — ${Math.round(((m.cpa[0] - m.cpa[2]) / m.cpa[2]) * 100)}% acima da média 7d (R$${m.cpa[2]}). Escalar com cuidado.`)
   if (m.cpa[2] > m.cpa[3] && m.cpa[3] > m.cpa[4] && m.cpa[4] > 0) alerts.push(`CPA em tendência de alta progressiva: 30d R$${m.cpa[4]} → 15d R$${m.cpa[3]} → 7d R$${m.cpa[2]}. Audiência pode estar saturando.`)
   return alerts
