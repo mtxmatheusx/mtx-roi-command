@@ -665,6 +665,59 @@ serve(async (req) => {
     ${actionsHtml}
   </div>
 
+  <!-- Campaign Metrics Table -->
+  ${(() => {
+    const insights: CampaignInsight[] = r.campaign_insights || [];
+    if (insights.length === 0) return "";
+    const cpaMeta = r.cpa_meta || 0;
+    const roasMin = r.roas_min_escala || 0;
+    const metricColor = (val: number, good: boolean) => good ? "#00ff88" : val === 0 ? "#888888" : "#ff4444";
+    const cpaColor = (v: number) => v === 0 ? "#888888" : v <= cpaMeta ? "#00ff88" : v <= cpaMeta * 1.15 ? "#ffaa00" : "#ff4444";
+    const roasColor = (v: number) => v === 0 ? "#888888" : v >= roasMin ? "#00ff88" : v >= roasMin * 0.8 ? "#ffaa00" : "#ff4444";
+    const fmtR = (v: number) => v > 0 ? `R$ ${v.toFixed(2)}` : "—";
+    const fmtX = (v: number) => v > 0 ? `${v.toFixed(2)}x` : "—";
+    const fmtP = (v: number) => v > 0 ? `${v.toFixed(2)}%` : "—";
+
+    const rows = insights.map(c => {
+      const windows = [
+        { label: "DTD", purchases: c.dtd_purchases, cpa: c.dtd_cpa, roas: c.dtd_roas, cpm: c.dtd_spend > 0 ? 0 : 0, ctr: c.ctr },
+        { label: "WTD", purchases: c.wtd_purchases, cpa: c.wtd_cpa, roas: c.wtd_roas, cpm: 0, ctr: c.ctr },
+        { label: "MTD", purchases: c.mtd_purchases, cpa: c.mtd_cpa, roas: c.mtd_roas, cpm: 0, ctr: c.ctr },
+      ];
+      return `
+        <div style="background:#111111;border:1px solid #1e1e1e;border-radius:8px;margin-bottom:12px;overflow:hidden;">
+          <div style="padding:12px 16px;border-bottom:1px solid #1e1e1e;">
+            <div style="font-size:13px;font-weight:700;color:#ffffff;">${c.name}</div>
+            <div style="font-size:11px;color:#888888;margin-top:2px;">Budget: R$ ${c.daily_budget.toFixed(0)} · Status: ${c.effective_status} · Trend: ${c.trend.toUpperCase()}</div>
+          </div>
+          <table width="100%" cellpadding="0" cellspacing="0" style="font-size:12px;">
+            <tr style="border-bottom:1px solid #1e1e1e;">
+              <th style="padding:8px 12px;text-align:left;color:#888888;font-weight:600;font-size:10px;text-transform:uppercase;letter-spacing:0.5px;">Janela</th>
+              <th style="padding:8px 8px;text-align:center;color:#888888;font-weight:600;font-size:10px;text-transform:uppercase;">Vendas</th>
+              <th style="padding:8px 8px;text-align:center;color:#888888;font-weight:600;font-size:10px;text-transform:uppercase;">CPA</th>
+              <th style="padding:8px 8px;text-align:center;color:#888888;font-weight:600;font-size:10px;text-transform:uppercase;">ROAS</th>
+              <th style="padding:8px 8px;text-align:center;color:#888888;font-weight:600;font-size:10px;text-transform:uppercase;">CTR</th>
+            </tr>
+            ${windows.map(w => `
+            <tr style="border-bottom:1px solid #1a1a1a;">
+              <td style="padding:8px 12px;color:#ffffff;font-weight:600;">${w.label}</td>
+              <td style="padding:8px 8px;text-align:center;color:${w.purchases > 0 ? "#00ff88" : "#888888"};font-weight:700;font-variant-numeric:tabular-nums;">${w.purchases}</td>
+              <td style="padding:8px 8px;text-align:center;color:${cpaColor(w.cpa)};font-weight:600;font-variant-numeric:tabular-nums;">${fmtR(w.cpa)}</td>
+              <td style="padding:8px 8px;text-align:center;color:${roasColor(w.roas)};font-weight:600;font-variant-numeric:tabular-nums;">${fmtX(w.roas)}</td>
+              <td style="padding:8px 8px;text-align:center;color:${w.ctr >= 1.0 ? "#00ff88" : w.ctr >= 0.8 ? "#ffaa00" : "#888888"};font-variant-numeric:tabular-nums;">${fmtP(w.ctr)}</td>
+            </tr>`).join("")}
+          </table>
+        </div>`;
+    }).join("");
+
+    return `
+    <div style="padding:0 24px 20px;">
+      <div style="font-size:10px;color:#888888;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:12px;">Métricas por Campanha</div>
+      ${rows}
+      <div style="font-size:10px;color:#444444;margin-top:4px;">🟢 Acima da meta · 🟡 Atenção · 🔴 Abaixo da meta · Meta CPA: R$ ${cpaMeta} · ROAS mín: ${roasMin}x</div>
+    </div>`;
+  })()}
+
   ${r.ai_summary ? `
   <!-- Claude Analysis -->
   <div style="padding:0 24px 20px;">
