@@ -255,7 +255,7 @@ export default function DashboardTab(props: DashboardTabProps) {
 
           {/* Automation Log */}
           <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
-            className="bg-card border border-border rounded-2xl shadow-[var(--shadow-card)] overflow-hidden">
+            className="rounded-2xl overflow-hidden bg-white/[0.78] backdrop-blur-[20px] backdrop-saturate-[160%] border border-white/70 [border-top-color:rgba(255,255,255,0.92)] shadow-[inset_0_1px_0_rgba(255,255,255,0.80),0_4px_12px_rgba(0,0,0,0.06)] dark:bg-[rgba(30,30,30,0.80)] dark:border-white/[0.08]">
               <div className="px-6 py-4 border-b border-border flex items-center gap-2.5">
                 <div className="w-6 h-6 rounded-md bg-[hsl(var(--green-bg))] flex items-center justify-center">
                   <Activity className="w-3.5 h-3.5 text-success" />
