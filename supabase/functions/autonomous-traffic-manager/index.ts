@@ -437,7 +437,7 @@ async function fetchInsightsForRange(accountId: string, accessToken: string, sin
     const map = new Map<string, any>();
     for (const row of (data.data || [])) map.set(row.campaign_id, row);
     return map;
-  } catch { return new Map(); }
+  } catch (_e) { return new Map(); }
 }
 
 async function fetchInsightsByPreset(accountId: string, accessToken: string, datePreset: string): Promise<Map<string, any>> {
@@ -448,11 +448,7 @@ async function fetchInsightsByPreset(accountId: string, accessToken: string, dat
     const map = new Map<string, any>();
     for (const row of (data.data || [])) map.set(row.campaign_id, row);
     return map;
-  } catch { return new Map(); }
-}
-    for (const row of (data.data || [])) map.set(row.campaign_id, row);
-    return map;
-  } catch { return new Map(); }
+  } catch (_e) { return new Map(); }
 }
 
 // ─── Main Handler ──────────────────────────────────────────
