@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      agent_skills: {
+        Row: {
+          active: boolean | null
+          content: string
+          created_at: string | null
+          id: string
+          name: string
+          platform: string | null
+        }
+        Insert: {
+          active?: boolean | null
+          content: string
+          created_at?: string | null
+          id?: string
+          name: string
+          platform?: string | null
+        }
+        Update: {
+          active?: boolean | null
+          content?: string
+          created_at?: string | null
+          id?: string
+          name?: string
+          platform?: string | null
+        }
+        Relationships: []
+      }
       brand_manuals: {
         Row: {
           created_at: string
