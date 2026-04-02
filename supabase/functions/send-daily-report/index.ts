@@ -21,6 +21,19 @@ interface PeriodMetrics {
   cpa: number
   cpm: number
   ctr: number
+  dataVerified: boolean
+}
+
+interface AgentData {
+  totalActions: number
+  pauses: number
+  scales: number
+  reduces: number
+  selfHeals: number
+  duplicates: number
+  recoveryRate: number | null
+  lastRunAt: string | null
+  recentActions: Array<{ action_type: string; details: any; created_at: string }>
 }
 
 interface ClientReport {
@@ -28,17 +41,17 @@ interface ClientReport {
   adAccountId: string
   cpaMeta: number
   periods: { today: PeriodMetrics; d7: PeriodMetrics; d15: PeriodMetrics; d30: PeriodMetrics }
+  agent: AgentData
 }
 
 const DATE_PRESETS = ['today', 'last_7d', 'last_14d', 'last_30d'] as const
-const PERIOD_KEYS = ['today', 'd7', 'd15', 'd30'] as const
 
 async function fetchMetaInsights(
   adAccountId: string,
   accessToken: string,
   datePreset: string
 ): Promise<PeriodMetrics> {
-  const empty: PeriodMetrics = { sales: 0, spend: 0, revenue: 0, costPerSale: 0, roi: 0, cpa: 0, cpm: 0, ctr: 0 }
+  const empty: PeriodMetrics = { sales: 0, spend: 0, revenue: 0, costPerSale: 0, roi: 0, cpa: 0, cpm: 0, ctr: 0, dataVerified: false }
 
   try {
     const fields = 'campaign_name,spend,actions,action_values,cost_per_action_type,cpm,ctr'
@@ -55,35 +68,26 @@ async function fetchMetaInsights(
     const json = await res.json()
     const rows = json.data || []
 
-    let totalSpend = 0
-    let totalSales = 0
-    let totalRevenue = 0
-    let totalImpressions = 0
-    let totalClicks = 0
-    let totalCostPerPurchase = 0
-    let purchaseCampaigns = 0
+    // If API returned successfully but no data rows, it's verified zero
+    let totalSpend = 0, totalSales = 0, totalRevenue = 0
+    let totalCostPerPurchase = 0, purchaseCampaigns = 0
 
     for (const row of rows) {
       const spend = parseFloat(row.spend || '0')
       totalSpend += spend
 
-      // Extract purchase actions
       const actions = row.actions || []
       const purchaseAction = actions.find((a: any) =>
         a.action_type === 'purchase' || a.action_type === 'omni_purchase'
       )
-      const sales = purchaseAction ? parseInt(purchaseAction.value || '0') : 0
-      totalSales += sales
+      totalSales += purchaseAction ? parseInt(purchaseAction.value || '0') : 0
 
-      // Extract purchase value
       const actionValues = row.action_values || []
       const purchaseValue = actionValues.find((a: any) =>
         a.action_type === 'purchase' || a.action_type === 'omni_purchase'
       )
-      const revenue = purchaseValue ? parseFloat(purchaseValue.value || '0') : 0
-      totalRevenue += revenue
+      totalRevenue += purchaseValue ? parseFloat(purchaseValue.value || '0') : 0
 
-      // CPA from cost_per_action_type
       const costPerActions = row.cost_per_action_type || []
       const cpaPurchase = costPerActions.find((a: any) =>
         a.action_type === 'purchase' || a.action_type === 'omni_purchase'
@@ -100,9 +104,51 @@ async function fetchMetaInsights(
     const roi = totalSpend > 0 ? ((totalRevenue - totalSpend) / totalSpend) * 100 : 0
     const cpa = purchaseCampaigns > 0 ? totalCostPerPurchase / purchaseCampaigns : (totalSales > 0 ? totalSpend / totalSales : 0)
 
-    return { sales: totalSales, spend: totalSpend, revenue: totalRevenue, costPerSale, roi, cpa, cpm, ctr }
+    return { sales: totalSales, spend: totalSpend, revenue: totalRevenue, costPerSale, roi, cpa, cpm, ctr, dataVerified: true }
   } catch (err) {
     console.error(`Meta fetch error for ${adAccountId} (${datePreset}):`, err)
+    return empty
+  }
+}
+
+async function fetchAgentData(supabase: any, profileId: string): Promise<AgentData> {
+  const empty: AgentData = {
+    totalActions: 0, pauses: 0, scales: 0, reduces: 0,
+    selfHeals: 0, duplicates: 0, recoveryRate: null,
+    lastRunAt: null, recentActions: [],
+  }
+
+  try {
+    const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+
+    const { data: logs, error } = await supabase
+      .from('emergency_logs')
+      .select('action_type, details, created_at')
+      .eq('profile_id', profileId)
+      .gte('created_at', since24h)
+      .order('created_at', { ascending: false })
+      .limit(50)
+
+    if (error || !logs) return empty
+
+    const pauses = logs.filter((l: any) => l.action_type === 'agent_pause' || l.action_type === 'pause').length
+    const scales = logs.filter((l: any) => l.action_type === 'agent_scale' || l.action_type === 'scale').length
+    const reduces = logs.filter((l: any) => l.action_type === 'agent_reduce' || l.action_type === 'reduce').length
+    const selfHeals = logs.filter((l: any) => l.action_type === 'agent_self_heal' || l.details?.recovered).length
+    const duplicates = logs.filter((l: any) => l.action_type === 'agent_duplicate' || l.action_type === 'duplicate').length
+
+    const failures = logs.filter((l: any) => l.details?.success === false || l.details?.recovered)
+    const recovered = logs.filter((l: any) => l.details?.recovered === true || l.action_type === 'agent_self_heal')
+    const recoveryRate = failures.length > 0 ? Math.round((recovered.length / failures.length) * 100) : null
+
+    return {
+      totalActions: logs.length,
+      pauses, scales, reduces, selfHeals, duplicates,
+      recoveryRate,
+      lastRunAt: logs.length > 0 ? logs[0].created_at : null,
+      recentActions: logs.slice(0, 5),
+    }
+  } catch {
     return empty
   }
 }
@@ -111,11 +157,15 @@ async function generateGeminiAnalysis(clients: ClientReport[], reportType: strin
   try {
     const clientSummaries = clients.map(c => {
       const p = c.periods
+      const agentInfo = c.agent.totalActions > 0
+        ? `\n  Agente Autônomo (24h): ${c.agent.totalActions} ações | ${c.agent.pauses} pausas | ${c.agent.scales} escalas | ${c.agent.reduces} reduções | ${c.agent.selfHeals} self-heals | ${c.agent.duplicates} duplicações | Recovery: ${c.agent.recoveryRate !== null ? c.agent.recoveryRate + '%' : 'N/A'}`
+        : '\n  Agente Autônomo: Sem ações nas últimas 24h'
+
       return `Cliente: ${c.name} (${c.adAccountId}, CPA Meta: R$${c.cpaMeta})
   Hoje: ${p.today.sales} vendas, R$${p.today.spend.toFixed(2)} spend, ROI ${p.today.roi.toFixed(1)}%, CPA R$${p.today.cpa.toFixed(2)}, CPM R$${p.today.cpm.toFixed(2)}, CTR ${p.today.ctr.toFixed(2)}%
   7d: ${p.d7.sales} vendas, R$${p.d7.spend.toFixed(2)} spend, ROI ${p.d7.roi.toFixed(1)}%, CPA R$${p.d7.cpa.toFixed(2)}, CPM R$${p.d7.cpm.toFixed(2)}, CTR ${p.d7.ctr.toFixed(2)}%
   15d: ${p.d15.sales} vendas, R$${p.d15.spend.toFixed(2)} spend, ROI ${p.d15.roi.toFixed(1)}%, CPA R$${p.d15.cpa.toFixed(2)}, CPM R$${p.d15.cpm.toFixed(2)}, CTR ${p.d15.ctr.toFixed(2)}%
-  30d: ${p.d30.sales} vendas, R$${p.d30.spend.toFixed(2)} spend, ROI ${p.d30.roi.toFixed(1)}%, CPA R$${p.d30.cpa.toFixed(2)}, CPM R$${p.d30.cpm.toFixed(2)}, CTR ${p.d30.ctr.toFixed(2)}%`
+  30d: ${p.d30.sales} vendas, R$${p.d30.spend.toFixed(2)} spend, ROI ${p.d30.roi.toFixed(1)}%, CPA R$${p.d30.cpa.toFixed(2)}, CPM R$${p.d30.cpm.toFixed(2)}, CTR ${p.d30.ctr.toFixed(2)}%${agentInfo}`
     }).join('\n\n')
 
     const timeContext = reportType === 'morning'
@@ -133,10 +183,11 @@ ${clientSummaries}
 Gere uma análise técnica em português (máx 300 palavras) com:
 1. **Diagnóstico**: Identifique tendências (ROI subindo/caindo, CPA acima da meta, CTR preocupante)
 2. **Alertas críticos**: Campanhas que precisam de atenção imediata (ROI < 80%, CTR < 1%, zero vendas)
-3. **Recomendações**: 2-3 ações específicas e práticas (ex: "Pausar campanha X", "Aumentar budget de Y em 20%", "Testar novo criativo para Z")
-4. **Projeção**: Se o ritmo atual se mantiver, qual o resultado esperado no fim do mês
+3. **Recomendações**: 2-3 ações específicas e práticas
+4. **Agente Autônomo**: Avalie as ações do agente nas últimas 24h — foram eficazes? Recovery rate está saudável?
+5. **Projeção**: Se o ritmo atual se mantiver, qual o resultado esperado no fim do mês
 
-Use dados concretos dos números fornecidos. Seja direto, técnico e acionável. Não use linguagem genérica.`
+Use dados concretos dos números fornecidos. Seja direto, técnico e acionável.`
 
     const res = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -179,7 +230,6 @@ Deno.serve(async (req) => {
       if (body?.report_type) reportType = body.report_type
     } catch { /* no body */ }
 
-    // Fetch all profiles with Meta tokens
     const { data: profiles } = await supabase
       .from('client_profiles')
       .select('id, user_id, name, is_active, meta_access_token, ad_account_id, cpa_meta')
@@ -191,7 +241,6 @@ Deno.serve(async (req) => {
       })
     }
 
-    // Group by user
     const userProfiles = new Map<string, typeof profiles>()
     for (const p of profiles) {
       if (!p.meta_access_token || !p.ad_account_id || p.ad_account_id === 'act_') continue
@@ -207,13 +256,22 @@ Deno.serve(async (req) => {
         const { data: { user } } = await supabase.auth.admin.getUserById(userId)
         if (!user?.email) continue
 
-        // Fetch metrics for each client across all 4 periods
         const clientReports: ClientReport[] = []
 
         for (const profile of clientProfiles) {
-          const periodResults = await Promise.all(
-            DATE_PRESETS.map(preset => fetchMetaInsights(profile.ad_account_id, profile.meta_access_token!, preset))
-          )
+          const [periodResults, agentData] = await Promise.all([
+            Promise.all(
+              DATE_PRESETS.map(preset => fetchMetaInsights(profile.ad_account_id, profile.meta_access_token!, preset))
+            ),
+            fetchAgentData(supabase, profile.id),
+          ])
+
+          // VALIDATION: Only include if at least one period has verified data
+          const anyVerified = periodResults.some(p => p.dataVerified)
+          if (!anyVerified) {
+            console.warn(`⚠️ SKIPPING ${profile.name}: No verified data from Meta API — will NOT send unverified numbers`)
+            continue
+          }
 
           clientReports.push({
             name: profile.name,
@@ -225,12 +283,17 @@ Deno.serve(async (req) => {
               d15: periodResults[2],
               d30: periodResults[3],
             },
+            agent: agentData,
           })
         }
 
-        // Generate Gemini analysis
-        const geminiAnalysis = await generateGeminiAnalysis(clientReports, reportType)
+        if (clientReports.length === 0) {
+          console.warn(`⚠️ No verified client data for user ${userId} — email NOT sent`)
+          results.push({ user_id: userId, status: 'skipped_no_verified_data' })
+          continue
+        }
 
+        const geminiAnalysis = await generateGeminiAnalysis(clientReports, reportType)
         const subject = getSubject(reportType)
         const html = buildEmailHtml(clientReports, reportType, user.email, geminiAnalysis)
 
@@ -287,27 +350,6 @@ function fmtInt(n: number): string {
   return n.toLocaleString('pt-BR')
 }
 
-function statusIcon(metric: string, value: number, cpaMeta?: number): string {
-  switch (metric) {
-    case 'roi':
-      if (value > 150) return '🟢'
-      if (value >= 80) return '🟡'
-      return '🔴'
-    case 'ctr':
-      if (value > 2) return '🟢'
-      if (value >= 1) return '🟡'
-      return '🔴'
-    case 'cpa':
-      if (cpaMeta && value <= cpaMeta) return '🟢'
-      if (cpaMeta && value <= cpaMeta * 1.3) return '🟡'
-      return '🔴'
-    case 'sales':
-      return value > 0 ? '🟢' : '🔴'
-    default:
-      return ''
-  }
-}
-
 function statusColor(metric: string, value: number, cpaMeta?: number): string {
   switch (metric) {
     case 'roi':
@@ -324,6 +366,10 @@ function statusColor(metric: string, value: number, cpaMeta?: number): string {
       return '#ff3b3b'
     case 'sales':
       return value > 0 ? '#00ff88' : '#ff3b3b'
+    case 'recovery':
+      if (value >= 80) return '#00ff88'
+      if (value >= 50) return '#f59e0b'
+      return '#ff3b3b'
     default:
       return '#ffffff'
   }
@@ -334,6 +380,77 @@ function overallStatus(periods: ClientReport['periods']): string {
   if (rois.every(r => r > 150)) return '🟢 ROI > 150% nos 4 períodos'
   if (rois.every(r => r >= 80)) return '🟡 ROI entre 80-150% em algum período'
   return '🔴 ROI < 80% em pelo menos um período'
+}
+
+function buildAgentSection(agent: AgentData): string {
+  if (agent.totalActions === 0) {
+    return `
+      <div style="background:#0d1117;border-radius:8px;padding:14px 16px;margin-top:12px;border:1px solid #1a1a2e;">
+        <p style="color:#666;margin:0;font-size:12px;">🤖 Agente Autônomo: Sem ações nas últimas 24h</p>
+      </div>
+    `
+  }
+
+  const recoveryHtml = agent.recoveryRate !== null
+    ? `<td style="padding:6px 8px;text-align:center;">
+        <span style="color:#888;font-size:10px;display:block;">Recovery</span>
+        <span style="color:${statusColor('recovery', agent.recoveryRate)};font-size:16px;font-weight:800;">${agent.recoveryRate}%</span>
+      </td>`
+    : ''
+
+  const lastRunLabel = agent.lastRunAt
+    ? new Date(agent.lastRunAt).toLocaleString('pt-BR', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })
+    : '—'
+
+  const recentHtml = agent.recentActions.length > 0
+    ? agent.recentActions.map(a => {
+        const time = new Date(a.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+        const icon = a.action_type.includes('pause') ? '⏸️' :
+                     a.action_type.includes('scale') ? '📈' :
+                     a.action_type.includes('reduce') ? '📉' :
+                     a.action_type.includes('heal') ? '🔧' :
+                     a.action_type.includes('duplicate') ? '📋' : '⚡'
+        const detail = a.details?.campaign_name || a.details?.reason || a.action_type
+        return `<tr>
+          <td style="padding:4px 8px;color:#666;font-size:11px;border-bottom:1px solid #1a1a1a;">${time}</td>
+          <td style="padding:4px 8px;color:#ccc;font-size:11px;border-bottom:1px solid #1a1a1a;">${icon} ${detail}</td>
+        </tr>`
+      }).join('')
+    : ''
+
+  return `
+    <div style="background:#0d1117;border-radius:8px;padding:16px;margin-top:12px;border:1px solid #1a1a2e;">
+      <h4 style="color:#a855f7;margin:0 0 12px;font-size:12px;text-transform:uppercase;letter-spacing:1px;">🤖 Agente Autônomo (24h)</h4>
+      <table style="width:100%;border-collapse:collapse;">
+        <tr>
+          <td style="padding:6px 8px;text-align:center;">
+            <span style="color:#888;font-size:10px;display:block;">Ações</span>
+            <span style="color:#fff;font-size:16px;font-weight:800;">${agent.totalActions}</span>
+          </td>
+          <td style="padding:6px 8px;text-align:center;">
+            <span style="color:#888;font-size:10px;display:block;">Pausas</span>
+            <span style="color:#ff3b3b;font-size:16px;font-weight:800;">${agent.pauses}</span>
+          </td>
+          <td style="padding:6px 8px;text-align:center;">
+            <span style="color:#888;font-size:10px;display:block;">Escalas</span>
+            <span style="color:#00ff88;font-size:16px;font-weight:800;">${agent.scales}</span>
+          </td>
+          <td style="padding:6px 8px;text-align:center;">
+            <span style="color:#888;font-size:10px;display:block;">Reduções</span>
+            <span style="color:#f59e0b;font-size:16px;font-weight:800;">${agent.reduces}</span>
+          </td>
+          ${recoveryHtml}
+        </tr>
+      </table>
+      ${recentHtml ? `
+        <div style="margin-top:12px;border-top:1px solid #1a1a2e;padding-top:8px;">
+          <p style="color:#666;margin:0 0 6px;font-size:10px;text-transform:uppercase;">Últimas ações</p>
+          <table style="width:100%;border-collapse:collapse;">${recentHtml}</table>
+        </div>
+      ` : ''}
+      <p style="color:#444;margin:8px 0 0;font-size:10px;">Última execução: ${lastRunLabel}</p>
+    </div>
+  `
 }
 
 function buildClientTable(client: ClientReport): string {
@@ -399,11 +516,14 @@ function buildClientTable(client: ClientReport): string {
   `).join('')
 
   const status = overallStatus(client.periods)
+  const verifiedBadge = client.periods.today.dataVerified
+    ? '<span style="color:#00ff88;font-size:10px;margin-left:8px;">✅ Dados verificados</span>'
+    : '<span style="color:#ff3b3b;font-size:10px;margin-left:8px;">⚠️ Dados não verificados</span>'
 
   return `
     <div style="background:#111;border-radius:12px;overflow:hidden;margin-bottom:20px;">
       <div style="padding:16px 20px;border-bottom:1px solid #222;">
-        <h3 style="color:#fff;margin:0;font-size:16px;font-weight:800;">🏪 ${client.name}</h3>
+        <h3 style="color:#fff;margin:0;font-size:16px;font-weight:800;">🏪 ${client.name}${verifiedBadge}</h3>
         <p style="color:#666;margin:4px 0 0;font-size:12px;">Conta: ${client.adAccountId}</p>
       </div>
       <table style="width:100%;border-collapse:collapse;">
@@ -423,6 +543,7 @@ function buildClientTable(client: ClientReport): string {
       <div style="padding:12px 20px;background:#0a0a0a;border-top:1px solid #222;">
         <p style="color:#ccc;margin:0;font-size:13px;">Status: ${status}</p>
       </div>
+      ${buildAgentSection(client.agent)}
     </div>
   `
 }
@@ -433,11 +554,15 @@ function buildEmailHtml(clients: ClientReport[], type: string, email: string, ge
 
   const clientTables = clients.map(c => buildClientTable(c)).join('')
 
-  // Consolidation
   const totalSalesToday = clients.reduce((s, c) => s + c.periods.today.sales, 0)
   const totalSpendToday = clients.reduce((s, c) => s + c.periods.today.spend, 0)
   const totalRevenueToday = clients.reduce((s, c) => s + c.periods.today.revenue, 0)
   const avgRoi = totalSpendToday > 0 ? ((totalRevenueToday - totalSpendToday) / totalSpendToday) * 100 : 0
+
+  // Agent totals
+  const totalAgentActions = clients.reduce((s, c) => s + c.agent.totalActions, 0)
+  const totalPauses = clients.reduce((s, c) => s + c.agent.pauses, 0)
+  const totalScales = clients.reduce((s, c) => s + c.agent.scales, 0)
 
   return `<!DOCTYPE html>
 <html lang="pt-BR">
@@ -472,9 +597,14 @@ function buildEmailHtml(clients: ClientReport[], type: string, email: string, ge
             </td>
           </tr>
           <tr>
-            <td colspan="2" style="padding:12px 0 0;">
+            <td style="padding:12px 0 0;">
               <span style="color:#888;font-size:12px;">ROI Médio Ponderado</span><br>
               <span style="color:${statusColor('roi', avgRoi)};font-size:28px;font-weight:800;">${fmt(avgRoi)}%</span>
+            </td>
+            <td style="padding:12px 0 0;text-align:right;">
+              <span style="color:#888;font-size:12px;">Agente Autônomo (24h)</span><br>
+              <span style="color:#a855f7;font-size:18px;font-weight:800;">🤖 ${totalAgentActions} ações</span>
+              <span style="color:#666;font-size:11px;display:block;">${totalPauses} pausas · ${totalScales} escalas</span>
             </td>
           </tr>
         </table>
@@ -493,7 +623,7 @@ function buildEmailHtml(clients: ClientReport[], type: string, email: string, ge
         Abrir MTX →
       </a>
       <p style="color:#444;font-size:11px;margin:16px 0 0;">
-        Relatório automático · ${clients.length} clientes ativos<br>
+        Relatório automático · ${clients.length} clientes ativos · Dados verificados via Meta API<br>
         ${email}
       </p>
     </div>
