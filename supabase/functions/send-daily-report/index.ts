@@ -113,71 +113,66 @@ function generateEmailHTML(data: {
 
   const roiColor = (v: number) => v >= 150 ? '#1a7f37' : v >= 80 ? '#b25c00' : '#c0392b'
 
+  const periods = ['Hoje', '7 dias', '15 dias', '30 dias']
+
+  const kpiPanel = (label: string, emoji: string, values: number[], format: (v: number) => string, colorFn?: (v: number) => string) => {
+    return `
+    <div style="margin-bottom:8px;">
+      <div style="font-size:11px;font-weight:600;color:#ababab;margin-bottom:6px;">${emoji} ${label}</div>
+      <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate;border-spacing:6px 0;">
+        <tr>
+          ${values.map((v, i) => `
+            <td width="25%" style="background:${i === 0 ? '#f0f7ff' : '#f7f7f5'};border:1px solid ${i === 0 ? '#c5dcf7' : '#e8e8e5'};border-radius:10px;padding:10px 6px;text-align:center;vertical-align:top;">
+              <div style="font-size:9px;font-weight:600;color:${i === 0 ? '#0051a2' : '#ababab'};text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;">${periods[i]}</div>
+              <div style="font-size:14px;font-weight:700;color:${colorFn ? colorFn(v) : '#1a1a1a'};letter-spacing:-.3px;font-variant-numeric:tabular-nums;">${format(v)}</div>
+            </td>
+          `).join('')}
+        </tr>
+      </table>
+    </div>`
+  }
+
   const clienteCards = data.clientes.map(c => {
     const s = statusBadge(c.roi)
     const m = c.metricas
     const alerta = c.alertas.length > 0 ? `
-      <div style="padding:0 0 12px;">
+      <div style="padding:8px 0 0;">
         <div style="background:#fff;border:1px solid rgba(255,159,10,.30);border-left:3px solid #ff9f0a;border-radius:10px;padding:12px 16px;">
-          <div style="font-size:12px;font-weight:700;color:#b25c00;margin-bottom:3px;">⚠️ Ação recomendada — ${c.nome}</div>
+          <div style="font-size:12px;font-weight:700;color:#b25c00;margin-bottom:3px;">⚠️ Ação recomendada</div>
           <div style="font-size:12px;color:#6b6b6b;line-height:1.5;">${c.alertas.join(' ')}</div>
         </div>
       </div>` : ''
 
     const agentBadge = c.agentActions > 0 ? `<span style="background:#f5f3ff;color:#7c3aed;border:1px solid #e0d6f5;border-radius:20px;padding:2px 8px;font-size:10px;font-weight:600;margin-left:6px;">🤖 ${c.agentActions}</span>` : ''
 
+    const profitColor = (v: number) => v >= 0 ? '#1a7f37' : '#c0392b'
+
     return `
-    <div style="border:1px solid #e8e8e5;border-radius:14px;margin-bottom:12px;overflow:hidden;background:#fff;">
-      <div style="padding:14px 16px 10px;">
+    <div style="border:1px solid #e8e8e5;border-radius:14px;margin-bottom:16px;overflow:hidden;background:#fff;">
+      <!-- Client Header -->
+      <div style="padding:14px 16px 12px;border-bottom:1px solid #f0f0ee;">
         <table width="100%" cellpadding="0" cellspacing="0"><tr>
           <td style="text-align:left;">
-            <span style="font-size:14px;font-weight:600;color:#1a1a1a;">${c.nome}</span>${agentBadge}
+            <span style="font-size:15px;font-weight:700;color:#1a1a1a;">${c.nome}</span>${agentBadge}
             <br><span style="font-size:11px;color:#ababab;">${c.accountId}</span>
           </td>
-          <td style="text-align:right;">
-            <span style="background:${s.bg};color:${s.color};border:1px solid ${s.border};border-radius:20px;padding:3px 10px;font-size:11px;font-weight:600;">${s.label}</span>
+          <td style="text-align:right;vertical-align:top;">
+            <span style="background:${s.bg};color:${s.color};border:1px solid ${s.border};border-radius:20px;padding:4px 12px;font-size:11px;font-weight:600;">${s.label}</span>
           </td>
         </tr></table>
       </div>
-      <table width="100%" cellpadding="7" cellspacing="0" style="border-collapse:collapse;">
-        <thead>
-          <tr style="background:#f7f7f5;border-top:1px solid #e8e8e5;">
-            <th style="width:30%;text-align:left;font-size:10px;font-weight:600;color:#ababab;text-transform:uppercase;letter-spacing:.05em;padding:8px 10px;">Métrica</th>
-            <th style="text-align:center;font-size:10px;font-weight:700;color:#0051a2;text-transform:uppercase;letter-spacing:.05em;border-top:2px solid #0071e3;background:#f0f7ff;">Hoje</th>
-            <th style="text-align:center;font-size:10px;font-weight:600;color:#ababab;text-transform:uppercase;letter-spacing:.05em;">7 dias</th>
-            <th style="text-align:center;font-size:10px;font-weight:600;color:#ababab;text-transform:uppercase;letter-spacing:.05em;">15 dias</th>
-            <th style="text-align:center;font-size:10px;font-weight:600;color:#ababab;text-transform:uppercase;letter-spacing:.05em;">30 dias</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr style="border-top:1px solid #f0f0ee;">
-            <td style="font-size:12px;color:#6b6b6b;font-weight:500;padding:7px 10px;">🛍️ Vendas</td>
-            ${m.vendas.map(v => `<td style="text-align:center;font-size:13px;font-weight:600;color:#1a1a1a;font-variant-numeric:tabular-nums;">${v}</td>`).join('')}
-          </tr>
-          <tr style="border-top:1px solid #f0f0ee;">
-            <td style="font-size:12px;color:#6b6b6b;font-weight:500;padding:7px 10px;">💲 Custo/Venda</td>
-            ${m.custoVenda.map(v => `<td style="text-align:center;font-size:13px;font-weight:600;color:#1a1a1a;font-variant-numeric:tabular-nums;">R$${fmt(v)}</td>`).join('')}
-          </tr>
-          <tr style="border-top:1px solid #f0f0ee;">
-            <td style="font-size:12px;color:#6b6b6b;font-weight:500;padding:7px 10px;">📈 ROI</td>
-            ${m.roi.map(v => `<td style="text-align:center;font-size:13px;font-weight:700;color:${roiColor(v)};font-variant-numeric:tabular-nums;">${fmt(v)}%</td>`).join('')}
-          </tr>
-          <tr style="border-top:1px solid #f0f0ee;">
-            <td style="font-size:12px;color:#6b6b6b;font-weight:500;padding:7px 10px;">🎯 CPA</td>
-            ${m.cpa.map(v => `<td style="text-align:center;font-size:13px;font-weight:600;color:#1a1a1a;font-variant-numeric:tabular-nums;">R$${fmt(v)}</td>`).join('')}
-          </tr>
-          <tr style="border-top:1px solid #f0f0ee;">
-            <td style="font-size:12px;color:#6b6b6b;font-weight:500;padding:7px 10px;">👁️ CPM</td>
-            ${m.cpm.map(v => `<td style="text-align:center;font-size:13px;color:#6b6b6b;font-variant-numeric:tabular-nums;">R$${fmt(v)}</td>`).join('')}
-          </tr>
-          <tr style="border-top:1px solid #f0f0ee;">
-            <td style="font-size:12px;color:#6b6b6b;font-weight:500;padding:7px 10px;">🔗 CTR</td>
-            ${m.ctr.map(v => `<td style="text-align:center;font-size:13px;color:${v < 1 ? '#c0392b' : '#6b6b6b'};font-variant-numeric:tabular-nums;">${fmt(v)}%</td>`).join('')}
-          </tr>
-        </tbody>
-      </table>
-    </div>
-    ${alerta}`
+      <!-- KPI Panels -->
+      <div style="padding:14px 14px 6px;">
+        ${kpiPanel('Lucro Líquido', '💰', m.lucro as unknown as number[], v => `R$${fmt(v)}`, profitColor)}
+        ${kpiPanel('Vendas', '🛍️', m.vendas as unknown as number[], v => fmtInt(v))}
+        ${kpiPanel('Investimento', '💳', m.spend as unknown as number[], v => `R$${fmt(v)}`)}
+        ${kpiPanel('ROI', '📈', m.roi as unknown as number[], v => `${fmt(v)}%`, roiColor)}
+        ${kpiPanel('CPA', '🎯', m.cpa as unknown as number[], v => `R$${fmt(v)}`)}
+        ${kpiPanel('CPM', '👁️', m.cpm as unknown as number[], v => `R$${fmt(v)}`)}
+        ${kpiPanel('CTR', '🔗', m.ctr as unknown as number[], v => `${fmt(v)}%`, v => v < 1 ? '#c0392b' : '#6b6b6b')}
+      </div>
+      ${alerta}
+    </div>`
   }).join('')
 
   const geminiSection = data.geminiAnalysis ? `
