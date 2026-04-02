@@ -48,11 +48,13 @@ function getTimeframeRanges() {
 }
 
 function parseMetrics(ins: any) {
-  if (!ins) return { spend: 0, purchases: 0, revenue: 0, ctr: 0, frequency: 0 };
+  if (!ins) return { spend: 0, purchases: 0, revenue: 0, ctr: 0, frequency: 0, cpm: 0, impressions: 0 };
   const spend = parseFloat(ins.spend || "0");
+  const impressions = parseInt(ins.impressions || "0", 10);
   const purchases = (ins.actions || []).filter((a: any) => a.action_type === "purchase" || a.action_type === "omni_purchase").reduce((s: number, a: any) => s + parseInt(a.value || "0", 10), 0);
   const revenue = (ins.action_values || []).filter((a: any) => a.action_type === "purchase" || a.action_type === "omni_purchase").reduce((s: number, a: any) => s + parseFloat(a.value || "0"), 0);
-  return { spend, purchases, revenue, ctr: parseFloat(ins.ctr || "0"), frequency: parseFloat(ins.frequency || "0") };
+  const cpm = impressions > 0 ? (spend / impressions) * 1000 : 0;
+  return { spend, purchases, revenue, ctr: parseFloat(ins.ctr || "0"), frequency: parseFloat(ins.frequency || "0"), cpm, impressions };
 }
 
 function determineTrend(dtdRoas: number, wtdRoas: number, mtdRoas: number): string {
