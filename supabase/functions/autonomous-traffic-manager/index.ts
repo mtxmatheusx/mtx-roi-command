@@ -721,7 +721,7 @@ serve(async (req) => {
   ${r.ai_summary ? `
   <!-- Claude Analysis -->
   <div style="padding:0 24px 20px;">
-    <div style="font-size:10px;color:#888888;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:12px;">Análise do Claude</div>
+    <div style="font-size:10px;color:#888888;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:12px;">Análise do Gemini</div>
     <div style="background:#111111;border:1px solid #1e1e1e;border-radius:8px;padding:16px;">
       <div style="font-size:13px;color:#cccccc;line-height:1.6;">${r.ai_summary.slice(0, 600)}</div>
     </div>
