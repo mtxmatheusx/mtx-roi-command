@@ -176,7 +176,7 @@ export default function AppSidebar() {
                   item.children ? (
                     <Collapsible
                       key={item.label}
-                      open={openGroups[item.label]}
+                      open={!!openGroups[item.label]}
                       onOpenChange={() => toggle(item.label)}
                       className="group/collapsible"
                     >
