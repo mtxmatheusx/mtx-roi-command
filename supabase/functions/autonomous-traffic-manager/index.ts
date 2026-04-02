@@ -487,15 +487,16 @@ serve(async (req) => {
 
         try {
           const campaignUrl = `https://graph.facebook.com/v23.0/${profile.ad_account_id}/campaigns?fields=id,name,effective_status,daily_budget,created_time&effective_status=["ACTIVE"]&access_token=${accessToken}&limit=100`;
-          const adsetUrl = `https://graph.facebook.com/v23.0/${profile.ad_account_id}/adsets?fields=id,name,daily_budget,effective_status,campaign_id,insights.time_range({"since":"${d7Since}","until":"${today}"}){spend,actions,action_values,ctr,frequency}&effective_status=["ACTIVE"]&access_token=${accessToken}&limit=100`;
+          const adsetUrl = `https://graph.facebook.com/v23.0/${profile.ad_account_id}/adsets?fields=id,name,daily_budget,effective_status,campaign_id,insights.date_preset(last_7d){spend,actions,action_values,ctr,frequency}&effective_status=["ACTIVE"]&access_token=${accessToken}&limit=100`;
 
-          const [campaignResp, adsetResp, todayMap, d7Map, d15Map, d30Map] = await Promise.all([
+          const [campaignResp, adsetResp, todayMap, yesterdayMap, d7Map, d15Map, d30Map] = await Promise.all([
             fetch(campaignUrl).then(r => r.json()),
             fetch(adsetUrl).then(r => r.json()),
-            fetchInsightsForRange(profile.ad_account_id, accessToken, today, today),
-            fetchInsightsForRange(profile.ad_account_id, accessToken, d7Since, today),
-            fetchInsightsForRange(profile.ad_account_id, accessToken, d15Since, today),
-            fetchInsightsForRange(profile.ad_account_id, accessToken, d30Since, today),
+            fetchInsightsByPreset(profile.ad_account_id, accessToken, "today"),
+            fetchInsightsByPreset(profile.ad_account_id, accessToken, "yesterday"),
+            fetchInsightsByPreset(profile.ad_account_id, accessToken, "last_7d"),
+            fetchInsightsByPreset(profile.ad_account_id, accessToken, "last_14d"),
+            fetchInsightsByPreset(profile.ad_account_id, accessToken, "last_30d"),
           ]);
 
           if (campaignResp.error) { profileResult.error = campaignResp.error.message; return profileResult; }
@@ -504,6 +505,7 @@ serve(async (req) => {
 
           const campaignInsights: CampaignInsight[] = (campaignResp.data || []).map((c: any) => {
             const tdy = parseMetrics(todayMap.get(c.id));
+            const yest = parseMetrics(yesterdayMap.get(c.id));
             const s7 = parseMetrics(d7Map.get(c.id));
             const s15 = parseMetrics(d15Map.get(c.id));
             const s30 = parseMetrics(d30Map.get(c.id));
@@ -516,6 +518,7 @@ serve(async (req) => {
             };
 
             const todayW = buildWindow(tdy);
+            const yesterdayW = buildWindow(yest);
             const d7W = buildWindow(s7);
             const d15W = buildWindow(s15);
             const d30W = buildWindow(s30);
@@ -524,7 +527,7 @@ serve(async (req) => {
               id: c.id, name: c.name, effective_status: c.effective_status,
               daily_budget: parseInt(c.daily_budget || "0", 10) / 100,
               created_time: c.created_time || "", age_days: ageDays,
-              today: todayW, d7: d7W, d15: d15W, d30: d30W,
+              today: todayW, yesterday: yesterdayW, d7: d7W, d15: d15W, d30: d30W,
               // Legacy aliases for Gemini/static rules (map today->dtd, 7d->wtd, 30d->mtd)
               dtd_spend: todayW.spend, dtd_purchases: todayW.purchases, dtd_revenue: todayW.revenue,
               dtd_roas: todayW.roas, dtd_cpa: todayW.cpa, dtd_cpm: todayW.cpm, dtd_ctr: todayW.ctr,
