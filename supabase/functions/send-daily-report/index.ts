@@ -113,7 +113,7 @@ function generateEmailHTML(data: {
 
   const roiColor = (v: number) => v >= 150 ? '#1a7f37' : v >= 80 ? '#b25c00' : '#c0392b'
 
-  const periods = ['Hoje', '7 dias', '15 dias', '30 dias']
+  const periods = ['Hoje', 'Ontem', '7 dias', '15 dias', '30 dias']
 
   const kpiPanel = (label: string, emoji: string, values: number[], format: (v: number) => string, colorFn?: (v: number) => string) => {
     return `
