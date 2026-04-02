@@ -13,11 +13,11 @@ interface MetricCardProps {
   index?: number;
 }
 
-const variantStyles: Record<string, { accent: string; icon: string; value: string }> = {
-  default:   { accent: "bg-muted/60",         icon: "text-muted-foreground", value: "text-foreground" },
-  profit:    { accent: "bg-success/8",         icon: "text-success",          value: "text-success" },
-  danger:    { accent: "bg-destructive/8",     icon: "text-destructive",      value: "text-destructive" },
-  highlight: { accent: "bg-primary/8",         icon: "text-primary",          value: "text-primary" },
+const variantStyles: Record<string, { accent: string; icon: string; value: string; topBar: string }> = {
+  default:   { accent: "bg-muted",              icon: "text-muted-foreground", value: "text-foreground",  topBar: "" },
+  profit:    { accent: "bg-[hsl(var(--green-bg))]",  icon: "text-success",          value: "text-success",     topBar: "bg-success/40" },
+  danger:    { accent: "bg-[hsl(var(--red-bg))]",     icon: "text-destructive",      value: "text-destructive", topBar: "bg-destructive/40" },
+  highlight: { accent: "bg-[hsl(var(--blue-bg))]",    icon: "text-primary",          value: "text-primary",     topBar: "bg-primary/40" },
 };
 
 export default function MetricCard({ title, value, subtitle, variant = "default", icon, delta, invertDelta, index = 0 }: MetricCardProps) {
@@ -31,23 +31,18 @@ export default function MetricCard({ title, value, subtitle, variant = "default"
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay: index * 0.06, ease: [0.22, 1, 0.36, 1] }}
-      className="liquid-glass group relative"
+      className="bg-card border border-border rounded-2xl shadow-[var(--shadow-card)] hover:shadow-[var(--shadow-elevated)] hover:-translate-y-px transition-all duration-200 group relative overflow-hidden"
     >
-      <div className="lg-distortion" />
-      <div className="lg-overlay" />
-      <div className="lg-specular" />
-      <div className="lg-content flex flex-col gap-3">
-        {/* Subtle top accent line for non-default variants */}
-        {variant !== "default" && (
-          <div className={`absolute top-0 left-0 right-0 h-[2px] z-[5] ${
-            variant === "profit" ? "bg-success/40" : variant === "danger" ? "bg-destructive/40" : "bg-primary/40"
-          }`} />
-        )}
+      {/* Top accent line for non-default variants */}
+      {variant !== "default" && styles.topBar && (
+        <div className={`absolute top-0 left-0 right-0 h-[2px] ${styles.topBar}`} />
+      )}
 
+      <div className="p-5 flex flex-col gap-3">
         <div className="flex items-center justify-between">
-          <span className="text-[11px] font-semibold text-muted-foreground tracking-[0.1em] uppercase">{title}</span>
+          <span className="t-label">{title}</span>
           {icon && (
-            <span className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-200 group-hover:scale-110 group-hover:shadow-sm ${styles.accent} ${styles.icon}`}>
+            <span className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-200 group-hover:scale-110 ${styles.accent} ${styles.icon}`}>
               {icon}
             </span>
           )}
@@ -58,7 +53,7 @@ export default function MetricCard({ title, value, subtitle, variant = "default"
         <div className="flex items-center gap-2 min-h-[20px]">
           {hasDelta && (
             <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full
-              ${isPositive ? "bg-success/10 text-success" : isNegative ? "bg-destructive/10 text-destructive" : "bg-muted text-muted-foreground"}`}>
+              ${isPositive ? "badge-green" : isNegative ? "badge-red" : "bg-muted text-muted-foreground"}`}>
               {isPositive ? <TrendingUp className="w-3 h-3" /> : isNegative ? <TrendingDown className="w-3 h-3" /> : null}
               {delta! > 0 ? "+" : ""}{delta!.toFixed(1)}%
             </span>
