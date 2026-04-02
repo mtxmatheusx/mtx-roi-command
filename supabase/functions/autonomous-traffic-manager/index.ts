@@ -19,6 +19,7 @@ interface CampaignInsight {
   created_time: string;
   age_days: number;
   today: WindowMetrics;
+  yesterday: WindowMetrics;
   d7: WindowMetrics;
   d15: WindowMetrics;
   d30: WindowMetrics;
@@ -257,10 +258,11 @@ Responda sempre em português com justificativa técnica clara.`;
   const campaignsText = campaigns.map(c =>
     `━━ "${c.name}" [${c.trend.toUpperCase()}] | Idade: ${c.age_days} dias${c.age_days < MIN_DAYS_BEFORE_PAUSE ? " 🛡️ PROTEGIDA" : ""}
    Budget: R$${c.daily_budget.toFixed(0)} | Status: ${c.effective_status}
-   Hoje  → Spend: R$${c.today.spend.toFixed(0)} | Vendas: ${c.today.purchases} | ROAS: ${c.today.roas.toFixed(2)}x | CPA: R$${c.today.cpa.toFixed(0)}
-   7d    → Spend: R$${c.d7.spend.toFixed(0)} | Vendas: ${c.d7.purchases} | ROAS: ${c.d7.roas.toFixed(2)}x | CPA: R$${c.d7.cpa.toFixed(0)}
-   15d   → Spend: R$${c.d15.spend.toFixed(0)} | Vendas: ${c.d15.purchases} | ROAS: ${c.d15.roas.toFixed(2)}x | CPA: R$${c.d15.cpa.toFixed(0)}
-   30d   → Spend: R$${c.d30.spend.toFixed(0)} | Vendas: ${c.d30.purchases} | ROAS: ${c.d30.roas.toFixed(2)}x | CPA: R$${c.d30.cpa.toFixed(0)}
+   Hoje   → Spend: R$${c.today.spend.toFixed(0)} | Vendas: ${c.today.purchases} | ROAS: ${c.today.roas.toFixed(2)}x | CPA: R$${c.today.cpa.toFixed(0)}
+   Ontem  → Spend: R$${c.yesterday.spend.toFixed(0)} | Vendas: ${c.yesterday.purchases} | ROAS: ${c.yesterday.roas.toFixed(2)}x | CPA: R$${c.yesterday.cpa.toFixed(0)}
+   7d     → Spend: R$${c.d7.spend.toFixed(0)} | Vendas: ${c.d7.purchases} | ROAS: ${c.d7.roas.toFixed(2)}x | CPA: R$${c.d7.cpa.toFixed(0)}
+   15d    → Spend: R$${c.d15.spend.toFixed(0)} | Vendas: ${c.d15.purchases} | ROAS: ${c.d15.roas.toFixed(2)}x | CPA: R$${c.d15.cpa.toFixed(0)}
+   30d    → Spend: R$${c.d30.spend.toFixed(0)} | Vendas: ${c.d30.purchases} | ROAS: ${c.d30.roas.toFixed(2)}x | CPA: R$${c.d30.cpa.toFixed(0)}
    CTR: ${c.ctr.toFixed(2)}% | Frequência: ${c.frequency.toFixed(2)}`
   ).join("\n\n");
 
@@ -435,7 +437,18 @@ async function fetchInsightsForRange(accountId: string, accessToken: string, sin
     const map = new Map<string, any>();
     for (const row of (data.data || [])) map.set(row.campaign_id, row);
     return map;
-  } catch { return new Map(); }
+  } catch (_e) { return new Map(); }
+}
+
+async function fetchInsightsByPreset(accountId: string, accessToken: string, datePreset: string): Promise<Map<string, any>> {
+  const url = `https://graph.facebook.com/v23.0/${accountId}/insights?fields=campaign_id,spend,actions,action_values,ctr,frequency,impressions,cpm&date_preset=${datePreset}&level=campaign&limit=500&access_token=${accessToken}`;
+  try {
+    const resp = await fetch(url);
+    const data = await resp.json();
+    const map = new Map<string, any>();
+    for (const row of (data.data || [])) map.set(row.campaign_id, row);
+    return map;
+  } catch (_e) { return new Map(); }
 }
 
 // ─── Main Handler ──────────────────────────────────────────
@@ -471,15 +484,16 @@ serve(async (req) => {
 
         try {
           const campaignUrl = `https://graph.facebook.com/v23.0/${profile.ad_account_id}/campaigns?fields=id,name,effective_status,daily_budget,created_time&effective_status=["ACTIVE"]&access_token=${accessToken}&limit=100`;
-          const adsetUrl = `https://graph.facebook.com/v23.0/${profile.ad_account_id}/adsets?fields=id,name,daily_budget,effective_status,campaign_id,insights.time_range({"since":"${d7Since}","until":"${today}"}){spend,actions,action_values,ctr,frequency}&effective_status=["ACTIVE"]&access_token=${accessToken}&limit=100`;
+          const adsetUrl = `https://graph.facebook.com/v23.0/${profile.ad_account_id}/adsets?fields=id,name,daily_budget,effective_status,campaign_id,insights.date_preset(last_7d){spend,actions,action_values,ctr,frequency}&effective_status=["ACTIVE"]&access_token=${accessToken}&limit=100`;
 
-          const [campaignResp, adsetResp, todayMap, d7Map, d15Map, d30Map] = await Promise.all([
+          const [campaignResp, adsetResp, todayMap, yesterdayMap, d7Map, d15Map, d30Map] = await Promise.all([
             fetch(campaignUrl).then(r => r.json()),
             fetch(adsetUrl).then(r => r.json()),
-            fetchInsightsForRange(profile.ad_account_id, accessToken, today, today),
-            fetchInsightsForRange(profile.ad_account_id, accessToken, d7Since, today),
-            fetchInsightsForRange(profile.ad_account_id, accessToken, d15Since, today),
-            fetchInsightsForRange(profile.ad_account_id, accessToken, d30Since, today),
+            fetchInsightsByPreset(profile.ad_account_id, accessToken, "today"),
+            fetchInsightsByPreset(profile.ad_account_id, accessToken, "yesterday"),
+            fetchInsightsByPreset(profile.ad_account_id, accessToken, "last_7d"),
+            fetchInsightsByPreset(profile.ad_account_id, accessToken, "last_14d"),
+            fetchInsightsByPreset(profile.ad_account_id, accessToken, "last_30d"),
           ]);
 
           if (campaignResp.error) { profileResult.error = campaignResp.error.message; return profileResult; }
@@ -488,6 +502,7 @@ serve(async (req) => {
 
           const campaignInsights: CampaignInsight[] = (campaignResp.data || []).map((c: any) => {
             const tdy = parseMetrics(todayMap.get(c.id));
+            const yest = parseMetrics(yesterdayMap.get(c.id));
             const s7 = parseMetrics(d7Map.get(c.id));
             const s15 = parseMetrics(d15Map.get(c.id));
             const s30 = parseMetrics(d30Map.get(c.id));
@@ -500,6 +515,7 @@ serve(async (req) => {
             };
 
             const todayW = buildWindow(tdy);
+            const yesterdayW = buildWindow(yest);
             const d7W = buildWindow(s7);
             const d15W = buildWindow(s15);
             const d30W = buildWindow(s30);
@@ -508,7 +524,7 @@ serve(async (req) => {
               id: c.id, name: c.name, effective_status: c.effective_status,
               daily_budget: parseInt(c.daily_budget || "0", 10) / 100,
               created_time: c.created_time || "", age_days: ageDays,
-              today: todayW, d7: d7W, d15: d15W, d30: d30W,
+              today: todayW, yesterday: yesterdayW, d7: d7W, d15: d15W, d30: d30W,
               // Legacy aliases for Gemini/static rules (map today->dtd, 7d->wtd, 30d->mtd)
               dtd_spend: todayW.spend, dtd_purchases: todayW.purchases, dtd_revenue: todayW.revenue,
               dtd_roas: todayW.roas, dtd_cpa: todayW.cpa, dtd_cpm: todayW.cpm, dtd_ctr: todayW.ctr,
@@ -709,6 +725,7 @@ serve(async (req) => {
     const rows = insights.map(c => {
       const windows = [
         { label: "Hoje", ...c.today },
+        { label: "Ontem", ...c.yesterday },
         { label: "7 dias", ...c.d7 },
         { label: "15 dias", ...c.d15 },
         { label: "30 dias", ...c.d30 },
