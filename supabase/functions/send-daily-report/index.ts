@@ -340,6 +340,8 @@ Deno.serve(async (req) => {
             cpa: [r(today.cpa), r(d7.cpa), r(d15.cpa), r(d30.cpa)],
             cpm: [r(today.cpm), r(d7.cpm), r(d15.cpm), r(d30.cpm)],
             ctr: [r(today.ctr), r(d7.ctr), r(d15.ctr), r(d30.ctr)],
+            lucro: [r(today.profit), r(d7.profit), r(d15.profit), r(d30.profit)],
+            spend: [r(today.spend), r(d7.spend), r(d15.spend), r(d30.spend)],
           }
 
           const alertas = generateAlerts(metricas, cpaMeta, profile.name)
