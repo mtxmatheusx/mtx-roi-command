@@ -257,9 +257,10 @@ Responda sempre em português com justificativa técnica clara.`;
   const campaignsText = campaigns.map(c =>
     `━━ "${c.name}" [${c.trend.toUpperCase()}] | Idade: ${c.age_days} dias${c.age_days < MIN_DAYS_BEFORE_PAUSE ? " 🛡️ PROTEGIDA" : ""}
    Budget: R$${c.daily_budget.toFixed(0)} | Status: ${c.effective_status}
-   DTD → Spend: R$${c.dtd_spend.toFixed(0)} | Vendas: ${c.dtd_purchases} | ROAS: ${c.dtd_roas.toFixed(2)}x | CPA: R$${c.dtd_cpa.toFixed(0)}
-   WTD → Spend: R$${c.wtd_spend.toFixed(0)} | Vendas: ${c.wtd_purchases} | ROAS: ${c.wtd_roas.toFixed(2)}x | CPA: R$${c.wtd_cpa.toFixed(0)}
-   MTD → Spend: R$${c.mtd_spend.toFixed(0)} | Vendas: ${c.mtd_purchases} | ROAS: ${c.mtd_roas.toFixed(2)}x | CPA: R$${c.mtd_cpa.toFixed(0)}
+   Hoje  → Spend: R$${c.today.spend.toFixed(0)} | Vendas: ${c.today.purchases} | ROAS: ${c.today.roas.toFixed(2)}x | CPA: R$${c.today.cpa.toFixed(0)}
+   7d    → Spend: R$${c.d7.spend.toFixed(0)} | Vendas: ${c.d7.purchases} | ROAS: ${c.d7.roas.toFixed(2)}x | CPA: R$${c.d7.cpa.toFixed(0)}
+   15d   → Spend: R$${c.d15.spend.toFixed(0)} | Vendas: ${c.d15.purchases} | ROAS: ${c.d15.roas.toFixed(2)}x | CPA: R$${c.d15.cpa.toFixed(0)}
+   30d   → Spend: R$${c.d30.spend.toFixed(0)} | Vendas: ${c.d30.purchases} | ROAS: ${c.d30.roas.toFixed(2)}x | CPA: R$${c.d30.cpa.toFixed(0)}
    CTR: ${c.ctr.toFixed(2)}% | Frequência: ${c.frequency.toFixed(2)}`
   ).join("\n\n");
 
