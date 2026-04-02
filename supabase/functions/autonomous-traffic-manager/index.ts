@@ -623,7 +623,7 @@ serve(async (req) => {
   <div style="background:linear-gradient(135deg,#0a0a0a 0%,#111111 100%);padding:32px 24px 24px;border-bottom:1px solid #1e1e1e;">
     <div style="font-size:10px;color:#00ff88;text-transform:uppercase;letter-spacing:2px;font-weight:600;margin-bottom:4px;">MTX Assessoria Estratégica</div>
     <div style="font-size:22px;font-weight:800;color:#ffffff;margin-bottom:2px;">🤖 Agente Autônomo</div>
-    <div style="font-size:11px;color:#888888;">Engine Claude Opus 4.5 · Tool-Use Loop</div>
+    <div style="font-size:11px;color:#888888;">Engine Gemini 2.0 Flash · Tool-Use Loop</div>
   </div>
 
   <!-- Destaque -->
