@@ -120,6 +120,7 @@ export default function CampaignsTable({ campaigns, disableScale }: CampaignsTab
           </tbody>
         </table>
       </div>
+      </div>
     </motion.div>
   );
 }
