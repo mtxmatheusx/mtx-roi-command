@@ -843,12 +843,12 @@ serve(async (req) => {
     </div>`;
   })()}
 
-  ${r.ai_summary ? `
-  <!-- Claude Analysis -->
+  ${geminiEmailAnalysis ? `
+  <!-- Gemini Deep Analysis -->
   <div style="padding:0 24px 20px;">
-    <div style="font-size:10px;color:#888888;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:12px;">Análise do Gemini</div>
-    <div style="background:#111111;border:1px solid #1e1e1e;border-radius:8px;padding:16px;">
-      <div style="font-size:13px;color:#cccccc;line-height:1.6;">${r.ai_summary.slice(0, 600)}</div>
+    <div style="font-size:10px;color:#888888;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:12px;">🤖 Análise do Gemini</div>
+    <div style="background:linear-gradient(135deg,#0f1a0f 0%,#111111 100%);border:1px solid #00ff8833;border-radius:8px;padding:20px;">
+      <div style="font-size:13px;color:#cccccc;line-height:1.7;">${geminiEmailAnalysis}</div>
     </div>
   </div>` : ""}
 
