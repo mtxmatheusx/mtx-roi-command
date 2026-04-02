@@ -459,6 +459,67 @@ async function fetchInsightsByPreset(accountId: string, accessToken: string, dat
   } catch (_e) { return new Map(); }
 }
 
+// ─── Gemini Email Analysis (dedicated call) ────────────────
+
+async function generateGeminiEmailAnalysis(
+  apiKey: string, profileName: string, profileConfig: any, campaigns: CampaignInsight[]
+): Promise<string> {
+  const fmtW = (w: WindowMetrics) => `Vendas:${w.purchases} ValorVendas:R$${w.revenue.toFixed(2)} Gasto:R$${w.spend.toFixed(2)} CPA:R$${w.cpa.toFixed(2)} ROAS:${w.roas.toFixed(2)}x CPM:R$${w.cpm.toFixed(2)} CTR:${w.ctr.toFixed(2)}%`;
+  const campaignsText = campaigns.map(c =>
+    `Campanha: "${c.name}" | Budget: R$${c.daily_budget.toFixed(0)} | Idade: ${c.age_days} dias | Trend: ${c.trend}
+  Hoje:   ${fmtW(c.today)}
+  Ontem:  ${fmtW(c.yesterday)}
+  7d:     ${fmtW(c.d7)}
+  15d:    ${fmtW(c.d15)}
+  30d:    ${fmtW(c.d30)}`
+  ).join("\n\n");
+
+  const prompt = `Você é um especialista sênior em tráfego pago com 10 anos de experiência em Meta Ads. Analise os dados abaixo com profundidade técnica e responda em português.
+
+PERFIL: ${profileName}
+Metas: CPA Meta R$ ${profileConfig.cpa_meta} | CPA Máx Tolerável R$ ${profileConfig.cpa_max_toleravel} | ROAS Mínimo ${profileConfig.roas_min_escala}x
+
+${campaignsText}
+
+Para cada campanha ativa, avalie:
+1. Saúde geral (Hoje vs Ontem vs 7d vs 30d)
+2. Tendência de ROAS e CPA — melhorando ou piorando?
+3. Eficiência de entrega (CPM e CTR indicam fadiga?)
+4. Recomendação clara: escalar / manter / reduzir / pausar
+5. Justificativa técnica da recomendação
+
+Ao final, um diagnóstico geral da conta:
+- O que está funcionando bem
+- O que preocupa
+- Próxima ação prioritária
+
+Seja direto, use números, compare com as metas do cliente. NÃO seja genérico. Cada recomendação deve ser específica para os dados apresentados.
+
+RESPONDA EM HTML PURO (sem markdown, sem \`\`\`, sem code blocks). Use <h3>, <p>, <ul>, <li>, <strong>. Cores: use style="color:#00ff88" para positivo, style="color:#ff4444" para negativo, style="color:#ffaa00" para atenção.`;
+
+  try {
+    const resp = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ role: "user", parts: [{ text: prompt }] }],
+          generationConfig: { maxOutputTokens: 2048 },
+        }),
+      }
+    );
+    if (!resp.ok) { console.error("[Gemini Email Analysis] error", resp.status); return ""; }
+    const result = await resp.json();
+    const text = result.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    // Strip markdown code fences if present
+    return text.replace(/```html?\n?/gi, "").replace(/```/g, "").trim();
+  } catch (e) {
+    console.error("[Gemini Email Analysis] exception:", e);
+    return "";
+  }
+}
+
 // ─── Main Handler ──────────────────────────────────────────
 
 serve(async (req) => {
