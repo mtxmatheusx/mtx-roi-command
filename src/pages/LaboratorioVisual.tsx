@@ -63,7 +63,7 @@ export default function LaboratorioVisual() {
             </div>
 
             <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-                <TabsList className="bg-card border p-1 h-12">
+                <TabsList className="liquid-glass !rounded-xl p-1 h-12">
                     <TabsTrigger value="analise" className="gap-2 px-6 h-10 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                         <Search className="w-4 h-4" />
                         1. Análise de Perfil

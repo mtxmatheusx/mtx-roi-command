@@ -317,7 +317,7 @@ export default function CampaignManagerTab({ campaigns, isLoading }: Props) {
 
         {/* Inner Tabs */}
         <Tabs value={innerTab} onValueChange={setInnerTab}>
-          <TabsList className="bg-card border border-border w-full justify-start">
+          <TabsList className="liquid-glass !rounded-xl w-full justify-start">
             <TabsTrigger value="create" className="gap-1.5"><Plus className="w-3.5 h-3.5" />Criar</TabsTrigger>
             <TabsTrigger value="targeting" className="gap-1.5"><Target className="w-3.5 h-3.5" />Segmentação</TabsTrigger>
             <TabsTrigger value="creatives" className="gap-1.5"><ImageIcon className="w-3.5 h-3.5" />Criativos</TabsTrigger>
