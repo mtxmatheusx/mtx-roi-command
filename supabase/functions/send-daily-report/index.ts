@@ -338,18 +338,18 @@ Deno.serve(async (req) => {
             agentActions = logs?.length || 0
           } catch {}
 
-          const [today, d7, d15, d30] = periodResults
+          const [today, yesterday, d7, d15, d30] = periodResults
           const cpaMeta = Number(profile.cpa_meta) || 45
 
           const metricas: ClientData['metricas'] = {
-            vendas: [today.sales, d7.sales, d15.sales, d30.sales],
-            custoVenda: [r(today.costPerSale), r(d7.costPerSale), r(d15.costPerSale), r(d30.costPerSale)],
-            roi: [r(today.roi), r(d7.roi), r(d15.roi), r(d30.roi)],
-            cpa: [r(today.cpa), r(d7.cpa), r(d15.cpa), r(d30.cpa)],
-            cpm: [r(today.cpm), r(d7.cpm), r(d15.cpm), r(d30.cpm)],
-            ctr: [r(today.ctr), r(d7.ctr), r(d15.ctr), r(d30.ctr)],
-            lucro: [r(today.profit), r(d7.profit), r(d15.profit), r(d30.profit)],
-            spend: [r(today.spend), r(d7.spend), r(d15.spend), r(d30.spend)],
+            vendas: [today.sales, yesterday.sales, d7.sales, d15.sales, d30.sales],
+            custoVenda: [r(today.costPerSale), r(yesterday.costPerSale), r(d7.costPerSale), r(d15.costPerSale), r(d30.costPerSale)],
+            roi: [r(today.roi), r(yesterday.roi), r(d7.roi), r(d15.roi), r(d30.roi)],
+            cpa: [r(today.cpa), r(yesterday.cpa), r(d7.cpa), r(d15.cpa), r(d30.cpa)],
+            cpm: [r(today.cpm), r(yesterday.cpm), r(d7.cpm), r(d15.cpm), r(d30.cpm)],
+            ctr: [r(today.ctr), r(yesterday.ctr), r(d7.ctr), r(d15.ctr), r(d30.ctr)],
+            lucro: [r(today.profit), r(yesterday.profit), r(d7.profit), r(d15.profit), r(d30.profit)],
+            spend: [r(today.spend), r(yesterday.spend), r(d7.spend), r(d15.spend), r(d30.spend)],
           }
 
           const alertas = generateAlerts(metricas, cpaMeta, profile.name)
