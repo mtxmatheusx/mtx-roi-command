@@ -206,13 +206,9 @@ const Sidebar = React.forwardRef<
       >
         <div
           data-sidebar="sidebar"
-          className="flex h-full w-full flex-col liquid-glass-dark group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:border group-data-[variant=floating]:border-sidebar-border group-data-[variant=floating]:shadow"
+          className="flex h-full w-full flex-col bg-[rgba(242,240,237,0.85)] backdrop-blur-[24px] backdrop-saturate-[160%] border-r border-white/55 dark:bg-[rgba(22,22,22,0.88)] dark:border-white/[0.06] group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:border group-data-[variant=floating]:border-sidebar-border group-data-[variant=floating]:shadow"
         >
-          <div className="lg-overlay" />
-          <div className="lg-specular" />
-          <div className="lg-content !p-0 flex flex-col h-full">
-            {children}
-          </div>
+          {children}
         </div>
       </div>
     </div>
