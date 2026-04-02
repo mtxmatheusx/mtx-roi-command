@@ -381,6 +381,7 @@ Deno.serve(async (req) => {
         const realTotalRevenue = allPeriods.reduce((s, p) => s + (p?.revenue || 0), 0)
         const avgRoi = realTotalSpend > 0 ? ((realTotalRevenue - realTotalSpend) / realTotalSpend) * 100 : 0
         const avgCpa = totalVendas > 0 ? realTotalSpend / totalVendas : 0
+        const lucroTotal = realTotalRevenue - realTotalSpend
 
         const subject = getSubject(reportType)
         const html = generateEmailHTML({
@@ -391,6 +392,7 @@ Deno.serve(async (req) => {
           roiMedio: r(avgRoi),
           spendTotal: r(realTotalSpend),
           cpaMedio: r(avgCpa),
+          lucroTotal: r(lucroTotal),
           clientes: clientDataList,
           geminiAnalysis,
         })
