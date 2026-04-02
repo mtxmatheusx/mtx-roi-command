@@ -33,18 +33,22 @@ export default function CampaignsTable({ campaigns, disableScale }: CampaignsTab
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="bg-card rounded-lg border border-border overflow-hidden"
+      className="liquid-glass"
     >
-      <div className="p-5 border-b border-border flex items-center justify-between">
-        <div>
-          <h2 className="text-base font-semibold">Campanhas Ativas</h2>
-          <p className="text-sm text-muted-foreground">Monitoramento em tempo real</p>
+      <div className="lg-distortion" />
+      <div className="lg-overlay" />
+      <div className="lg-specular" />
+      <div className="lg-content !p-0">
+        <div className="p-5 border-b border-white/10 flex items-center justify-between">
+          <div>
+            <h2 className="text-base font-semibold">Campanhas Ativas</h2>
+            <p className="text-sm text-muted-foreground">Monitoramento em tempo real</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Switch id="active-only" checked={showActiveOnly} onCheckedChange={setShowActiveOnly} />
+            <Label htmlFor="active-only" className="text-xs text-muted-foreground cursor-pointer">Apenas ativas</Label>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Switch id="active-only" checked={showActiveOnly} onCheckedChange={setShowActiveOnly} />
-          <Label htmlFor="active-only" className="text-xs text-muted-foreground cursor-pointer">Apenas ativas</Label>
-        </div>
-      </div>
       <div className="overflow-x-auto -mx-px">
         <table className="w-full text-sm min-w-[700px]">
           <thead>
