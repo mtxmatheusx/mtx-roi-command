@@ -486,10 +486,13 @@ serve(async (req) => {
               created_time: c.created_time || "", age_days: ageDays,
               dtd_spend: dtd.spend, dtd_purchases: dtd.purchases, dtd_revenue: dtd.revenue,
               dtd_roas: dtdRoas, dtd_cpa: dtd.purchases > 0 ? dtd.spend / dtd.purchases : (dtd.spend > 0 ? dtd.spend : 0),
+              dtd_cpm: dtd.cpm, dtd_ctr: dtd.ctr,
               wtd_spend: wtd.spend, wtd_purchases: wtd.purchases, wtd_revenue: wtd.revenue,
               wtd_roas: wtdRoas, wtd_cpa: wtd.purchases > 0 ? wtd.spend / wtd.purchases : (wtd.spend > 0 ? wtd.spend : 0),
+              wtd_cpm: wtd.cpm, wtd_ctr: wtd.ctr,
               mtd_spend: mtd.spend, mtd_purchases: mtd.purchases, mtd_revenue: mtd.revenue,
               mtd_roas: mtdRoas, mtd_cpa: mtd.purchases > 0 ? mtd.spend / mtd.purchases : (mtd.spend > 0 ? mtd.spend : 0),
+              mtd_cpm: mtd.cpm, mtd_ctr: mtd.ctr,
               ctr: wtd.ctr, frequency: wtd.frequency,
               trend: determineTrend(dtdRoas, wtdRoas, mtdRoas),
             };
