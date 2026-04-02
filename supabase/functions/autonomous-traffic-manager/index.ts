@@ -511,6 +511,7 @@ Para cada campanha ativa, avalie:
 3. Eficiência de entrega (CPM e CTR indicam fadiga?)
 4. Recomendação clara: escalar / manter / reduzir / pausar
 5. Justificativa técnica da recomendação
+6. Diagnóstico PSICOLÓGICO: identifique qual princípio psicológico explica a performance (Mere Exposure, Loss Aversion, BJ Fogg, Social Proof, Activation Energy, Scarcity). Sugira ajuste de messaging baseado no comportamento do público, não só em métricas técnicas.
 
 Ao final, um diagnóstico geral da conta:
 - O que está funcionando bem
