@@ -378,7 +378,7 @@ function buildEmailHtml(clients: ClientReport[], type: string, email: string, ge
     ${clientBlocks}
 
     <!-- ═══ GEMINI ANALYSIS ═══ -->
-    <div style="background:linear-gradient(145deg,#0a0a14 0%,#1a0a2e 50%,#0a0a14 100%);border:1px solid rgba(168,85,247,0.15);border-top-color:rgba(168,85,247,0.25);border-radius:18px;padding:24px;margin-top:8px;box-shadow:0 4px 24px -4px rgba(0,0,0,0.35),inset 0 1px 0 0 rgba(168,85,247,0.08);">
+    <div style="background:linear-gradient(135deg,rgba(168,85,247,0.14) 0%,rgba(168,85,247,0.05) 100%);border:1px solid rgba(168,85,247,0.22);border-radius:20px;padding:24px;margin-top:8px;box-shadow:0 8px 32px rgba(0,0,0,0.2),inset 0 1px 0 rgba(255,255,255,0.08);">
       <div style="display:flex;align-items:center;margin-bottom:16px;">
         <div style="width:32px;height:32px;border-radius:8px;background:#a855f720;display:flex;align-items:center;justify-content:center;margin-right:10px;">
           <span style="font-size:16px;">🤖</span>
