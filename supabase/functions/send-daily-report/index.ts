@@ -11,38 +11,25 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY')!
 const META_API_VERSION = 'v23.0'
 const META_BASE = `https://graph.facebook.com/${META_API_VERSION}`
+const APP_URL = 'https://mtx-roi-command.lovable.app'
 
 interface PeriodMetrics {
-  sales: number
-  spend: number
-  revenue: number
-  costPerSale: number
-  roi: number
-  cpa: number
-  cpm: number
-  ctr: number
-  profit: number
-  dataVerified: boolean
+  sales: number; spend: number; revenue: number; costPerSale: number
+  roi: number; cpa: number; cpm: number; ctr: number; profit: number; dataVerified: boolean
 }
 
-interface AgentData {
-  totalActions: number
-  pauses: number
-  scales: number
-  reduces: number
-  selfHeals: number
-  duplicates: number
-  recoveryRate: number | null
-  lastRunAt: string | null
-  recentActions: Array<{ action_type: string; details: any; created_at: string }>
-}
-
-interface ClientReport {
-  name: string
-  adAccountId: string
-  cpaMeta: number
-  periods: { today: PeriodMetrics; d7: PeriodMetrics; d15: PeriodMetrics; d30: PeriodMetrics }
-  agent: AgentData
+interface ClientData {
+  nome: string; accountId: string; profileId: string; roi: number; cpaMeta: number
+  metricas: {
+    vendas: [number, number, number, number]
+    custoVenda: [number, number, number, number]
+    roi: [number, number, number, number]
+    cpa: [number, number, number, number]
+    cpm: [number, number, number, number]
+    ctr: [number, number, number, number]
+  }
+  alertas: string[]
+  agentActions: number
 }
 
 const DATE_PRESETS = ['today', 'last_7d', 'last_14d', 'last_30d'] as const
@@ -77,45 +64,228 @@ async function fetchMetaInsights(adAccountId: string, accessToken: string, dateP
   } catch (err) { console.error(`Meta fetch error ${adAccountId} (${datePreset}):`, err); return empty }
 }
 
-async function fetchAgentData(supabase: any, profileId: string): Promise<AgentData> {
-  const empty: AgentData = { totalActions: 0, pauses: 0, scales: 0, reduces: 0, selfHeals: 0, duplicates: 0, recoveryRate: null, lastRunAt: null, recentActions: [] }
+async function generateGeminiAnalysis(clients: ClientData[], reportType: string): Promise<string> {
   try {
-    const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
-    const { data: logs, error } = await supabase.from('emergency_logs').select('action_type, details, created_at').eq('profile_id', profileId).gte('created_at', since24h).order('created_at', { ascending: false }).limit(50)
-    if (error || !logs) return empty
-    const pauses = logs.filter((l: any) => l.action_type === 'agent_pause' || l.action_type === 'pause').length
-    const scales = logs.filter((l: any) => l.action_type === 'agent_scale' || l.action_type === 'scale').length
-    const reduces = logs.filter((l: any) => l.action_type === 'agent_reduce' || l.action_type === 'reduce').length
-    const selfHeals = logs.filter((l: any) => l.action_type === 'agent_self_heal' || l.details?.recovered).length
-    const duplicates = logs.filter((l: any) => l.action_type === 'agent_duplicate' || l.action_type === 'duplicate').length
-    const failures = logs.filter((l: any) => l.details?.success === false || l.details?.recovered)
-    const recovered = logs.filter((l: any) => l.details?.recovered === true || l.action_type === 'agent_self_heal')
-    const recoveryRate = failures.length > 0 ? Math.round((recovered.length / failures.length) * 100) : null
-    return { totalActions: logs.length, pauses, scales, reduces, selfHeals, duplicates, recoveryRate, lastRunAt: logs.length > 0 ? logs[0].created_at : null, recentActions: logs.slice(0, 5) }
-  } catch { return empty }
-}
-
-async function generateGeminiAnalysis(clients: ClientReport[], reportType: string): Promise<string> {
-  try {
-    const clientSummaries = clients.map(c => {
-      const p = c.periods
-      const agentInfo = c.agent.totalActions > 0
-        ? `\n  Agente (24h): ${c.agent.totalActions} ações | ${c.agent.pauses} pausas | ${c.agent.scales} escalas | Recovery: ${c.agent.recoveryRate !== null ? c.agent.recoveryRate + '%' : 'N/A'}`
-        : ''
-      return `${c.name} (CPA Meta: R$${c.cpaMeta})\n  Hoje: ${p.today.sales}v R$${p.today.spend.toFixed(0)} spend Lucro R$${p.today.profit.toFixed(0)} ROI ${p.today.roi.toFixed(0)}%\n  7d: ${p.d7.sales}v R$${p.d7.spend.toFixed(0)} Lucro R$${p.d7.profit.toFixed(0)} ROI ${p.d7.roi.toFixed(0)}%\n  15d: ${p.d15.sales}v R$${p.d15.spend.toFixed(0)} Lucro R$${p.d15.profit.toFixed(0)} ROI ${p.d15.roi.toFixed(0)}%\n  30d: ${p.d30.sales}v R$${p.d30.spend.toFixed(0)} Lucro R$${p.d30.profit.toFixed(0)} ROI ${p.d30.roi.toFixed(0)}%${agentInfo}`
-    }).join('\n\n')
-    const timeCtx = reportType === 'morning' ? 'Relatório matinal (ontem). Prioridades do dia.' : reportType === 'midday' ? 'Meio-dia (hoje parcial). Alertas urgentes.' : 'Fechamento do dia. Resumo + planejamento amanhã.'
-    const prompt = `Analista de performance MTX. ${timeCtx}\n\nClientes:\n${clientSummaries}\n\nAnálise técnica (máx 250 palavras): Diagnóstico de tendências, alertas críticos (ROI<80%, zero vendas), 2-3 recomendações acionáveis, avaliação do agente autônomo, projeção mensal. Seja direto e use os números reais.`
+    const summary = clients.map(c => {
+      const m = c.metricas
+      return `${c.nome}: Hoje ${m.vendas[0]}v ROI ${m.roi[0]}% CPA R$${m.cpa[0]} | 7d ${m.vendas[1]}v ROI ${m.roi[1]}% | 30d ${m.vendas[3]}v ROI ${m.roi[3]}%`
+    }).join('\n')
+    const timeCtx = reportType === 'morning' ? 'Relatório matinal. Prioridades do dia.' : reportType === 'midday' ? 'Meio-dia (parcial). Alertas urgentes.' : 'Fechamento. Resumo + planejamento amanhã.'
+    const prompt = `Analista de performance MTX. ${timeCtx}\n\nClientes:\n${summary}\n\nAnálise técnica (máx 200 palavras): Diagnóstico, alertas críticos (ROI<80%), 2-3 recomendações, projeção mensal. Seja direto.`
     const res = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${LOVABLE_API_KEY}` },
-      body: JSON.stringify({ model: 'google/gemini-2.5-flash', messages: [{ role: 'user', content: prompt }], max_tokens: 1024, temperature: 0.4 }),
+      body: JSON.stringify({ model: 'google/gemini-2.5-flash', messages: [{ role: 'user', content: prompt }], max_tokens: 800, temperature: 0.4 }),
     })
-    if (!res.ok) return 'Análise indisponível no momento.'
+    if (!res.ok) return ''
     const data = await res.json()
-    return data.choices?.[0]?.message?.content || 'Análise indisponível no momento.'
-  } catch { return 'Análise indisponível no momento.' }
+    return data.choices?.[0]?.message?.content || ''
+  } catch { return '' }
 }
+
+function generateAlerts(m: ClientData['metricas'], cpaMeta: number, nome: string): string[] {
+  const alerts: string[] = []
+  if (m.roi[0] < 80) alerts.push(`ROI hoje está em ${m.roi[0]}% — abaixo do mínimo saudável (80%).`)
+  if (m.vendas[0] === 0 && m.vendas[1] > 0) alerts.push(`Zero vendas hoje, mas ${m.vendas[1]} nos últimos 7 dias. Verificar se campanhas estão ativas.`)
+  if (cpaMeta > 0 && m.cpa[0] > cpaMeta * 1.3) alerts.push(`CPA hoje (R$${m.cpa[0]}) está ${Math.round(((m.cpa[0] - cpaMeta) / cpaMeta) * 100)}% acima da meta (R$${cpaMeta}).`)
+  if (m.ctr[0] < 1) alerts.push(`CTR em ${m.ctr[0]}% — abaixo de 1%. Considerar refresh de criativos.`)
+  return alerts
+}
+
+const fmt = (n: number) => Number(n).toFixed(2).replace('.', ',')
+const fmtInt = (n: number) => Math.round(n).toString()
+
+// ─── EMAIL HTML GENERATOR (Apple × Notion) ───────────────────
+
+function generateEmailHTML(data: {
+  periodo: string; horaLabel: string; dataHora: string
+  totalVendas: number; roiMedio: number; spendTotal: number; cpaMedio: number
+  clientes: ClientData[]; geminiAnalysis: string
+}): string {
+
+  const statusBadge = (roi: number) => {
+    if (roi >= 150) return { label: `🟢 ROI ${Math.round(roi)}%`, bg: '#edfaf1', color: '#1a7f37', border: 'rgba(52,199,89,0.25)' }
+    if (roi >= 80)  return { label: `🟡 ROI ${Math.round(roi)}%`, bg: '#fff8ec', color: '#b25c00', border: 'rgba(255,159,10,0.25)' }
+    return { label: `🔴 ROI ${Math.round(roi)}% — Atenção`, bg: '#fff0ef', color: '#c0392b', border: 'rgba(255,59,48,0.25)' }
+  }
+
+  const roiColor = (v: number) => v >= 150 ? '#1a7f37' : v >= 80 ? '#b25c00' : '#c0392b'
+
+  const clienteCards = data.clientes.map(c => {
+    const s = statusBadge(c.roi)
+    const m = c.metricas
+    const alerta = c.alertas.length > 0 ? `
+      <div style="padding:0 0 12px;">
+        <div style="background:#fff;border:1px solid rgba(255,159,10,.30);border-left:3px solid #ff9f0a;border-radius:10px;padding:12px 16px;">
+          <div style="font-size:12px;font-weight:700;color:#b25c00;margin-bottom:3px;">⚠️ Ação recomendada — ${c.nome}</div>
+          <div style="font-size:12px;color:#6b6b6b;line-height:1.5;">${c.alertas.join(' ')}</div>
+        </div>
+      </div>` : ''
+
+    const agentBadge = c.agentActions > 0 ? `<span style="background:#f5f3ff;color:#7c3aed;border:1px solid #e0d6f5;border-radius:20px;padding:2px 8px;font-size:10px;font-weight:600;margin-left:6px;">🤖 ${c.agentActions}</span>` : ''
+
+    return `
+    <div style="border:1px solid #e8e8e5;border-radius:14px;margin-bottom:12px;overflow:hidden;background:#fff;">
+      <div style="padding:14px 16px 10px;">
+        <table width="100%" cellpadding="0" cellspacing="0"><tr>
+          <td style="text-align:left;">
+            <span style="font-size:14px;font-weight:600;color:#1a1a1a;">${c.nome}</span>${agentBadge}
+            <br><span style="font-size:11px;color:#ababab;">${c.accountId}</span>
+          </td>
+          <td style="text-align:right;">
+            <span style="background:${s.bg};color:${s.color};border:1px solid ${s.border};border-radius:20px;padding:3px 10px;font-size:11px;font-weight:600;">${s.label}</span>
+          </td>
+        </tr></table>
+      </div>
+      <table width="100%" cellpadding="7" cellspacing="0" style="border-collapse:collapse;">
+        <thead>
+          <tr style="background:#f7f7f5;border-top:1px solid #e8e8e5;">
+            <th style="width:30%;text-align:left;font-size:10px;font-weight:600;color:#ababab;text-transform:uppercase;letter-spacing:.05em;padding:8px 10px;">Métrica</th>
+            <th style="text-align:center;font-size:10px;font-weight:700;color:#0051a2;text-transform:uppercase;letter-spacing:.05em;border-top:2px solid #0071e3;background:#f0f7ff;">Hoje</th>
+            <th style="text-align:center;font-size:10px;font-weight:600;color:#ababab;text-transform:uppercase;letter-spacing:.05em;">7 dias</th>
+            <th style="text-align:center;font-size:10px;font-weight:600;color:#ababab;text-transform:uppercase;letter-spacing:.05em;">15 dias</th>
+            <th style="text-align:center;font-size:10px;font-weight:600;color:#ababab;text-transform:uppercase;letter-spacing:.05em;">30 dias</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="border-top:1px solid #f0f0ee;">
+            <td style="font-size:12px;color:#6b6b6b;font-weight:500;padding:7px 10px;">🛍️ Vendas</td>
+            ${m.vendas.map(v => `<td style="text-align:center;font-size:13px;font-weight:600;color:#1a1a1a;font-variant-numeric:tabular-nums;">${v}</td>`).join('')}
+          </tr>
+          <tr style="border-top:1px solid #f0f0ee;">
+            <td style="font-size:12px;color:#6b6b6b;font-weight:500;padding:7px 10px;">💲 Custo/Venda</td>
+            ${m.custoVenda.map(v => `<td style="text-align:center;font-size:13px;font-weight:600;color:#1a1a1a;font-variant-numeric:tabular-nums;">R$${fmt(v)}</td>`).join('')}
+          </tr>
+          <tr style="border-top:1px solid #f0f0ee;">
+            <td style="font-size:12px;color:#6b6b6b;font-weight:500;padding:7px 10px;">📈 ROI</td>
+            ${m.roi.map(v => `<td style="text-align:center;font-size:13px;font-weight:700;color:${roiColor(v)};font-variant-numeric:tabular-nums;">${fmt(v)}%</td>`).join('')}
+          </tr>
+          <tr style="border-top:1px solid #f0f0ee;">
+            <td style="font-size:12px;color:#6b6b6b;font-weight:500;padding:7px 10px;">🎯 CPA</td>
+            ${m.cpa.map(v => `<td style="text-align:center;font-size:13px;font-weight:600;color:#1a1a1a;font-variant-numeric:tabular-nums;">R$${fmt(v)}</td>`).join('')}
+          </tr>
+          <tr style="border-top:1px solid #f0f0ee;">
+            <td style="font-size:12px;color:#6b6b6b;font-weight:500;padding:7px 10px;">👁️ CPM</td>
+            ${m.cpm.map(v => `<td style="text-align:center;font-size:13px;color:#6b6b6b;font-variant-numeric:tabular-nums;">R$${fmt(v)}</td>`).join('')}
+          </tr>
+          <tr style="border-top:1px solid #f0f0ee;">
+            <td style="font-size:12px;color:#6b6b6b;font-weight:500;padding:7px 10px;">🔗 CTR</td>
+            ${m.ctr.map(v => `<td style="text-align:center;font-size:13px;color:${v < 1 ? '#c0392b' : '#6b6b6b'};font-variant-numeric:tabular-nums;">${fmt(v)}%</td>`).join('')}
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    ${alerta}`
+  }).join('')
+
+  const geminiSection = data.geminiAnalysis ? `
+  <!-- ANÁLISE IA -->
+  <div style="background:#fff;border-left:1px solid #e8e8e5;border-right:1px solid #e8e8e5;padding:8px 32px 24px;">
+    <div style="border:1px solid #e0d6f5;border-radius:14px;overflow:hidden;background:#faf8ff;">
+      <div style="padding:14px 16px 10px;border-bottom:1px solid #e0d6f5;">
+        <table width="100%" cellpadding="0" cellspacing="0"><tr>
+          <td><span style="font-size:13px;font-weight:700;color:#7c3aed;">🧠 Diagnóstico Técnico</span></td>
+          <td style="text-align:right;"><span style="font-size:9px;color:#ababab;">Gemini 2.5 Flash · ${data.clientes.length} cliente(s)</span></td>
+        </tr></table>
+      </div>
+      <div style="padding:14px 16px;font-size:12px;color:#424245;line-height:1.85;">
+        ${data.geminiAnalysis.replace(/\*\*(.*?)\*\*/g, '<strong style="color:#5b21b6;">$1</strong>').replace(/\n/g, '<br>')}
+      </div>
+    </div>
+  </div>` : ''
+
+  return `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Relatório MTX</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body style="margin:0;padding:0;background:#f5f5f0;font-family:'Inter',-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',sans-serif;-webkit-font-smoothing:antialiased;">
+<div style="padding:32px 16px;">
+<div style="max-width:620px;margin:0 auto;">
+
+  <!-- HEADER -->
+  <div style="background:#fff;border:1px solid #e8e8e5;border-bottom:none;border-radius:16px 16px 0 0;padding:28px 32px;">
+    <table width="100%" cellpadding="0" cellspacing="0"><tr>
+      <td>
+        <table cellpadding="0" cellspacing="0"><tr>
+          <td style="width:36px;height:36px;background:#0071e3;border-radius:9px;text-align:center;vertical-align:middle;">
+            <span style="font-size:16px;font-weight:900;color:#fff;line-height:36px;">M</span>
+          </td>
+          <td style="padding-left:10px;">
+            <span style="font-size:18px;font-weight:700;color:#1a1a1a;letter-spacing:-0.3px;">MTX Assessoria</span>
+          </td>
+        </tr></table>
+      </td>
+      <td style="text-align:right;">
+        <span style="background:#f0f7ff;border:1px solid #c5dcf7;border-radius:20px;padding:4px 12px;font-size:11px;font-weight:600;color:#0051a2;letter-spacing:.04em;text-transform:uppercase;">${data.periodo}</span>
+      </td>
+    </tr></table>
+    <div style="height:1px;background:#e8e8e5;margin:16px -32px 0;"></div>
+    <div style="padding-top:16px;">
+      <span style="font-size:12px;color:#6b6b6b;">📅 ${data.dataHora}</span>
+      <span style="font-size:12px;color:#6b6b6b;margin-left:16px;">🕐 ${data.horaLabel}</span>
+      <span style="font-size:12px;color:#6b6b6b;margin-left:16px;">● ${data.clientes.length} clientes ativos</span>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div style="background:#fff;border-left:1px solid #e8e8e5;border-right:1px solid #e8e8e5;padding:20px 32px;border-bottom:1px solid #f0f0ee;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate;border-spacing:8px 0;">
+      <tr>
+        <td width="24%" style="background:#f7f7f5;border:1px solid #e8e8e5;border-radius:12px;padding:14px 8px;text-align:center;">
+          <div style="font-size:10px;font-weight:600;color:#ababab;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">🛍️ Vendas</div>
+          <div style="font-size:20px;font-weight:700;color:#1a1a1a;letter-spacing:-.5px;font-variant-numeric:tabular-nums;">${data.totalVendas}</div>
+        </td>
+        <td width="24%" style="background:#f7f7f5;border:1px solid #e8e8e5;border-radius:12px;padding:14px 8px;text-align:center;">
+          <div style="font-size:10px;font-weight:600;color:#ababab;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">📈 ROI Médio</div>
+          <div style="font-size:20px;font-weight:700;color:${data.roiMedio >= 150 ? '#1a7f37' : data.roiMedio >= 80 ? '#b25c00' : '#c0392b'};letter-spacing:-.5px;font-variant-numeric:tabular-nums;">${fmt(data.roiMedio)}%</div>
+        </td>
+        <td width="24%" style="background:#f7f7f5;border:1px solid #e8e8e5;border-radius:12px;padding:14px 8px;text-align:center;">
+          <div style="font-size:10px;font-weight:600;color:#ababab;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">💳 Spend</div>
+          <div style="font-size:20px;font-weight:700;color:#1a1a1a;letter-spacing:-.5px;font-variant-numeric:tabular-nums;">R$${fmt(data.spendTotal)}</div>
+        </td>
+        <td width="24%" style="background:#f7f7f5;border:1px solid #e8e8e5;border-radius:12px;padding:14px 8px;text-align:center;">
+          <div style="font-size:10px;font-weight:600;color:#ababab;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">🎯 CPA</div>
+          <div style="font-size:20px;font-weight:700;color:#1a1a1a;letter-spacing:-.5px;font-variant-numeric:tabular-nums;">R$${fmt(data.cpaMedio)}</div>
+        </td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- SECTION TITLE -->
+  <div style="background:#fff;border-left:1px solid #e8e8e5;border-right:1px solid #e8e8e5;padding:20px 32px 8px;">
+    <div style="font-size:11px;font-weight:600;color:#ababab;text-transform:uppercase;letter-spacing:.08em;">
+      ◼ Performance por Cliente — Nível de Campanha
+    </div>
+  </div>
+
+  <!-- CLIENTES -->
+  <div style="background:#fff;border-left:1px solid #e8e8e5;border-right:1px solid #e8e8e5;padding:8px 32px 24px;">
+    ${clienteCards}
+  </div>
+
+  ${geminiSection}
+
+  <!-- FOOTER -->
+  <div style="background:#fff;border:1px solid #e8e8e5;border-top:${data.geminiAnalysis ? 'none' : '1px solid #e8e8e5'};border-radius:0 0 16px 16px;padding:24px 32px;text-align:center;">
+    <a href="${APP_URL}" style="display:inline-block;background:#0071e3;color:#fff;border-radius:980px;padding:11px 28px;font-size:14px;font-weight:600;text-decoration:none;">Abrir MTX Dashboard →</a>
+    <div style="font-size:11px;color:#ababab;margin-top:16px;line-height:1.6;">
+      Dados via Meta Ads API · Nível de campanha · Gerado automaticamente<br>
+      MTX Assessoria Estratégica · ${data.dataHora}
+    </div>
+  </div>
+
+</div>
+</div>
+</body>
+</html>`
+}
+
+// ─── MAIN HANDLER ────────────────────────────────────────────
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
@@ -136,35 +306,87 @@ Deno.serve(async (req) => {
     }
 
     const results: { user_id: string; status: string; error?: string }[] = []
+    const periodoLabel = reportType === 'morning' ? 'Relatório Matinal' : reportType === 'midday' ? 'Performance ao Vivo' : 'Fechamento do Dia'
+    const horaLabel = reportType === 'morning' ? 'Dados de ontem (completo)' : reportType === 'midday' ? 'Dados parciais de hoje' : 'Fechamento do dia'
+    const dateStr = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
 
     for (const [userId, clientProfiles] of userProfiles) {
       try {
         const { data: { user } } = await supabase.auth.admin.getUserById(userId)
         if (!user?.email) continue
 
-        const clientReports: ClientReport[] = []
+        const clientDataList: ClientData[] = []
+
         for (const profile of clientProfiles) {
-          const [periodResults, agentData] = await Promise.all([
-            Promise.all(DATE_PRESETS.map(preset => fetchMetaInsights(profile.ad_account_id, profile.meta_access_token!, preset))),
-            fetchAgentData(supabase, profile.id),
-          ])
+          const periodResults = await Promise.all(
+            DATE_PRESETS.map(preset => fetchMetaInsights(profile.ad_account_id, profile.meta_access_token!, preset))
+          )
           if (!periodResults.some(p => p.dataVerified)) {
-            console.warn(`⚠️ SKIP ${profile.name}: No verified data`)
-            continue
+            console.warn(`⚠️ SKIP ${profile.name}: No verified data`); continue
           }
-          clientReports.push({
-            name: profile.name, adAccountId: profile.ad_account_id,
-            cpaMeta: Number(profile.cpa_meta) || 45,
-            periods: { today: periodResults[0], d7: periodResults[1], d15: periodResults[2], d30: periodResults[3] },
-            agent: agentData,
+
+          // Agent actions count
+          let agentActions = 0
+          try {
+            const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+            const { data: logs } = await supabase.from('emergency_logs').select('id').eq('profile_id', profile.id).gte('created_at', since24h)
+            agentActions = logs?.length || 0
+          } catch {}
+
+          const [today, d7, d15, d30] = periodResults
+          const cpaMeta = Number(profile.cpa_meta) || 45
+
+          const metricas: ClientData['metricas'] = {
+            vendas: [today.sales, d7.sales, d15.sales, d30.sales],
+            custoVenda: [r(today.costPerSale), r(d7.costPerSale), r(d15.costPerSale), r(d30.costPerSale)],
+            roi: [r(today.roi), r(d7.roi), r(d15.roi), r(d30.roi)],
+            cpa: [r(today.cpa), r(d7.cpa), r(d15.cpa), r(d30.cpa)],
+            cpm: [r(today.cpm), r(d7.cpm), r(d15.cpm), r(d30.cpm)],
+            ctr: [r(today.ctr), r(d7.ctr), r(d15.ctr), r(d30.ctr)],
+          }
+
+          const alertas = generateAlerts(metricas, cpaMeta, profile.name)
+
+          clientDataList.push({
+            nome: profile.name,
+            accountId: profile.ad_account_id,
+            profileId: profile.id,
+            roi: r(today.roi),
+            cpaMeta,
+            metricas,
+            alertas,
+            agentActions,
           })
         }
 
-        if (!clientReports.length) { results.push({ user_id: userId, status: 'skipped_no_verified_data' }); continue }
+        if (!clientDataList.length) { results.push({ user_id: userId, status: 'skipped_no_verified_data' }); continue }
 
-        const geminiAnalysis = await generateGeminiAnalysis(clientReports, reportType)
+        const geminiAnalysis = await generateGeminiAnalysis(clientDataList, reportType)
+
+        const totalVendas = clientDataList.reduce((s, c) => s + c.metricas.vendas[0], 0)
+        const totalSpend = clientDataList.reduce((s, c) => s + c.metricas.cpa[0] * c.metricas.vendas[0], 0) // approximate from CPA × vendas
+        // Better: sum from raw periods
+        const allPeriods = await Promise.all(clientProfiles.map(async p => {
+          if (!p.meta_access_token || !p.ad_account_id || p.ad_account_id === 'act_') return null
+          return fetchMetaInsights(p.ad_account_id, p.meta_access_token!, 'today')
+        }))
+        const realTotalSpend = allPeriods.reduce((s, p) => s + (p?.spend || 0), 0)
+        const realTotalRevenue = allPeriods.reduce((s, p) => s + (p?.revenue || 0), 0)
+        const avgRoi = realTotalSpend > 0 ? ((realTotalRevenue - realTotalSpend) / realTotalSpend) * 100 : 0
+        const avgCpa = totalVendas > 0 ? realTotalSpend / totalVendas : 0
+
         const subject = getSubject(reportType)
-        const html = buildEmailHtml(clientReports, reportType, user.email, geminiAnalysis)
+        const html = generateEmailHTML({
+          periodo: periodoLabel,
+          horaLabel,
+          dataHora: dateStr,
+          totalVendas,
+          roiMedio: r(avgRoi),
+          spendTotal: r(realTotalSpend),
+          cpaMedio: r(avgCpa),
+          clientes: clientDataList,
+          geminiAnalysis,
+        })
 
         const resendRes = await fetch('https://api.resend.com/emails', {
           method: 'POST',
@@ -182,6 +404,8 @@ Deno.serve(async (req) => {
   }
 })
 
+function r(n: number): number { return Math.round(n * 100) / 100 }
+
 function getSubject(type: string): string {
   switch (type) {
     case 'morning': return '☀️ MTX — Bom dia | Prioridades do dia'
@@ -189,251 +413,4 @@ function getSubject(type: string): string {
     case 'evening': return '🎯 MTX — Fechamento | Resumo + amanhã'
     default: return '📊 MTX — Relatório Diário'
   }
-}
-
-const fmt = (n: number) => n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-const fmtInt = (n: number) => n.toLocaleString('pt-BR')
-const fmtK = (n: number) => Math.abs(n) >= 1000 ? (n / 1000).toFixed(1).replace('.', ',') + 'k' : fmt(n)
-
-function profitColor(v: number): string { return v > 0 ? '#1a7f37' : v < 0 ? '#c0392b' : '#6e6e73' }
-function roiColor(v: number): string { return v > 150 ? '#1a7f37' : v >= 80 ? '#b25c00' : '#c0392b' }
-function cpaColor(v: number, meta: number): string { return meta > 0 && v <= meta ? '#1a7f37' : meta > 0 && v <= meta * 1.3 ? '#b25c00' : '#c0392b' }
-function ctrColor(v: number): string { return v > 2 ? '#1a7f37' : v >= 1 ? '#b25c00' : '#c0392b' }
-function recoveryColor(v: number): string { return v >= 80 ? '#1a7f37' : v >= 50 ? '#b25c00' : '#c0392b' }
-
-function kpiCard(label: string, value: string, color: string, subtitle?: string): string {
-  return `<td style="padding:6px;">
-    <div style="background:#ffffff;border:1px solid #e9e9e7;border-top:1.5px solid rgba(0,0,0,0.10);border-radius:14px;padding:16px 12px;text-align:center;box-shadow:0 4px 12px rgba(0,0,0,0.06);">
-      <div style="font-size:9px;color:#86868b;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:5px;font-weight:500;">${label}</div>
-      <div style="font-size:20px;font-weight:800;color:${color};font-variant-numeric:tabular-nums;line-height:1.2;">${value}</div>
-      ${subtitle ? `<div style="font-size:9px;color:#86868b;margin-top:4px;">${subtitle}</div>` : ''}
-    </div>
-  </td>`
-}
-
-function sectionHeader(number: string, title: string, icon: string, accent: string = '#0071e3'): string {
-  return `
-  <div style="display:flex;align-items:center;margin:28px 0 16px;padding-bottom:10px;border-bottom:1px solid #e9e9e7;">
-    <div style="width:28px;height:28px;border-radius:8px;background:#f5f5f7;border:1px solid #e9e9e7;display:flex;align-items:center;justify-content:center;margin-right:10px;">
-      <span style="font-size:12px;font-weight:800;color:${accent};">${number}</span>
-    </div>
-    <span style="font-size:13px;margin-right:6px;">${icon}</span>
-    <span style="font-size:15px;font-weight:700;color:#1d1d1f;letter-spacing:-0.2px;">${title}</span>
-  </div>`
-}
-
-function periodPanel(label: string, emoji: string, p: PeriodMetrics, cpaMeta: number): string {
-  return `
-  <div style="background:#ffffff;border:1px solid #e9e9e7;border-top:1.5px solid rgba(0,0,0,0.10);border-radius:16px;padding:18px;margin-bottom:12px;box-shadow:0 4px 12px rgba(0,0,0,0.06);">
-    <div style="display:flex;align-items:center;margin-bottom:14px;">
-      <span style="font-size:14px;margin-right:8px;">${emoji}</span>
-      <span style="font-size:13px;font-weight:700;color:#1d1d1f;text-transform:uppercase;letter-spacing:0.5px;">${label}</span>
-      ${p.dataVerified ? '<span style="margin-left:auto;font-size:8px;color:#1a7f37;background:#edfaf1;padding:2px 8px;border-radius:10px;border:1px solid #34c759;">✓ Verificado</span>' : ''}
-    </div>
-    
-    <div style="text-align:center;padding:10px 0 14px;border-bottom:1px solid #e9e9e7;margin-bottom:12px;">
-      <div style="font-size:9px;color:#86868b;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:4px;">Lucro Líquido</div>
-      <div style="font-size:28px;font-weight:900;color:${profitColor(p.profit)};font-variant-numeric:tabular-nums;line-height:1.1;">
-        ${p.profit >= 0 ? '+' : ''}R$ ${fmt(p.profit)}
-      </div>
-      <div style="font-size:10px;color:#86868b;margin-top:4px;">Receita R$ ${fmtK(p.revenue)} − Spend R$ ${fmtK(p.spend)}</div>
-    </div>
-
-    <table width="100%" cellpadding="0" cellspacing="0">
-      <tr>
-        ${kpiCard('Vendas', fmtInt(p.sales), p.sales > 0 ? '#1a7f37' : '#c0392b')}
-        ${kpiCard('ROI', `${fmt(p.roi)}%`, roiColor(p.roi))}
-        ${kpiCard('CPA', `R$${fmt(p.cpa)}`, cpaColor(p.cpa, cpaMeta), cpaMeta > 0 ? `Meta: R$${fmt(cpaMeta)}` : undefined)}
-      </tr>
-      <tr>
-        ${kpiCard('Spend', `R$${fmt(p.spend)}`, '#1d1d1f')}
-        ${kpiCard('CPM', `R$${fmt(p.cpm)}`, '#1d1d1f')}
-        ${kpiCard('CTR', `${fmt(p.ctr)}%`, ctrColor(p.ctr))}
-      </tr>
-    </table>
-  </div>`
-}
-
-function buildAgentSection(agent: AgentData): string {
-  if (agent.totalActions === 0) {
-    return `<div style="background:#ffffff;border:1px solid #e9e9e7;border-radius:14px;padding:12px 14px;margin-bottom:14px;box-shadow:0 2px 8px rgba(0,0,0,0.04);">
-      <p style="color:#86868b;margin:0;font-size:11px;">🤖 Agente Autônomo — Sem ações nas últimas 24h</p>
-    </div>`
-  }
-
-  const lastRun = agent.lastRunAt ? new Date(agent.lastRunAt).toLocaleString('pt-BR', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' }) : '—'
-
-  const actionItems = agent.recentActions.map(a => {
-    const time = new Date(a.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
-    const icon = a.action_type.includes('pause') ? '⏸️' : a.action_type.includes('scale') ? '📈' : a.action_type.includes('reduce') ? '📉' : a.action_type.includes('heal') ? '🔧' : a.action_type.includes('duplicate') ? '📋' : '⚡'
-    const detail = a.details?.campaign_name || a.details?.reason || a.action_type
-    return `<div style="display:flex;align-items:center;padding:5px 0;border-bottom:1px solid #f0f0ee;">
-      <span style="color:#86868b;font-size:10px;min-width:40px;font-variant-numeric:tabular-nums;">${time}</span>
-      <span style="color:#424245;font-size:11px;margin-left:8px;">${icon} ${detail}</span>
-    </div>`
-  }).join('')
-
-  return `
-  <div style="background:#f5f3ff;border:1px solid #e0d6f5;border-top:1.5px solid rgba(124,58,237,0.20);border-radius:16px;padding:18px;margin-bottom:14px;box-shadow:0 4px 12px rgba(0,0,0,0.06);">
-    <div style="margin-bottom:12px;">
-      <span style="font-size:13px;font-weight:700;color:#7c3aed;">🤖 Agente Autônomo</span>
-      <span style="float:right;font-size:9px;color:#86868b;">Última exec: ${lastRun}</span>
-    </div>
-    <table width="100%" cellpadding="0" cellspacing="0">
-      <tr>
-        ${kpiCard('Ações', String(agent.totalActions), '#7c3aed')}
-        ${kpiCard('Pausas', String(agent.pauses), '#c0392b')}
-        ${kpiCard('Escalas', String(agent.scales), '#1a7f37')}
-      </tr>
-      <tr>
-        ${kpiCard('Reduções', String(agent.reduces), '#b25c00')}
-        ${kpiCard('Self-Heal', String(agent.selfHeals), '#0071e3')}
-        ${kpiCard('Recovery', agent.recoveryRate !== null ? `${agent.recoveryRate}%` : 'N/A', agent.recoveryRate !== null ? recoveryColor(agent.recoveryRate) : '#86868b')}
-      </tr>
-    </table>
-    ${actionItems ? `<div style="margin-top:10px;padding-top:8px;border-top:1px solid #e0d6f5;"><div style="font-size:9px;color:#86868b;text-transform:uppercase;letter-spacing:1px;margin-bottom:5px;">Últimas ações</div>${actionItems}</div>` : ''}
-  </div>`
-}
-
-function buildClientBlock(client: ClientReport, index: number): string {
-  const p = client.periods
-  return `
-  <div style="margin-bottom:28px;">
-    <div style="display:flex;align-items:center;padding:14px 0 10px;border-bottom:2px solid #e9e9e7;margin-bottom:14px;">
-      <div style="width:32px;height:32px;border-radius:10px;background:#f5f5f7;border:1px solid #e9e9e7;display:flex;align-items:center;justify-content:center;margin-right:12px;">
-        <span style="font-size:14px;font-weight:800;color:#0071e3;">${index + 1}</span>
-      </div>
-      <div>
-        <h2 style="color:#1d1d1f;margin:0;font-size:18px;font-weight:800;letter-spacing:-0.3px;">${client.name}</h2>
-        <p style="color:#86868b;margin:2px 0 0;font-size:10px;letter-spacing:0.3px;">${client.adAccountId} · CPA Meta: R$ ${fmt(client.cpaMeta)}</p>
-      </div>
-    </div>
-
-    ${periodPanel('Hoje', '📅', p.today, client.cpaMeta)}
-    ${periodPanel('7 Dias', '📊', p.d7, client.cpaMeta)}
-    ${periodPanel('15 Dias', '📈', p.d15, client.cpaMeta)}
-    ${periodPanel('30 Dias', '🗓️', p.d30, client.cpaMeta)}
-    ${buildAgentSection(client.agent)}
-  </div>`
-}
-
-function buildEmailHtml(clients: ClientReport[], type: string, email: string, geminiAnalysis: string): string {
-  const greeting = type === 'morning' ? '☀️ Bom dia' : type === 'midday' ? '📊 Meio-dia' : '🎯 Fechamento'
-  const subtitle = type === 'morning' ? 'Dados de ontem (fechamento completo)' : type === 'midday' ? 'Dados parciais de hoje' : 'Fechamento do dia'
-  const dateStr = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
-  const timeStr = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })
-
-  const clientBlocks = clients.map((c, i) => buildClientBlock(c, i)).join('')
-
-  const totalSales = clients.reduce((s, c) => s + c.periods.today.sales, 0)
-  const totalSpend = clients.reduce((s, c) => s + c.periods.today.spend, 0)
-  const totalRevenue = clients.reduce((s, c) => s + c.periods.today.revenue, 0)
-  const totalProfit = totalRevenue - totalSpend
-  const avgRoi = totalSpend > 0 ? ((totalRevenue - totalSpend) / totalSpend) * 100 : 0
-  const totalAgentActions = clients.reduce((s, c) => s + c.agent.totalActions, 0)
-
-  return `<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MTX Command Center — Relatório</title>
-</head>
-<body style="margin:0;padding:0;background:#f7f7f5;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;-webkit-font-smoothing:antialiased;color:#1d1d1f;">
-<div style="max-width:640px;margin:0 auto;background:#f7f7f5;">
-
-  <!-- ═══ HEADER ═══ -->
-  <div style="background:#ffffff;padding:36px 24px 28px;text-align:center;border-bottom:1px solid #e9e9e7;">
-    
-    <div style="margin-bottom:16px;">
-      <div style="display:inline-block;width:48px;height:48px;border-radius:14px;background:linear-gradient(135deg,#ff3b30,#ff6b35);box-shadow:0 4px 12px rgba(255,59,48,0.20);line-height:48px;">
-        <span style="font-size:20px;font-weight:900;color:#fff;letter-spacing:-1px;">M</span>
-      </div>
-    </div>
-
-    <div style="display:inline-block;background:#fff0ef;border:1px solid #ffccc7;border-radius:980px;padding:3px 14px;margin-bottom:10px;">
-      <span style="font-size:10px;color:#c0392b;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;">MTX Command Center</span>
-    </div>
-
-    <h1 style="color:#1d1d1f;margin:8px 0 0;font-size:26px;font-weight:900;letter-spacing:-0.5px;line-height:1.2;">
-      ${greeting}
-    </h1>
-    <p style="color:#6e6e73;margin:6px 0 0;font-size:13px;font-weight:400;">${subtitle}</p>
-    <p style="color:#86868b;margin:4px 0 0;font-size:11px;">${dateStr} · ${timeStr} BRT</p>
-  </div>
-
-  <div style="padding:24px;">
-
-    <!-- ═══ SEÇÃO 1: RESUMO CONSOLIDADO ═══ -->
-    ${sectionHeader('1', 'Resumo Consolidado', '📊')}
-    
-    <div style="background:#ffffff;border:1px solid #e9e9e7;border-top:1.5px solid rgba(0,0,0,0.10);border-radius:18px;padding:22px;margin-bottom:8px;box-shadow:0 4px 12px rgba(0,0,0,0.06);">
-      
-      <div style="text-align:center;margin-bottom:18px;padding-bottom:16px;border-bottom:1px solid #e9e9e7;">
-        <div style="font-size:9px;color:#86868b;text-transform:uppercase;letter-spacing:2px;margin-bottom:4px;">Lucro Líquido Total (Hoje)</div>
-        <div style="font-size:38px;font-weight:900;color:${profitColor(totalProfit)};font-variant-numeric:tabular-nums;line-height:1.1;">
-          ${totalProfit >= 0 ? '+' : ''}R$ ${fmt(totalProfit)}
-        </div>
-      </div>
-
-      <table width="100%" cellpadding="0" cellspacing="0">
-        <tr>
-          ${kpiCard('Vendas Totais', fmtInt(totalSales), totalSales > 0 ? '#1a7f37' : '#c0392b')}
-          ${kpiCard('Investimento', `R$${fmt(totalSpend)}`, '#1d1d1f')}
-          ${kpiCard('ROI Médio', `${fmt(avgRoi)}%`, roiColor(avgRoi))}
-        </tr>
-      </table>
-
-      ${totalAgentActions > 0 ? `
-      <div style="text-align:center;margin-top:12px;padding-top:10px;border-top:1px solid #e9e9e7;">
-        <span style="font-size:10px;color:#7c3aed;background:#f5f3ff;padding:3px 10px;border-radius:10px;border:1px solid #e0d6f5;">🤖 ${totalAgentActions} ações do agente (24h)</span>
-      </div>` : ''}
-    </div>
-
-    <!-- ═══ SEÇÃO 2: PERFORMANCE POR CLIENTE ═══ -->
-    ${sectionHeader('2', 'Performance por Cliente', '🏢')}
-    ${clientBlocks}
-
-    <!-- ═══ SEÇÃO 3: ANÁLISE ESTRATÉGICA IA ═══ -->
-    ${sectionHeader('3', 'Análise Estratégica', '🤖', '#7c3aed')}
-    
-    <div style="background:#f5f3ff;border:1px solid #e0d6f5;border-top:1.5px solid rgba(124,58,237,0.20);border-radius:18px;padding:22px;box-shadow:0 4px 12px rgba(0,0,0,0.06);">
-      <div style="display:flex;align-items:center;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid #e0d6f5;">
-        <div style="width:28px;height:28px;border-radius:8px;background:rgba(124,58,237,0.10);display:flex;align-items:center;justify-content:center;margin-right:10px;">
-          <span style="font-size:14px;">🧠</span>
-        </div>
-        <div>
-          <div style="font-size:13px;font-weight:700;color:#7c3aed;">Diagnóstico Técnico</div>
-          <div style="font-size:9px;color:#86868b;">Gemini 2.5 Flash · Dados verificados · ${clients.length} cliente(s)</div>
-        </div>
-      </div>
-      <div style="color:#424245;font-size:12px;line-height:1.85;">
-        ${geminiAnalysis.replace(/\\*\\*(.*?)\\*\\*/g, '<strong style="color:#5b21b6;">$1</strong>').replace(/\\n/g, '<br>')}
-      </div>
-    </div>
-  </div>
-
-  <!-- ═══ FOOTER ═══ -->
-  <div style="background:#ffffff;padding:28px 24px 36px;text-align:center;border-top:1px solid #e9e9e7;">
-    
-    <a href="https://mtx-roi-command.lovable.app" style="display:inline-block;background:#0071e3;color:#ffffff;text-decoration:none;padding:12px 28px;border-radius:980px;font-weight:600;font-size:13px;letter-spacing:0.2px;box-shadow:0 4px 12px rgba(0,113,227,0.20);">
-      Abrir MTX Command Center →
-    </a>
-
-    <div style="width:60px;height:1px;background:#e9e9e7;margin:20px auto;"></div>
-
-    <div>
-      <p style="color:#1d1d1f;font-size:10px;margin:0 0 4px;font-weight:600;text-transform:uppercase;letter-spacing:1px;">MTX Agência Criativa</p>
-      <p style="color:#86868b;font-size:10px;margin:0 0 2px;">mtxagenciacriativa@gmail.com</p>
-      <p style="color:#aeaeb2;font-size:9px;margin:8px 0 0;line-height:1.5;">
-        Relatório automático · ${clients.length} cliente(s) · Dados verificados via Meta API<br>
-        Emitido em ${dateStr} às ${timeStr} BRT<br>
-        Destinatário: ${email}
-      </p>
-    </div>
-  </div>
-
-</div>
-</body>
-</html>`
 }
