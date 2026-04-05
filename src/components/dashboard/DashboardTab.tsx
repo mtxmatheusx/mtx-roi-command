@@ -51,6 +51,7 @@ interface DashboardTabProps {
   deltaCTR: number | null;
   deltaTM: number | null;
   logs: LogEntry[];
+  demographics?: any;
   sectionVisible?: (id: string) => boolean;
 }
 
@@ -84,7 +85,7 @@ export default function DashboardTab(props: DashboardTabProps) {
     dataVerified, fetchedAt, budgetMaximo, budgetFrequency, cpaMeta,
     totalSpend, totalRevenue, totalProfit, totalPurchases, avgCPA, roas, avgCPM, avgCTR, calcTicketMedio,
     deltaProfit, deltaSpend, deltaCPA, deltaROAS, deltaPurchases, deltaCPM, deltaCTR, deltaTM, logs,
-    sectionVisible,
+    demographics, sectionVisible,
   } = props;
 
   const show = (id: string) => !sectionVisible || sectionVisible(id);
@@ -288,7 +289,7 @@ export default function DashboardTab(props: DashboardTabProps) {
           </motion.div>}
 
           {/* Demographics */}
-          {show("demographics") && <DemographicsChart />}
+          {show("demographics") && <DemographicsChart data={demographics} />}
 
           {/* UTM Analysis */}
           {show("utm") && <UTMAnalysis />}

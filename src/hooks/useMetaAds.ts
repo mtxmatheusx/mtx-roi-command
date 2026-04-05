@@ -310,6 +310,7 @@ export function useMetaAds(dateRange?: DateRange, profileConfig?: { adAccountId?
         daily: daily.length ? daily : generateMockDaily(),
         previous: data?.previous || null,
         creatives,
+        demographics: data?.demographics || null,
         fetchedAt: resultFetchedAt,
         dataVerified: resultVerified,
         isCached: false,
@@ -339,7 +340,7 @@ export function useMetaAds(dateRange?: DateRange, profileConfig?: { adAccountId?
     if (query.data?.isCached !== undefined) setIsCached(query.data.isCached);
   }, [query.data?.fetchedAt, query.data?.dataVerified, query.data?.isCached]);
 
-  const result = query.data ?? { campaigns: mockCampaigns, daily: generateMockDaily(), previous: mockPrevious, creatives: [] as MetaCreative[], fetchedAt: null, dataVerified: false, isCached: false };
+  const result = query.data ?? { campaigns: mockCampaigns, daily: generateMockDaily(), previous: mockPrevious, creatives: [] as MetaCreative[], demographics: null, fetchedAt: null, dataVerified: false, isCached: false };
   const isUsingMock = !adAccountId || adAccountId === "act_" || (!!query.error && !isCached);
 
   const forceRefetch = useCallback(() => {
@@ -351,6 +352,7 @@ export function useMetaAds(dateRange?: DateRange, profileConfig?: { adAccountId?
     daily: result.daily,
     previous: result.previous,
     creatives: result.creatives,
+    demographics: result.demographics,
     isLoading: query.isLoading,
     isError: query.isError,
     error: query.error,

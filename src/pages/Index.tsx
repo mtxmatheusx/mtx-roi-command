@@ -42,7 +42,7 @@ export default function Dashboard() {
   const { toast } = useToast();
   const [dateRange, setDateRange] = useState<DateRange>(defaultRange);
   const { adAccountId, cpaMeta, ticketMedio, budgetMaximo, budgetFrequency, activeProfile, metaAccessToken, apiBaseUrl } = useClientProfiles();
-  const { campaigns, daily, previous, isLoading, isUsingMock, forceRefetch, fetchedAt, dataVerified, isRateLimited, isPermissionError, isTokenExpired, isCached } = useMetaAds(dateRange, { adAccountId, cpaMeta, ticketMedio, accessToken: metaAccessToken });
+  const { campaigns, daily, previous, demographics, isLoading, isUsingMock, forceRefetch, fetchedAt, dataVerified, isRateLimited, isPermissionError, isTokenExpired, isCached } = useMetaAds(dateRange, { adAccountId, cpaMeta, ticketMedio, accessToken: metaAccessToken });
 
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -207,6 +207,7 @@ export default function Dashboard() {
             deltaCTR={deltaCTR}
             deltaTM={deltaTM}
             logs={logs}
+            demographics={demographics}
             sectionVisible={isVisible}
           />
         </TabsContent>

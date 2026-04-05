@@ -396,8 +396,59 @@ Deno.serve(async (req) => {
       }
     }
 
+    // ── Demographics breakdowns ──
+    let demographics: { age: unknown[]; gender: unknown[]; region: unknown[] } | null = null;
+    try {
+      const demoDateOpts = useDateRange
+        ? `&time_range={"since":"${since}","until":"${until}"}`
+        : `&date_preset=${datePreset || "last_7d"}`;
+
+      const [ageRes, genderRes, regionRes] = await Promise.all([
+        fetch(`https://graph.facebook.com/v21.0/${adAccountId}/insights?fields=spend,impressions,actions,action_values&breakdowns=age&level=account${demoDateOpts}&access_token=${accessToken}`),
+        fetch(`https://graph.facebook.com/v21.0/${adAccountId}/insights?fields=spend,impressions,actions,action_values&breakdowns=gender&level=account${demoDateOpts}&access_token=${accessToken}`),
+        fetch(`https://graph.facebook.com/v21.0/${adAccountId}/insights?fields=spend,actions,action_values&breakdowns=region&level=account${demoDateOpts}&limit=20&access_token=${accessToken}`),
+      ]);
+
+      const [ageData, genderData, regionData] = await Promise.all([
+        ageRes.json(), genderRes.json(), regionRes.json(),
+      ]);
+
+      const parseDemoRow = (row: Record<string, unknown>) => {
+        const actions = (row?.actions as Array<{ action_type: string; value: string }>) || [];
+        const actionValues = (row?.action_values as Array<{ action_type: string; value: string }>) || [];
+        return {
+          spend: Number(row?.spend || 0),
+          impressions: Number(row?.impressions || 0),
+          purchases: Number(actions.find((a) => a?.action_type === "purchase")?.value || 0),
+          revenue: Number(actionValues.find((a) => a?.action_type === "purchase")?.value || 0),
+        };
+      };
+
+      const GENDER_LABELS: Record<string, string> = { male: "Masculino", female: "Feminino", unknown: "Desconhecido" };
+
+      demographics = {
+        age: (ageData?.data || []).map((r: Record<string, unknown>) => ({
+          range: r?.age || "?",
+          ...parseDemoRow(r),
+        })),
+        gender: (genderData?.data || []).map((r: Record<string, unknown>) => ({
+          label: GENDER_LABELS[(r?.gender as string) || "unknown"] || String(r?.gender || "?"),
+          ...parseDemoRow(r),
+        })),
+        region: (regionData?.data || [])
+          .map((r: Record<string, unknown>) => ({
+            name: r?.region || "?",
+            ...parseDemoRow(r),
+          }))
+          .sort((a: { spend: number }, b: { spend: number }) => b.spend - a.spend)
+          .slice(0, 10),
+      };
+    } catch {
+      // Demographics fetch failed — continue without
+    }
+
     return new Response(
-      JSON.stringify({ campaigns, daily, previous, creatives, dataVerified, total: campaigns.length, fetchedAt: new Date().toISOString() }),
+      JSON.stringify({ campaigns, daily, previous, creatives, demographics, dataVerified, total: campaigns.length, fetchedAt: new Date().toISOString() }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
