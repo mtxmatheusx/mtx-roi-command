@@ -12,9 +12,10 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { subDays, format } from "date-fns";
+import FunnelVisualization from "@/components/FunnelVisualization";
 
 const defaultRange: DateRange = {
-  since: format(subDays(new Date(), 6), "yyyy-MM-dd"),
+  since: format(subDays(new Date(), 27), "yyyy-MM-dd"),
   until: format(new Date(), "yyyy-MM-dd"),
 };
 
@@ -87,6 +88,10 @@ export default function CampanhasPage() {
         <>
           {viewLevel === "campaigns" && (
             <>
+              {/* Visual Funnel */}
+              <FunnelVisualization campaigns={campaigns} />
+
+              <div className="mt-8" />
               <CampaignsTable campaigns={campaigns} />
 
               {/* Full funnel detail table */}

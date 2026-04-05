@@ -19,6 +19,8 @@ import CampaignManagerTab from "@/components/dashboard/CampaignManagerTab";
 import FollowerGrowthTab from "@/components/dashboard/FollowerGrowthTab";
 import { DollarSign, TrendingUp, Target, BarChart3, Loader2, AlertTriangle, RefreshCw, Eye, MousePointerClick, ShoppingBag, ShieldCheck, OctagonAlert, Activity, Briefcase, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import DashboardCustomizer from "@/components/DashboardCustomizer";
+import { useDashboardPrefs } from "@/hooks/useDashboardPrefs";
 
 interface LogEntry {
   time: string;
@@ -27,7 +29,7 @@ interface LogEntry {
 }
 
 const defaultRange: DateRange = {
-  since: format(subDays(new Date(), 6), "yyyy-MM-dd"),
+  since: format(subDays(new Date(), 27), "yyyy-MM-dd"),
   until: format(new Date(), "yyyy-MM-dd"),
 };
 
@@ -45,6 +47,7 @@ export default function Dashboard() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [activeTab, setActiveTab] = useState("dashboard");
   const [apiConfigured, setApiConfigured] = useState(false);
+  const { isVisible } = useDashboardPrefs();
 
   // Initialize external API connection on load
   useEffect(() => {
@@ -147,6 +150,7 @@ export default function Dashboard() {
             <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
             Forçar Atualização
           </Button>
+          <DashboardCustomizer />
         </div>
       </div>
 
@@ -203,6 +207,7 @@ export default function Dashboard() {
             deltaCTR={deltaCTR}
             deltaTM={deltaTM}
             logs={logs}
+            sectionVisible={isVisible}
           />
         </TabsContent>
 

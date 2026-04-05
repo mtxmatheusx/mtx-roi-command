@@ -9,6 +9,8 @@ import { DashboardSkeleton } from "@/components/dashboard/DashboardSkeleton";
 import { Progress } from "@/components/ui/progress";
 import { useTokenHealth } from "@/hooks/useTokenHealth";
 import { DollarSign, TrendingUp, Target, BarChart3, AlertTriangle, Eye, MousePointerClick, ShoppingBag, ShieldCheck, OctagonAlert, Activity, X, KeyRound } from "lucide-react";
+import DemographicsChart from "@/components/DemographicsChart";
+import UTMAnalysis from "@/components/UTMAnalysis";
 
 interface LogEntry {
   time: string;
@@ -49,6 +51,7 @@ interface DashboardTabProps {
   deltaCTR: number | null;
   deltaTM: number | null;
   logs: LogEntry[];
+  sectionVisible?: (id: string) => boolean;
 }
 
 const AlertBanner = ({ children, variant = "warning", onDismiss }: { children: React.ReactNode; variant?: "warning" | "info" | "error"; onDismiss?: () => void }) => {
@@ -81,7 +84,10 @@ export default function DashboardTab(props: DashboardTabProps) {
     dataVerified, fetchedAt, budgetMaximo, budgetFrequency, cpaMeta,
     totalSpend, totalRevenue, totalProfit, totalPurchases, avgCPA, roas, avgCPM, avgCTR, calcTicketMedio,
     deltaProfit, deltaSpend, deltaCPA, deltaROAS, deltaPurchases, deltaCPM, deltaCTR, deltaTM, logs,
+    sectionVisible,
   } = props;
+
+  const show = (id: string) => !sectionVisible || sectionVisible(id);
 
   const { alerts: tokenAlerts } = useTokenHealth();
   const [dismissed, setDismissed] = useState<Record<string, boolean>>({});
@@ -222,25 +228,27 @@ export default function DashboardTab(props: DashboardTabProps) {
           </motion.div>
 
           {/* Primary KPIs */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-            <MetricCard title="Investimento" value={formatCurrency(totalSpend)} icon={<DollarSign className="w-4 h-4" />} delta={deltaSpend} invertDelta index={0} />
-            <MetricCard title="CPA" value={formatCurrency(avgCPA)} subtitle={`Meta: ${formatCurrency(cpaMeta)}`} variant={avgCPA > cpaMeta * 1.2 ? "danger" : "default"} icon={<Target className="w-4 h-4" />} delta={deltaCPA} invertDelta index={1} />
-            <MetricCard title="ROAS" value={`${roas.toFixed(2)}x`} variant={roas > 3 ? "profit" : "default"} icon={<TrendingUp className="w-4 h-4" />} delta={deltaROAS} index={2} />
-            <MetricCard title="Compras" value={String(totalPurchases)} icon={<BarChart3 className="w-4 h-4" />} delta={deltaPurchases} index={3} />
-          </div>
-
-          {/* Secondary KPIs */}
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
-            <MetricCard title="CPM" value={formatCurrency(avgCPM)} icon={<Eye className="w-4 h-4" />} delta={deltaCPM} invertDelta index={4} />
-            <MetricCard title="CTR" value={`${avgCTR.toFixed(2)}%`} variant={avgCTR < 1 ? "danger" : "default"} icon={<MousePointerClick className="w-4 h-4" />} delta={deltaCTR} index={5} />
-            <MetricCard title="Ticket Médio" value={formatCurrency(calcTicketMedio)} icon={<ShoppingBag className="w-4 h-4" />} delta={deltaTM} index={6} />
-          </div>
+          {show("kpis") && (
+            <>
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                <MetricCard title="Investimento" value={formatCurrency(totalSpend)} icon={<DollarSign className="w-4 h-4" />} delta={deltaSpend} invertDelta index={0} />
+                <MetricCard title="CPA" value={formatCurrency(avgCPA)} subtitle={`Meta: ${formatCurrency(cpaMeta)}`} variant={avgCPA > cpaMeta * 1.2 ? "danger" : "default"} icon={<Target className="w-4 h-4" />} delta={deltaCPA} invertDelta index={1} />
+                <MetricCard title="ROAS" value={`${roas.toFixed(2)}x`} variant={roas > 3 ? "profit" : "default"} icon={<TrendingUp className="w-4 h-4" />} delta={deltaROAS} index={2} />
+                <MetricCard title="Compras" value={String(totalPurchases)} icon={<BarChart3 className="w-4 h-4" />} delta={deltaPurchases} index={3} />
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
+                <MetricCard title="CPM" value={formatCurrency(avgCPM)} icon={<Eye className="w-4 h-4" />} delta={deltaCPM} invertDelta index={4} />
+                <MetricCard title="CTR" value={`${avgCTR.toFixed(2)}%`} variant={avgCTR < 1 ? "danger" : "default"} icon={<MousePointerClick className="w-4 h-4" />} delta={deltaCTR} index={5} />
+                <MetricCard title="Ticket Médio" value={formatCurrency(calcTicketMedio)} icon={<ShoppingBag className="w-4 h-4" />} delta={deltaTM} index={6} />
+              </div>
+            </>
+          )}
 
           {/* Charts */}
-          <DashboardCharts daily={daily} cpaMeta={cpaMeta} />
+          {show("charts") && <DashboardCharts daily={daily} cpaMeta={cpaMeta} />}
 
           {/* Campaigns Table */}
-          <CampaignsTable campaigns={campaigns} disableScale={(() => {
+          {show("campaigns") && <CampaignsTable campaigns={campaigns} disableScale={(() => {
             if (budgetMaximo <= 0) return false;
             const today = new Date().toISOString().slice(0, 10);
             const thisMonth = today.slice(0, 7);
@@ -251,10 +259,10 @@ export default function DashboardTab(props: DashboardTabProps) {
               else sp = daily.filter((d: any) => d.date.startsWith(thisMonth)).reduce((s: number, d: any) => s + d.spend, 0);
             }
             return sp >= budgetMaximo;
-          })()} />
+          })()} />}
 
           {/* Automation Log */}
-          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
+          {show("logs") && <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
             className="rounded-2xl overflow-hidden bg-white/[0.78] backdrop-blur-[20px] backdrop-saturate-[160%] border border-white/70 [border-top-color:rgba(255,255,255,0.92)] shadow-[inset_0_1px_0_rgba(255,255,255,0.80),0_4px_12px_rgba(0,0,0,0.06)] dark:bg-[rgba(30,30,30,0.80)] dark:border-white/[0.08]">
               <div className="px-6 py-4 border-b border-border flex items-center gap-2.5">
                 <div className="w-6 h-6 rounded-md bg-[hsl(var(--green-bg))] flex items-center justify-center">
@@ -277,7 +285,13 @@ export default function DashboardTab(props: DashboardTabProps) {
                   </div>
                 )}
               </div>
-          </motion.div>
+          </motion.div>}
+
+          {/* Demographics */}
+          {show("demographics") && <DemographicsChart />}
+
+          {/* UTM Analysis */}
+          {show("utm") && <UTMAnalysis />}
 
           {/* Data Verified */}
           {!isUsingMock && dataVerified && (
