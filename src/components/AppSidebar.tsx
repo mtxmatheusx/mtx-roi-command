@@ -125,9 +125,6 @@ const NAV: NavGroup[] = [
     items: [
       { to: "/feedback-copy", icon: MessageSquare, label: "Feedbacks de Copy" },
       { to: "/brand-identity", icon: Palette, label: "Briefing & ID Visual" },
-      { to: "/feed-preview", icon: Grid3X3, label: "Preview do Feed" },
-      { to: "/google-drive", icon: FolderPlus, label: "Pastas Google Drive" },
-      { to: "/kanban", icon: KanbanSquare, label: "Quadro de Tarefas" },
       { to: "/skills", icon: Brain, label: "Skills Hub" },
     ],
   },
