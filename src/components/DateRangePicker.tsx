@@ -120,6 +120,10 @@ export default function DateRangePicker({ value, onChange }: DateRangePickerProp
             numberOfMonths={isMobile ? 1 : 2}
             locale={ptBR}
             disabled={(date) => date > new Date()}
+            captionLayout="dropdown"
+            startMonth={new Date(2020, 0)}
+            endMonth={new Date()}
+            defaultMonth={selectedRange?.from || new Date()}
             className={cn("pointer-events-auto")}
           />
         </PopoverContent>
