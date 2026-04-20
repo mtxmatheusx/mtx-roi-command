@@ -72,18 +72,37 @@ export default function DateRangePicker({ value, onChange }: DateRangePickerProp
     }
   }, [isMobile, open]);
 
-  const selectedRange: RangeValue | undefined = value
+  // Local pending state to track partial selection (only `from` chosen, awaiting `to`)
+  const [pendingFrom, setPendingFrom] = useState<Date | null>(null);
+
+  const selectedRange: RangeValue | undefined = pendingFrom
+    ? { from: pendingFrom, to: undefined }
+    : value
     ? { from: new Date(value.since + "T00:00:00"), to: new Date(value.until + "T00:00:00") }
     : undefined;
 
   const handleSelect = (range: RangeValue) => {
-    if (range?.from) {
+    if (range?.from && !range.to) {
+      // First click — keep partial selection locally without committing
+      setPendingFrom(range.from);
+      return;
+    }
+    if (range?.from && range.to) {
+      setPendingFrom(null);
       onChange({
         since: fmt(startOfDay(range.from)),
-        until: fmt(startOfDay(range.to || range.from)),
+        until: fmt(startOfDay(range.to)),
       });
     }
   };
+
+  // Clear pending state when popover closes or when external value changes via presets
+  useEffect(() => {
+    if (!open) setPendingFrom(null);
+  }, [open]);
+  useEffect(() => {
+    setPendingFrom(null);
+  }, [value?.since, value?.until]);
 
   const activeInlineLabel = value
     ? inlineShortcuts.find((s) => {
