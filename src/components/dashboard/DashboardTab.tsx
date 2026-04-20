@@ -53,6 +53,7 @@ interface DashboardTabProps {
   logs: LogEntry[];
   demographics?: any;
   sectionVisible?: (id: string) => boolean;
+  dateRange?: { since: string; until: string };
 }
 
 const AlertBanner = ({ children, variant = "warning", onDismiss }: { children: React.ReactNode; variant?: "warning" | "info" | "error"; onDismiss?: () => void }) => {
@@ -85,7 +86,7 @@ export default function DashboardTab(props: DashboardTabProps) {
     dataVerified, fetchedAt, budgetMaximo, budgetFrequency, cpaMeta,
     totalSpend, totalRevenue, totalProfit, totalPurchases, avgCPA, roas, avgCPM, avgCTR, calcTicketMedio,
     deltaProfit, deltaSpend, deltaCPA, deltaROAS, deltaPurchases, deltaCPM, deltaCTR, deltaTM, logs,
-    demographics, sectionVisible,
+    demographics, sectionVisible, dateRange,
   } = props;
 
   const show = (id: string) => !sectionVisible || sectionVisible(id);
@@ -292,7 +293,7 @@ export default function DashboardTab(props: DashboardTabProps) {
           {show("demographics") && <DemographicsChart data={demographics} />}
 
           {/* UTM Analysis */}
-          {show("utm") && <UTMAnalysis />}
+          {show("utm") && <UTMAnalysis dateRange={dateRange} />}
 
           {/* Data Verified */}
           {!isUsingMock && dataVerified && (
