@@ -65,7 +65,7 @@ export default function DateRangePicker({ value, onChange }: DateRangePickerProp
 
   return (
     <div className="flex items-center gap-2 flex-wrap">
-      <div className="flex items-center gap-0.5 p-1 rounded-full bg-muted/40 border border-border/50 backdrop-blur-sm overflow-x-auto max-w-full">
+      <div className="flex flex-wrap items-center gap-1 p-1 rounded-2xl sm:rounded-full bg-muted/40 border border-border/50 backdrop-blur-sm">
         {shortcuts.map((s) => (
           <Button
             key={s.label}
