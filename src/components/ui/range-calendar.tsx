@@ -321,14 +321,14 @@ export function RangeCalendar({
   return (
     <div className="px-3 sm:px-4 py-3 select-none w-full min-w-0 relative">
       {/* Header */}
-      <div className="flex items-center justify-between gap-2 mb-2">
+      <div className="flex items-center justify-between gap-2 mb-3">
         <button
           type="button"
           onClick={() => handleNav(-1)}
-          className="inline-flex items-center justify-center h-11 w-11 sm:h-7 sm:w-7 rounded-md text-muted-foreground/60 hover:text-foreground hover:bg-muted transition-all duration-150 shrink-0 touch-manipulation"
+          className="inline-flex items-center justify-center h-8 w-8 rounded-md text-muted-foreground/60 hover:text-foreground hover:bg-muted transition-colors shrink-0 touch-manipulation"
           aria-label="Mês anterior"
         >
-          <ChevronLeft className="h-4 w-4 sm:h-3.5 sm:w-3.5" strokeWidth={2.25} />
+          <ChevronLeft className="h-4 w-4" strokeWidth={2} />
         </button>
 
         <div
@@ -342,7 +342,7 @@ export function RangeCalendar({
               onClick={() => idx === 0 && setShowMonthPicker(true)}
               disabled={idx !== 0}
               className={cn(
-                "text-center text-[clamp(0.8125rem,2.4vw,0.875rem)] font-medium tracking-tight text-foreground capitalize truncate px-1 py-1 rounded-md transition-colors",
+                "text-center text-[13px] sm:text-sm font-semibold tracking-tight text-foreground capitalize truncate px-2 py-1 rounded-md transition-colors",
                 idx === 0 && "hover:bg-muted/60 cursor-pointer",
                 idx !== 0 && "cursor-default"
               )}
@@ -355,20 +355,18 @@ export function RangeCalendar({
         <button
           type="button"
           onClick={() => handleNav(1)}
-          className="inline-flex items-center justify-center h-11 w-11 sm:h-7 sm:w-7 rounded-md text-muted-foreground/60 hover:text-foreground hover:bg-muted transition-all duration-150 shrink-0 touch-manipulation"
+          className="inline-flex items-center justify-center h-8 w-8 rounded-md text-muted-foreground/60 hover:text-foreground hover:bg-muted transition-colors shrink-0 touch-manipulation"
           aria-label="Próximo mês"
         >
-          <ChevronRight className="h-4 w-4 sm:h-3.5 sm:w-3.5" strokeWidth={2.25} />
+          <ChevronRight className="h-4 w-4" strokeWidth={2} />
         </button>
       </div>
-
-      <div className="h-px bg-border/40 -mx-3 sm:-mx-4 mb-3" />
 
       {/* Months grid (with subtle scale-down when month picker open) */}
       <motion.div
         animate={{ scale: showMonthPicker ? 0.95 : 1, opacity: showMonthPicker ? 0.4 : 1 }}
         transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
-        className="flex flex-col md:flex-row gap-6 w-full min-w-0"
+        className="flex flex-col md:flex-row gap-4 md:gap-6 w-full min-w-0"
       >
         {months.map((m) => (
           <MonthGrid
