@@ -470,6 +470,69 @@ export type Database = {
           },
         ]
       }
+      ecommerce_connections: {
+        Row: {
+          access_token: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          last_sync_error: string | null
+          last_sync_status: string | null
+          last_synced_at: string | null
+          orders_synced: number
+          platform: string
+          profile_id: string
+          refresh_token: string | null
+          scope: string | null
+          store_id: string | null
+          store_name: string | null
+          store_url: string | null
+          token_expires_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_token?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          last_sync_error?: string | null
+          last_sync_status?: string | null
+          last_synced_at?: string | null
+          orders_synced?: number
+          platform?: string
+          profile_id: string
+          refresh_token?: string | null
+          scope?: string | null
+          store_id?: string | null
+          store_name?: string | null
+          store_url?: string | null
+          token_expires_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_token?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          last_sync_error?: string | null
+          last_sync_status?: string | null
+          last_synced_at?: string | null
+          orders_synced?: number
+          platform?: string
+          profile_id?: string
+          refresh_token?: string | null
+          scope?: string | null
+          store_id?: string | null
+          store_name?: string | null
+          store_url?: string | null
+          token_expires_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       emergency_logs: {
         Row: {
           action_type: string
@@ -915,6 +978,89 @@ export type Database = {
             columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "client_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      utm_sales: {
+        Row: {
+          connection_id: string
+          created_at: string
+          currency: string
+          customer_email: string | null
+          external_order_id: string
+          id: string
+          landing_page: string | null
+          order_number: string | null
+          order_status: string | null
+          ordered_at: string
+          platform: string
+          profile_id: string
+          raw_payload: Json | null
+          referrer: string | null
+          total_amount: number
+          updated_at: string
+          user_id: string
+          utm_campaign: string | null
+          utm_content: string | null
+          utm_medium: string | null
+          utm_source: string | null
+          utm_term: string | null
+        }
+        Insert: {
+          connection_id: string
+          created_at?: string
+          currency?: string
+          customer_email?: string | null
+          external_order_id: string
+          id?: string
+          landing_page?: string | null
+          order_number?: string | null
+          order_status?: string | null
+          ordered_at: string
+          platform?: string
+          profile_id: string
+          raw_payload?: Json | null
+          referrer?: string | null
+          total_amount?: number
+          updated_at?: string
+          user_id: string
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+        }
+        Update: {
+          connection_id?: string
+          created_at?: string
+          currency?: string
+          customer_email?: string | null
+          external_order_id?: string
+          id?: string
+          landing_page?: string | null
+          order_number?: string | null
+          order_status?: string | null
+          ordered_at?: string
+          platform?: string
+          profile_id?: string
+          raw_payload?: Json | null
+          referrer?: string | null
+          total_amount?: number
+          updated_at?: string
+          user_id?: string
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "utm_sales_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "ecommerce_connections"
             referencedColumns: ["id"]
           },
         ]
