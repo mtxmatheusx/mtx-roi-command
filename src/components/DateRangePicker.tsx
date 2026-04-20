@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { format, subDays, startOfMonth, startOfDay } from "date-fns";
+import { format, subDays, startOfMonth, startOfDay, endOfMonth, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { CalendarIcon } from "lucide-react";
 import { DateRange as DayPickerRange } from "react-day-picker";
@@ -16,7 +16,7 @@ interface DateRangePickerProps {
 
 const fmt = (d: Date) => format(d, "yyyy-MM-dd");
 
-const shortcuts = [
+const inlineShortcuts = [
   { label: "Hoje", range: () => ({ since: fmt(new Date()), until: fmt(new Date()) }) },
   { label: "Ontem", range: () => { const y = subDays(new Date(), 1); return { since: fmt(y), until: fmt(y) }; } },
   { label: "7 dias", range: () => ({ since: fmt(subDays(new Date(), 6)), until: fmt(new Date()) }) },
@@ -26,6 +26,19 @@ const shortcuts = [
   { label: "90 dias", range: () => ({ since: fmt(subDays(new Date(), 89)), until: fmt(new Date()) }) },
   { label: "180 dias", range: () => ({ since: fmt(subDays(new Date(), 179)), until: fmt(new Date()) }) },
   { label: "Mês Atual", range: () => ({ since: fmt(startOfMonth(new Date())), until: fmt(new Date()) }) },
+];
+
+const popoverPresets = [
+  { label: "Hoje", range: () => ({ since: fmt(new Date()), until: fmt(new Date()) }) },
+  { label: "Últimos 7 dias", range: () => ({ since: fmt(subDays(new Date(), 6)), until: fmt(new Date()) }) },
+  { label: "Últimos 15 dias", range: () => ({ since: fmt(subDays(new Date(), 14)), until: fmt(new Date()) }) },
+  { label: "Últimos 30 dias", range: () => ({ since: fmt(subDays(new Date(), 29)), until: fmt(new Date()) }) },
+  { label: "Este mês", range: () => ({ since: fmt(startOfMonth(new Date())), until: fmt(new Date()) }) },
+  { label: "Mês passado", range: () => {
+      const last = subMonths(new Date(), 1);
+      return { since: fmt(startOfMonth(last)), until: fmt(endOfMonth(last)) };
+    },
+  },
 ];
 
 export default function DateRangePicker({ value, onChange }: DateRangePickerProps) {
@@ -52,9 +65,16 @@ export default function DateRangePicker({ value, onChange }: DateRangePickerProp
     }
   };
 
-  const activeLabel = value
-    ? shortcuts.find((s) => {
+  const activeInlineLabel = value
+    ? inlineShortcuts.find((s) => {
         const r = s.range();
+        return r.since === value.since && r.until === value.until;
+      })?.label
+    : null;
+
+  const activePresetLabel = value
+    ? popoverPresets.find((p) => {
+        const r = p.range();
         return r.since === value.since && r.until === value.until;
       })?.label
     : null;
@@ -63,10 +83,24 @@ export default function DateRangePicker({ value, onChange }: DateRangePickerProp
     ? `${format(new Date(value.since + "T00:00:00"), "dd MMM", { locale: ptBR })} – ${format(new Date(value.until + "T00:00:00"), "dd MMM", { locale: ptBR })}`
     : "Últimos 7 dias";
 
+  const rangePillText = value
+    ? (() => {
+        const from = new Date(value.since + "T00:00:00");
+        const to = new Date(value.until + "T00:00:00");
+        const sameYear = from.getFullYear() === to.getFullYear();
+        if (value.since === value.until) {
+          return format(from, "dd 'de' MMM yyyy", { locale: ptBR });
+        }
+        const fromStr = format(from, sameYear ? "dd MMM" : "dd MMM yyyy", { locale: ptBR });
+        const toStr = format(to, "dd MMM yyyy", { locale: ptBR });
+        return `${fromStr} — ${toStr}`;
+      })()
+    : "Selecione um período";
+
   return (
     <div className="flex items-center gap-2 flex-wrap">
       <div className="flex flex-wrap items-center gap-1 p-1 rounded-2xl sm:rounded-full bg-muted/40 border border-border/50 backdrop-blur-sm">
-        {shortcuts.map((s) => (
+        {inlineShortcuts.map((s) => (
           <Button
             key={s.label}
             variant="ghost"
@@ -75,7 +109,7 @@ export default function DateRangePicker({ value, onChange }: DateRangePickerProp
             className={cn(
               "h-7 px-3 text-xs font-medium rounded-full transition-all duration-200 border-0 shrink-0",
               "hover:bg-background/80 hover:text-foreground",
-              activeLabel === s.label
+              activeInlineLabel === s.label
                 ? "bg-primary text-primary-foreground shadow-sm hover:bg-primary hover:text-primary-foreground"
                 : "text-muted-foreground"
             )}
@@ -97,35 +131,56 @@ export default function DateRangePicker({ value, onChange }: DateRangePickerProp
           </Button>
         </PopoverTrigger>
         <PopoverContent
-          className="w-auto p-0 rounded-2xl border-border/60 shadow-2xl overflow-hidden bg-popover/95 backdrop-blur-xl"
+          className={cn(
+            "p-0 rounded-xl border-border/60 shadow-md overflow-hidden bg-popover/95 backdrop-blur-xl",
+            "w-[calc(100vw-2rem)] sm:w-auto"
+          )}
           align="end"
           sideOffset={8}
         >
-          <div className="px-4 pt-3 pb-2 border-b border-border/40 bg-muted/20">
-            <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">
-              Selecione o período
-            </p>
-            {value && (
-              <p className="text-xs text-foreground mt-0.5 tabular-nums">
-                {format(new Date(value.since + "T00:00:00"), "dd 'de' MMM, yyyy", { locale: ptBR })}
-                {" → "}
-                {format(new Date(value.until + "T00:00:00"), "dd 'de' MMM, yyyy", { locale: ptBR })}
+          {/* Range pill header */}
+          <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-border/40 bg-muted/30">
+            <div>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">
+                Período selecionado
               </p>
-            )}
+              <span className="inline-flex items-center px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold tabular-nums">
+                {rangePillText}
+              </span>
+            </div>
           </div>
-          <Calendar
-            mode="range"
-            selected={selectedRange}
-            onSelect={handleSelect}
-            numberOfMonths={isMobile ? 1 : 2}
-            locale={ptBR}
-            disabled={(date) => date > new Date()}
-            captionLayout="dropdown"
-            startMonth={new Date(2020, 0)}
-            endMonth={new Date()}
-            defaultMonth={selectedRange?.from || new Date()}
-            className={cn("pointer-events-auto")}
-          />
+
+          <div className="flex flex-col sm:flex-row">
+            {/* Sidebar presets */}
+            <div className="flex sm:flex-col gap-1 p-2 sm:p-3 sm:border-r border-b sm:border-b-0 border-border/40 bg-muted/10 overflow-x-auto sm:overflow-visible sm:min-w-[150px]">
+              {popoverPresets.map((p) => (
+                <button
+                  key={p.label}
+                  onClick={() => onChange(p.range())}
+                  className={cn(
+                    "shrink-0 text-left px-3 py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap",
+                    activePresetLabel === p.label
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                  )}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Calendar */}
+            <Calendar
+              mode="range"
+              selected={selectedRange}
+              onSelect={handleSelect}
+              numberOfMonths={isMobile ? 1 : 2}
+              locale={ptBR}
+              disabled={(date) => date > new Date()}
+              defaultMonth={selectedRange?.from || new Date()}
+              className={cn("pointer-events-auto")}
+            />
+          </div>
         </PopoverContent>
       </Popover>
     </div>
