@@ -51,11 +51,11 @@ export default function DateRangePicker({ value, onChange }: DateRangePickerProp
     return () => window.removeEventListener("resize", check);
   }, []);
 
-  const selectedRange: DayPickerRange | undefined = value
+  const selectedRange: RangeValue | undefined = value
     ? { from: new Date(value.since + "T00:00:00"), to: new Date(value.until + "T00:00:00") }
     : undefined;
 
-  const handleSelect = (range: DayPickerRange | undefined) => {
+  const handleSelect = (range: RangeValue) => {
     if (range?.from) {
       onChange({
         since: fmt(startOfDay(range.from)),
@@ -169,15 +169,12 @@ export default function DateRangePicker({ value, onChange }: DateRangePickerProp
             </div>
 
             {/* Calendar */}
-            <Calendar
-              mode="range"
-              selected={selectedRange}
-              onSelect={handleSelect}
+            <RangeCalendar
+              value={selectedRange}
+              onChange={handleSelect}
               numberOfMonths={isMobile ? 1 : 2}
-              locale={ptBR}
-              disabled={(date) => date > new Date()}
+              disabledAfter={new Date()}
               defaultMonth={selectedRange?.from || new Date()}
-              className={cn("pointer-events-auto")}
             />
           </div>
         </PopoverContent>
