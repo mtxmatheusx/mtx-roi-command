@@ -43,14 +43,14 @@ export function useEcommerceConnection(profileId: string | undefined) {
     queryKey: ["ecommerce_connection", profileId],
     enabled: !!profileId,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("ecommerce_connections" as any)
+      const { data, error } = await (supabase
+        .from("ecommerce_connections" as any) as any)
         .select("*")
         .eq("profile_id", profileId!)
         .eq("platform", "nuvemshop")
         .maybeSingle();
       if (error) throw error;
-      return data as EcommerceConnection | null;
+      return (data ?? null) as EcommerceConnection | null;
     },
   });
 
