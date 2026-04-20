@@ -22,6 +22,7 @@ import { supabase } from "@/integrations/supabase/client";
 import ReactMarkdown from "react-markdown";
 import { useAuth } from "@/hooks/useAuth";
 import PlatformConnectionsManager from "@/components/PlatformConnectionsManager";
+import NuvemshopConnectionCard from "@/components/NuvemshopConnectionCard";
 import ClientAccessSection from "@/components/ClientAccessSection";
 
 const configSchema = z.object({
