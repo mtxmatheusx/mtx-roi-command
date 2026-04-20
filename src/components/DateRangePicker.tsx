@@ -122,7 +122,9 @@ export default function DateRangePicker({ value, onChange }: DateRangePickerProp
     ? `${format(new Date(value.since + "T00:00:00"), "dd MMM", { locale: ptBR })} – ${format(new Date(value.until + "T00:00:00"), "dd MMM", { locale: ptBR })}`
     : "Últimos 7 dias";
 
-  const rangePillText = value
+  const rangePillText = pendingFrom
+    ? `${format(pendingFrom, "dd 'de' MMM yyyy", { locale: ptBR })} — …`
+    : value
     ? (() => {
         const from = new Date(value.since + "T00:00:00");
         const to = new Date(value.until + "T00:00:00");
