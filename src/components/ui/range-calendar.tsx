@@ -90,13 +90,13 @@ function MonthGrid({
   const labels = compactWeekdays ? WEEKDAYS_SHORT : WEEKDAYS_FULL;
 
   return (
-    <div className="flex flex-col gap-2 w-full min-w-0">
+    <div className="flex flex-col gap-1.5 w-full min-w-0">
       {/* Weekday header */}
-      <div className="grid grid-cols-7 w-full">
+      <div className="grid grid-cols-7 w-full" style={{ gridTemplateColumns: "repeat(7, minmax(0, 1fr))" }}>
         {labels.map((w, i) => (
           <div
             key={`${w}-${i}`}
-            className="h-8 flex items-center justify-center text-[clamp(0.625rem,2vw,0.6875rem)] font-medium uppercase tracking-[0.05em] text-muted-foreground/60 min-w-0"
+            className="h-7 flex items-center justify-center text-[10px] sm:text-[11px] font-medium uppercase tracking-wider text-muted-foreground/50 min-w-0"
           >
             {w}
           </div>
@@ -109,14 +109,14 @@ function MonthGrid({
           <motion.div
             key={format(monthDate, "yyyy-MM")}
             custom={direction}
-            initial={{ opacity: 0, x: direction > 0 ? 8 : -8 }}
+            initial={{ opacity: 0, x: direction > 0 ? 6 : -6 }}
             animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: direction > 0 ? -8 : 8 }}
-            transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
-            className="grid grid-cols-7 gap-y-0.5 w-full"
+            exit={{ opacity: 0, x: direction > 0 ? -6 : 6 }}
+            transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
+            className="grid grid-cols-7 w-full"
             style={{ gridTemplateColumns: "repeat(7, minmax(0, 1fr))" }}
           >
-            {days.map((day, idx) => {
+            {days.map((day) => {
               const inMonth = isSameMonth(day, monthDate);
               const disabled = disabledAfter ? isAfter(day, disabledAfter) : false;
               const isStart = liveStart && isSameDay(day, liveStart);
@@ -129,24 +129,22 @@ function MonthGrid({
                 isBefore(day, liveEnd);
               const isSelected = isStart || isEnd;
               const today = isToday(day);
+              const isSingleDay = liveStart && liveEnd && isSameDay(liveStart, liveEnd);
 
               const rangeStripClasses = cn(
-                inRange && "bg-primary/[0.08]",
-                (isStart || isEnd) && liveStart && liveEnd && !isSameDay(liveStart, liveEnd) && "bg-primary/[0.08]",
-                isStart && liveEnd && !isSameDay(liveStart, liveEnd) && "rounded-l-lg",
-                isEnd && liveStart && !isSameDay(liveStart, liveEnd) && "rounded-r-lg",
+                inRange && "bg-primary/[0.07]",
+                (isStart || isEnd) && !isSingleDay && "bg-primary/[0.07]",
+                isStart && liveEnd && !isSingleDay && "rounded-l-md",
+                isEnd && liveStart && !isSingleDay && "rounded-r-md",
               );
-
-              const staggerDelay = inRange ? Math.min(idx * 0.012, 0.18) : 0;
 
               return (
                 <div
                   key={day.toISOString()}
                   className={cn(
-                    "relative flex items-center justify-center min-w-0 aspect-square min-h-[40px] sm:min-h-0 sm:h-9",
+                    "relative flex items-center justify-center min-w-0 h-10 sm:h-9",
                     rangeStripClasses
                   )}
-                  style={inRange ? { transitionDelay: `${staggerDelay}s` } : undefined}
                 >
                   <button
                     type="button"
@@ -155,22 +153,19 @@ function MonthGrid({
                     onMouseEnter={() => onDayHover(day)}
                     onMouseLeave={() => onDayHover(null)}
                     className={cn(
-                      "relative inline-flex items-center justify-center text-[clamp(0.8125rem,2.4vw,0.875rem)] rounded-lg",
-                      "h-9 w-9 sm:h-9 sm:w-9",
-                      "transition-all duration-150 ease-[cubic-bezier(0.4,0,0.2,1)]",
-                      "font-normal cursor-pointer select-none touch-manipulation",
-                      inMonth ? "text-foreground" : "text-muted-foreground/40",
-                      !isSelected &&
-                        !disabled &&
-                        "hover:bg-muted hover:scale-[1.05]",
-                      isSelected &&
-                        "!bg-primary !text-primary-foreground font-medium shadow-[0_1px_3px_hsl(var(--primary)/0.35)] hover:scale-[1.02]",
+                      "relative inline-flex items-center justify-center text-[13px] sm:text-[13px] rounded-md",
+                      "h-9 w-9",
+                      "transition-colors duration-100",
+                      "font-normal cursor-pointer select-none touch-manipulation tabular-nums",
+                      inMonth ? "text-foreground" : "text-muted-foreground/30",
+                      !isSelected && !disabled && "hover:bg-muted",
+                      isSelected && "!bg-primary !text-primary-foreground font-medium",
                       disabled && "pointer-events-none opacity-25",
                     )}
                   >
                     {format(day, "d")}
                     {today && !isSelected && (
-                      <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-[3px] h-[3px] rounded-full bg-primary" />
+                      <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-primary" />
                     )}
                   </button>
                 </div>
