@@ -9,6 +9,8 @@ import {
   addDays,
   addMonths,
   subMonths,
+  setMonth,
+  setYear,
   format,
   isSameMonth,
   isSameDay,
@@ -34,6 +36,10 @@ interface RangeCalendarProps {
 
 const WEEKDAYS_FULL = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 const WEEKDAYS_SHORT = ["D", "S", "T", "Q", "Q", "S", "S"];
+const MONTHS_PT = [
+  "Jan", "Fev", "Mar", "Abr", "Mai", "Jun",
+  "Jul", "Ago", "Set", "Out", "Nov", "Dez",
+];
 
 function buildMonthMatrix(monthDate: Date): Date[] {
   const start = startOfWeek(startOfMonth(monthDate), { weekStartsOn: 0 });
@@ -68,10 +74,18 @@ function MonthGrid({
 }) {
   const days = useMemo(() => buildMonthMatrix(monthDate), [monthDate]);
 
+  // Compute live range across the full calendar (cross-month aware)
   const from = value?.from;
-  const to = value?.to ?? (from && hoverDate && isAfter(hoverDate, from) ? hoverDate : value?.to);
-  const liveStart = from && to ? (isAfter(from, to) ? to : from) : from;
-  const liveEnd = from && to ? (isAfter(from, to) ? from : to) : to;
+  const explicitTo = value?.to;
+  // While selecting (only `from` set), use hoverDate as preview end
+  const previewTo = !explicitTo && from && hoverDate ? hoverDate : explicitTo;
+
+  const liveStart = from && previewTo
+    ? (isAfter(from, previewTo) ? previewTo : from)
+    : from;
+  const liveEnd = from && previewTo
+    ? (isAfter(from, previewTo) ? from : previewTo)
+    : previewTo;
 
   const labels = compactWeekdays ? WEEKDAYS_SHORT : WEEKDAYS_FULL;
 
@@ -137,7 +151,7 @@ function MonthGrid({
                   <button
                     type="button"
                     disabled={disabled}
-                    onClick={() => !disabled && inMonth && onDayClick(day)}
+                    onClick={() => !disabled && onDayClick(day)}
                     onMouseEnter={() => onDayHover(day)}
                     onMouseLeave={() => onDayHover(null)}
                     className={cn(
@@ -145,15 +159,13 @@ function MonthGrid({
                       "h-9 w-9 sm:h-9 sm:w-9",
                       "transition-all duration-150 ease-[cubic-bezier(0.4,0,0.2,1)]",
                       "font-normal cursor-pointer select-none touch-manipulation",
-                      inMonth ? "text-foreground" : "text-muted-foreground/30",
+                      inMonth ? "text-foreground" : "text-muted-foreground/40",
                       !isSelected &&
-                        inMonth &&
                         !disabled &&
                         "hover:bg-muted hover:scale-[1.05]",
                       isSelected &&
                         "!bg-primary !text-primary-foreground font-medium shadow-[0_1px_3px_hsl(var(--primary)/0.35)] hover:scale-[1.02]",
                       disabled && "pointer-events-none opacity-25",
-                      !inMonth && "pointer-events-none",
                     )}
                   >
                     {format(day, "d")}
@@ -171,6 +183,88 @@ function MonthGrid({
   );
 }
 
+/* ============= Month/Year picker ============= */
+function MonthYearPicker({
+  currentMonth,
+  onSelect,
+  onClose,
+  disabledAfter,
+}: {
+  currentMonth: Date;
+  onSelect: (d: Date) => void;
+  onClose: () => void;
+  disabledAfter?: Date;
+}) {
+  const [year, setYearState] = useState(currentMonth.getFullYear());
+  const maxYear = disabledAfter ? disabledAfter.getFullYear() : 9999;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.96 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.96 }}
+      transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
+      className="absolute inset-0 z-10 bg-popover/95 backdrop-blur-xl flex flex-col p-3"
+    >
+      {/* Year selector header */}
+      <div className="flex items-center justify-between mb-3">
+        <button
+          type="button"
+          onClick={() => setYearState((y) => y - 1)}
+          className="inline-flex items-center justify-center h-8 w-8 rounded-md text-muted-foreground/70 hover:text-foreground hover:bg-muted transition-colors"
+          aria-label="Ano anterior"
+        >
+          <ChevronLeft className="h-4 w-4" strokeWidth={2.25} />
+        </button>
+        <div className="text-sm font-semibold tracking-tight text-foreground tabular-nums">
+          {year}
+        </div>
+        <button
+          type="button"
+          onClick={() => setYearState((y) => Math.min(y + 1, maxYear))}
+          disabled={year >= maxYear}
+          className="inline-flex items-center justify-center h-8 w-8 rounded-md text-muted-foreground/70 hover:text-foreground hover:bg-muted transition-colors disabled:opacity-30 disabled:pointer-events-none"
+          aria-label="Próximo ano"
+        >
+          <ChevronRight className="h-4 w-4" strokeWidth={2.25} />
+        </button>
+      </div>
+
+      {/* 4x3 month grid */}
+      <div className="grid grid-cols-4 gap-2 flex-1 content-start">
+        {MONTHS_PT.map((label, idx) => {
+          const candidate = setMonth(setYear(new Date(), year), idx);
+          const isCurrent =
+            currentMonth.getFullYear() === year && currentMonth.getMonth() === idx;
+          const disabled = disabledAfter
+            ? isAfter(startOfMonth(candidate), startOfMonth(disabledAfter))
+            : false;
+          return (
+            <button
+              key={label}
+              type="button"
+              disabled={disabled}
+              onClick={() => {
+                onSelect(candidate);
+                onClose();
+              }}
+              className={cn(
+                "h-12 rounded-lg text-sm font-medium transition-all",
+                "hover:bg-muted hover:scale-[1.03]",
+                isCurrent && "!bg-primary !text-primary-foreground shadow-[0_1px_3px_hsl(var(--primary)/0.35)]",
+                disabled && "opacity-25 pointer-events-none",
+                !isCurrent && !disabled && "text-foreground"
+              )}
+            >
+              {label}
+            </button>
+          );
+        })}
+      </div>
+    </motion.div>
+  );
+}
+
 export function RangeCalendar({
   value,
   onChange,
@@ -183,7 +277,16 @@ export function RangeCalendar({
   );
   const [direction, setDirection] = useState(0);
   const [hoverDate, setHoverDate] = useState<Date | null>(null);
-  const [, setPending] = useState<Date | null>(null);
+  const [showMonthPicker, setShowMonthPicker] = useState(false);
+
+  // Sync view to the start of an externally-set range (e.g. presets)
+  // Only navigates when the start date is in a different month than the current view.
+  useEffect(() => {
+    if (value?.from && !isSameMonth(value.from, viewMonth)) {
+      setViewMonth(startOfMonth(value.from));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value?.from?.getTime(), value?.to?.getTime()]);
 
   // Detect very small screens for 1-letter weekday labels
   const [compactWeekdays, setCompactWeekdays] = useState(false);
@@ -200,19 +303,17 @@ export function RangeCalendar({
   };
 
   const handleDayClick = (day: Date) => {
+    // Cross-month two-click logic:
+    // 1) No range or full range → start new range
+    // 2) Only `from` set → set `to` (auto-swap if before `from`)
     if (!value?.from || (value.from && value.to)) {
-      setPending(day);
       onChange?.({ from: day, to: undefined });
     } else if (value.from && !value.to) {
       const from = value.from;
-      const range: RangeValue = isAfter(day, from)
+      const range: RangeValue = isAfter(day, from) || isSameDay(day, from)
         ? { from, to: day }
         : { from: day, to: from };
-      setPending(null);
       onChange?.(range);
-    } else {
-      setPending(day);
-      onChange?.({ from: day, to: undefined });
     }
   };
 
@@ -223,7 +324,7 @@ export function RangeCalendar({
   }, [viewMonth, numberOfMonths]);
 
   return (
-    <div className="px-3 sm:px-4 py-3 select-none w-full min-w-0">
+    <div className="px-3 sm:px-4 py-3 select-none w-full min-w-0 relative">
       {/* Header */}
       <div className="flex items-center justify-between gap-2 mb-2">
         <button
@@ -239,13 +340,20 @@ export function RangeCalendar({
           className="flex-1 grid min-w-0"
           style={{ gridTemplateColumns: `repeat(${numberOfMonths}, minmax(0, 1fr))` }}
         >
-          {months.map((m) => (
-            <div
+          {months.map((m, idx) => (
+            <button
               key={format(m, "yyyy-MM")}
-              className="text-center text-[clamp(0.8125rem,2.4vw,0.875rem)] font-medium tracking-tight text-foreground capitalize truncate px-1"
+              type="button"
+              onClick={() => idx === 0 && setShowMonthPicker(true)}
+              disabled={idx !== 0}
+              className={cn(
+                "text-center text-[clamp(0.8125rem,2.4vw,0.875rem)] font-medium tracking-tight text-foreground capitalize truncate px-1 py-1 rounded-md transition-colors",
+                idx === 0 && "hover:bg-muted/60 cursor-pointer",
+                idx !== 0 && "cursor-default"
+              )}
             >
               {format(m, "MMMM yyyy", { locale: ptBR })}
-            </div>
+            </button>
           ))}
         </div>
 
@@ -261,8 +369,12 @@ export function RangeCalendar({
 
       <div className="h-px bg-border/40 -mx-3 sm:-mx-4 mb-3" />
 
-      {/* Months grid */}
-      <div className="flex flex-col md:flex-row gap-6 w-full min-w-0">
+      {/* Months grid (with subtle scale-down when month picker open) */}
+      <motion.div
+        animate={{ scale: showMonthPicker ? 0.95 : 1, opacity: showMonthPicker ? 0.4 : 1 }}
+        transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
+        className="flex flex-col md:flex-row gap-6 w-full min-w-0"
+      >
         {months.map((m) => (
           <MonthGrid
             key={format(m, "yyyy-MM")}
@@ -276,7 +388,22 @@ export function RangeCalendar({
             compactWeekdays={compactWeekdays}
           />
         ))}
-      </div>
+      </motion.div>
+
+      {/* Month/Year picker overlay */}
+      <AnimatePresence>
+        {showMonthPicker && (
+          <MonthYearPicker
+            currentMonth={viewMonth}
+            onSelect={(d) => {
+              setDirection(isAfter(d, viewMonth) ? 1 : -1);
+              setViewMonth(startOfMonth(d));
+            }}
+            onClose={() => setShowMonthPicker(false)}
+            disabledAfter={disabledAfter}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
