@@ -209,6 +209,7 @@ export function useMetaAds(dateRange?: DateRange, profileConfig?: { adAccountId?
       daily: DailyDataPoint[];
       previous: PreviousPeriod | null;
       creatives: MetaCreative[];
+      demographics?: any;
       fetchedAt: string | null;
       dataVerified: boolean;
       isCached: boolean;
