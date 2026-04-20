@@ -187,7 +187,7 @@ export default function Relatorio() {
         <p style={{ color: COLORS.cinzaClaro, maxWidth: "360px", textAlign: "center", lineHeight: 1.6 }}>
           Este link expirou ou é inválido. Solicite um novo relatório à sua agência.
         </p>
-        <a href="https://wa.me/5511999999999" target="_blank" rel="noopener noreferrer"
+        <a href="https://wa.me/5551991443171" target="_blank" rel="noopener noreferrer"
           style={{ marginTop: "1rem", padding: "0.8rem 1.5rem", background: COLORS.azulExpert, color: "#fff", borderRadius: "100px", textDecoration: "none", fontWeight: 600, fontSize: "0.875rem" }}>
           Falar com a MTX
         </a>
