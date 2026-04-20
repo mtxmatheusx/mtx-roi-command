@@ -37,17 +37,22 @@ export default function CampaignNotes({ campaignId, campaignName }: CampaignNote
 
   const loadNotes = async () => {
     setLoading(true);
-    // Store notes in knowledge_base table with a specific category
+    // Store notes in knowledge_base table tagged via field_key
     const { data } = await supabase
       .from("knowledge_base")
-      .select("id, content, created_at")
-      .eq("profile_id", profileId)
-      .eq("category", `campaign_note_${campaignId}`)
+      .select("id, extracted_text, created_at")
+      .eq("profile_id", profileId as string)
+      .eq("field_key", `campaign_note_${campaignId}`)
       .order("created_at", { ascending: false })
       .limit(20);
 
     if (data) {
-      setNotes(data.map((d: any) => ({ ...d, campaign_id: campaignId })));
+      setNotes(data.map((d: any) => ({
+        id: d.id,
+        content: d.extracted_text || "",
+        created_at: d.created_at,
+        campaign_id: campaignId,
+      })));
     }
     setLoading(false);
   };
@@ -60,10 +65,10 @@ export default function CampaignNotes({ campaignId, campaignName }: CampaignNote
       .insert({
         profile_id: profileId,
         user_id: user.id,
-        title: `Nota: ${campaignName}`,
-        content: newNote.trim(),
-        category: `campaign_note_${campaignId}`,
-        source: "campaign_notes",
+        doc_type: "campaign_note",
+        field_key: `campaign_note_${campaignId}`,
+        file_name: `Nota: ${campaignName}`,
+        extracted_text: newNote.trim(),
       });
 
     if (error) {

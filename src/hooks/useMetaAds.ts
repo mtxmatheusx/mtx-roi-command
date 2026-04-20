@@ -73,6 +73,7 @@ interface CachedData {
   daily: DailyDataPoint[];
   previous: PreviousPeriod | null;
   creatives: MetaCreative[];
+  demographics?: any;
   fetchedAt: string;
   dataVerified: boolean;
 }
@@ -208,6 +209,7 @@ export function useMetaAds(dateRange?: DateRange, profileConfig?: { adAccountId?
       daily: DailyDataPoint[];
       previous: PreviousPeriod | null;
       creatives: MetaCreative[];
+      demographics?: any;
       fetchedAt: string | null;
       dataVerified: boolean;
       isCached: boolean;
@@ -340,7 +342,7 @@ export function useMetaAds(dateRange?: DateRange, profileConfig?: { adAccountId?
     if (query.data?.isCached !== undefined) setIsCached(query.data.isCached);
   }, [query.data?.fetchedAt, query.data?.dataVerified, query.data?.isCached]);
 
-  const result = query.data ?? { campaigns: mockCampaigns, daily: generateMockDaily(), previous: mockPrevious, creatives: [] as MetaCreative[], demographics: null, fetchedAt: null, dataVerified: false, isCached: false };
+  const result: any = query.data ?? { campaigns: mockCampaigns, daily: generateMockDaily(), previous: mockPrevious, creatives: [] as MetaCreative[], demographics: null, fetchedAt: null, dataVerified: false, isCached: false };
   const isUsingMock = !adAccountId || adAccountId === "act_" || (!!query.error && !isCached);
 
   const forceRefetch = useCallback(() => {
