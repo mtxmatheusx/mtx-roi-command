@@ -698,6 +698,9 @@ export default function Configuracoes() {
         {/* Multi-Platform Connections */}
         <PlatformConnectionsManager />
 
+        {/* Nuvemshop / E-commerce Integration */}
+        <NuvemshopConnectionCard />
+
         {/* API Externa */}
         <Card>
           <CardHeader>
