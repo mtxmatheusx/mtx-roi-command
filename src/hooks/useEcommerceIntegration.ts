@@ -112,12 +112,13 @@ export function useEcommerceConnection(profileId: string | undefined) {
     },
   });
 
-  const syncOrders = useMutation({
-    mutationFn: async (daysBack = 30) => {
+  const syncOrders = useMutation<any, Error, number | undefined>({
+    mutationFn: async (daysBack) => {
+      const days = daysBack ?? 30;
       if (!connectionQuery.data?.id) throw new Error("Nenhuma loja conectada");
       const { data, error } = await supabase.functions.invoke(
         "nuvemshop-sync-orders",
-        { body: { connection_id: connectionQuery.data.id, days_back: daysBack } },
+        { body: { connection_id: connectionQuery.data.id, days_back: days } },
       );
       if (error) throw error;
       if (!data?.success) throw new Error(data?.error || "Falha ao sincronizar");
