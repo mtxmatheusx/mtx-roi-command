@@ -11,7 +11,7 @@ function Calendar({ className, classNames, showOutsideDays = true, ...props }: C
     <DayPicker
       showOutsideDays={showOutsideDays}
       formatters={{
-        formatWeekdayName: (date, options) => {
+        formatWeekdayName: (date) => {
           const map: Record<number, string> = {
             0: "Dom",
             1: "Seg",
@@ -23,61 +23,78 @@ function Calendar({ className, classNames, showOutsideDays = true, ...props }: C
           };
           return map[date.getDay()] ?? "";
         },
-        formatCaption: (date, options) => {
+        formatCaption: (date) => {
           const month = date.toLocaleString("pt-BR", { month: "long" });
           const year = date.getFullYear();
           return `${month.charAt(0).toUpperCase()}${month.slice(1)} ${year}`;
         },
       }}
-      className={cn("p-3 sm:p-4 animate-in fade-in-0 duration-200", className)}
+      className={cn("p-4 animate-in fade-in-0 duration-200", className)}
       classNames={{
-        months: "flex flex-col sm:flex-row gap-4 sm:gap-8",
-        month: "space-y-3 w-full",
-        caption: "relative flex items-center justify-center pt-1 pb-3 h-8",
-        caption_label: "text-sm font-semibold tracking-tight text-foreground",
-        nav: "flex items-center",
-        nav_button: cn(
-          "inline-flex items-center justify-center h-7 w-7 rounded-full",
-          "text-muted-foreground hover:text-foreground",
-          "hover:bg-accent transition-colors",
+        // v9 root + grouping
+        root: "w-fit",
+        months: "flex flex-col sm:flex-row gap-6 relative",
+        month: "flex flex-col gap-3",
+
+        // v9 caption + nav
+        month_caption: "flex items-center justify-center h-9 px-9 relative",
+        caption_label: "text-base font-semibold tracking-tight text-foreground capitalize",
+        nav: "absolute inset-x-0 top-0 flex items-center justify-between px-1 pointer-events-none",
+        button_previous: cn(
+          "pointer-events-auto inline-flex items-center justify-center h-7 w-7 rounded-full",
+          "text-muted-foreground hover:text-foreground hover:bg-muted transition-colors",
         ),
-        nav_button_previous: "absolute left-0",
-        nav_button_next: "absolute right-0",
-        table: "w-full border-collapse",
-        head_row: "grid grid-cols-7 mb-1",
-        head_cell:
-          "text-muted-foreground font-normal text-[10px] uppercase tracking-wide h-8 flex items-center justify-center",
-        row: "grid grid-cols-7 mt-1",
-        cell: cn(
-          "relative h-9 w-9 sm:h-10 sm:w-10 p-0 text-center text-sm",
-          "focus-within:relative focus-within:z-20",
-          "[&:has([aria-selected])]:bg-primary/10",
-          "first:[&:has([aria-selected])]:rounded-l-full",
-          "last:[&:has([aria-selected])]:rounded-r-full",
-          "[&:has([aria-selected].day-range-end)]:rounded-r-full",
-          "[&:has([aria-selected].day-range-start)]:rounded-l-full",
-          "[&:has([aria-selected].day-outside)]:bg-primary/5",
+        button_next: cn(
+          "pointer-events-auto inline-flex items-center justify-center h-7 w-7 rounded-full",
+          "text-muted-foreground hover:text-foreground hover:bg-muted transition-colors",
         ),
+
+        // v9 month grid
+        month_grid: "w-full border-collapse",
+        weekdays: "grid grid-cols-7 mb-2",
+        weekday:
+          "text-[10px] font-medium uppercase tracking-wider text-muted-foreground/70 h-8 flex items-center justify-center w-10",
+        weeks: "flex flex-col gap-0.5",
+        week: "grid grid-cols-7",
+
+        // v9 day cell wrapper
         day: cn(
-          "inline-flex items-center justify-center h-9 w-9 sm:h-10 sm:w-10 p-0",
-          "text-sm font-medium rounded-full",
-          "transition-colors duration-150 cursor-pointer",
-          "hover:bg-muted hover:text-foreground",
-          "aria-selected:opacity-100",
+          "relative h-10 w-10 p-0 text-center text-sm",
+          "[&:has([data-selected])]:bg-primary/10",
+          "[&:has([data-range-start])]:rounded-l-full",
+          "[&:has([data-range-end])]:rounded-r-full",
+          "[&:has([data-range-start])]:bg-primary/10",
+          "[&:has([data-range-end])]:bg-primary/10",
+          "first:[&:has([data-selected])]:rounded-l-full",
+          "last:[&:has([data-selected])]:rounded-r-full",
         ),
-        day_range_start:
-          "day-range-start !bg-primary !text-primary-foreground hover:!bg-primary rounded-full font-semibold",
-        day_range_end:
-          "day-range-end !bg-primary !text-primary-foreground hover:!bg-primary rounded-full font-semibold",
-        day_selected:
-          "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground font-semibold",
-        day_today:
-          "ring-1 ring-primary/60 ring-inset bg-transparent text-foreground font-semibold",
-        day_outside: "day-outside text-muted-foreground opacity-30 aria-selected:opacity-50",
-        day_disabled: "text-muted-foreground opacity-30 cursor-not-allowed hover:bg-transparent",
-        day_range_middle:
-          "aria-selected:bg-primary/10 aria-selected:text-foreground !rounded-none hover:!bg-primary/15",
-        day_hidden: "invisible",
+
+        // v9 day button (the actual interactive element)
+        day_button: cn(
+          "inline-flex items-center justify-center h-10 w-10 p-0",
+          "text-sm font-medium rounded-full",
+          "transition-colors duration-150 cursor-pointer select-none",
+          "hover:bg-muted hover:text-foreground",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
+        ),
+
+        // v9 modifier classNames — applied to the cell
+        selected:
+          "[&>button]:bg-primary [&>button]:text-primary-foreground [&>button]:hover:bg-primary [&>button]:font-semibold",
+        range_start:
+          "[&>button]:bg-primary [&>button]:text-primary-foreground [&>button]:rounded-full [&>button]:font-semibold",
+        range_end:
+          "[&>button]:bg-primary [&>button]:text-primary-foreground [&>button]:rounded-full [&>button]:font-semibold",
+        range_middle:
+          "!rounded-none bg-primary/10 [&>button]:bg-transparent [&>button]:!rounded-none [&>button]:text-foreground [&>button]:hover:bg-primary/20",
+        today:
+          "[&>button]:ring-1 [&>button]:ring-primary [&>button]:ring-inset [&>button]:font-semibold",
+        outside:
+          "text-muted-foreground/30 [&>button]:text-muted-foreground/30 [&>button]:hover:bg-transparent",
+        disabled:
+          "text-muted-foreground/30 [&>button]:opacity-40 [&>button]:cursor-not-allowed [&>button]:hover:bg-transparent",
+        hidden: "invisible",
+
         ...classNames,
       }}
       components={{
