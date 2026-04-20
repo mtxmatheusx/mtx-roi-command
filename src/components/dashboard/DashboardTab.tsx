@@ -53,6 +53,7 @@ interface DashboardTabProps {
   logs: LogEntry[];
   demographics?: any;
   sectionVisible?: (id: string) => boolean;
+  dateRange?: { since: string; until: string };
 }
 
 const AlertBanner = ({ children, variant = "warning", onDismiss }: { children: React.ReactNode; variant?: "warning" | "info" | "error"; onDismiss?: () => void }) => {
