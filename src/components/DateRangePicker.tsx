@@ -131,8 +131,13 @@ export default function DateRangePicker({ value, onChange }: DateRangePickerProp
         </PopoverTrigger>
         <PopoverContent
           className={cn(
-            "p-0 rounded-xl border-border/60 shadow-md overflow-hidden bg-popover/95 backdrop-blur-xl",
-            "w-[calc(100vw-2rem)] sm:w-auto"
+            "p-0 rounded-2xl border border-border/40 overflow-hidden bg-popover/85 backdrop-blur-2xl",
+            "shadow-[0_24px_48px_-12px_rgba(0,0,0,0.18),0_0_0_1px_rgba(0,0,0,0.04)]",
+            "w-[calc(100vw-2rem)] sm:w-auto",
+            "data-[state=open]:animate-in data-[state=closed]:animate-out",
+            "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+            "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
+            "data-[state=open]:slide-in-from-top-1 data-[state=closed]:slide-out-to-top-1"
           )}
           align="end"
           sideOffset={8}
