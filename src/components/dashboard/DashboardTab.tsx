@@ -293,7 +293,7 @@ export default function DashboardTab(props: DashboardTabProps) {
           {show("demographics") && <DemographicsChart data={demographics} />}
 
           {/* UTM Analysis */}
-          {show("utm") && <UTMAnalysis />}
+          {show("utm") && <UTMAnalysis dateRange={dateRange} />}
 
           {/* Data Verified */}
           {!isUsingMock && dataVerified && (
