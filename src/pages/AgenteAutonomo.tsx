@@ -255,6 +255,29 @@ export default function AgenteAutonomo() {
   // Email alert for low recovery rate
   const [alertSent, setAlertSent] = useState(false);
   const [isSendingReport, setIsSendingReport] = useState(false);
+  const [isGeneratingLink, setIsGeneratingLink] = useState(false);
+
+  const handleGenerateClientLink = async () => {
+    if (!activeProfile?.id) return;
+    setIsGeneratingLink(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-client-report", {
+        body: { profileId: activeProfile.id },
+      });
+      if (error) throw error;
+      const url: string = data?.reportUrl;
+      if (!url) throw new Error("Link não retornado");
+      await navigator.clipboard.writeText(url);
+      toast({
+        title: "🔗 Link gerado e copiado",
+        description: "Link válido por 7 dias. Cole para o cliente.",
+      });
+    } catch (e: any) {
+      toast({ title: "Erro ao gerar link", description: e.message, variant: "destructive" });
+    } finally {
+      setIsGeneratingLink(false);
+    }
+  };
 
   const handleSendRecoveryAlert = async () => {
     if (!activeProfile?.id || !user?.id) return;
@@ -337,7 +360,11 @@ export default function AgenteAutonomo() {
               IA que monitora, otimiza e protege suas campanhas 24/7
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button variant="outline" onClick={handleGenerateClientLink} disabled={isGeneratingLink || !activeProfile} className="gap-2">
+              {isGeneratingLink ? <Loader2 className="w-4 h-4 animate-spin" /> : <Copy className="w-4 h-4" />}
+              {isGeneratingLink ? "Gerando..." : "Gerar Link do Cliente"}
+            </Button>
             <Button variant="outline" onClick={handleSendReportNow} disabled={isSendingReport} className="gap-2">
               {isSendingReport ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
               {isSendingReport ? "Enviando..." : "Enviar Relatório Agora"}
