@@ -86,7 +86,7 @@ export default function DashboardTab(props: DashboardTabProps) {
     dataVerified, fetchedAt, budgetMaximo, budgetFrequency, cpaMeta,
     totalSpend, totalRevenue, totalProfit, totalPurchases, avgCPA, roas, avgCPM, avgCTR, calcTicketMedio,
     deltaProfit, deltaSpend, deltaCPA, deltaROAS, deltaPurchases, deltaCPM, deltaCTR, deltaTM, logs,
-    demographics, sectionVisible,
+    demographics, sectionVisible, dateRange,
   } = props;
 
   const show = (id: string) => !sectionVisible || sectionVisible(id);
