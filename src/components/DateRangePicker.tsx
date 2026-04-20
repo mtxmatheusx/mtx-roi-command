@@ -144,13 +144,13 @@ export default function DateRangePicker({ value, onChange }: DateRangePickerProp
   /* ====== Calendar body (shared) ====== */
   const CalendarBody = (
     <>
-      {/* Range pill header */}
-      <div className="flex items-center justify-between gap-3 px-3 sm:px-4 py-2.5 sm:py-3 border-b border-border/40 bg-muted/30">
+      {/* Range header — minimal */}
+      <div className="flex items-center justify-between gap-3 px-3 sm:px-4 py-2.5 border-b border-border/40">
         <div className="min-w-0">
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1 truncate">
-            Período selecionado
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground/70 font-medium mb-0.5">
+            Período
           </p>
-          <span className="inline-flex items-center px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-full bg-primary/10 text-primary text-[11px] sm:text-xs font-semibold tabular-nums">
+          <span className="text-[12px] sm:text-[13px] font-semibold text-foreground tabular-nums truncate block">
             {rangePillText}
           </span>
         </div>
@@ -160,9 +160,9 @@ export default function DateRangePicker({ value, onChange }: DateRangePickerProp
         {/* Sidebar presets */}
         <div
           className={cn(
-            "flex md:flex-col gap-1 p-2 md:p-3 md:border-r border-b md:border-b-0 border-border/40 bg-muted/10",
+            "flex md:flex-col gap-0.5 p-2 md:border-r border-b md:border-b-0 border-border/40",
             "overflow-x-auto md:overflow-visible no-scrollbar",
-            "md:min-w-[150px]",
+            "md:min-w-[140px] md:w-[140px]",
             "snap-x snap-mandatory md:snap-none",
           )}
         >
@@ -171,10 +171,10 @@ export default function DateRangePicker({ value, onChange }: DateRangePickerProp
               key={p.label}
               onClick={() => onChange(p.range())}
               className={cn(
-                "shrink-0 snap-start text-left px-3 py-2 md:py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap min-h-[40px] md:min-h-0 inline-flex items-center touch-manipulation",
+                "shrink-0 snap-start text-left px-3 py-1.5 rounded-md text-[12px] font-medium transition-colors whitespace-nowrap min-h-[36px] md:min-h-0 inline-flex items-center touch-manipulation",
                 activePresetLabel === p.label
                   ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
               )}
             >
               {p.label}
