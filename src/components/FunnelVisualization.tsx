@@ -1,6 +1,8 @@
 import { motion } from "framer-motion";
 import { formatCurrency } from "@/lib/mockData";
 import type { Campaign } from "@/lib/mockData";
+import ExportDashboard from "./dashboard/ExportDashboard";
+
 
 interface FunnelVisualizationProps {
   campaigns: Campaign[];
