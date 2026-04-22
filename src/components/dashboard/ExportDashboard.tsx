@@ -31,7 +31,7 @@ interface ExportDashboardProps {
   variant?: "dropdown" | "button";
 }
 
-export default function ExportDashboard({ elementId, dashboardName = "Dashboard", dateRange }: ExportDashboardProps) {
+export default function ExportDashboard({ elementId, dashboardName = "Dashboard", dateRange, variant = "dropdown" }: ExportDashboardProps) {
   const [isExporting, setIsExporting] = useState(false);
   const [showOptions, setShowOptions] = useState(false);
   const [exportType, setExportType] = useState<"pdf" | "png" | "jpeg">("pdf");
