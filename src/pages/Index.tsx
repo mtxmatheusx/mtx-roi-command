@@ -118,17 +118,18 @@ export default function Dashboard() {
     <AppLayout>
       <ActiveProfileHeader />
 
-      {/* Monitoring Indicator */}
-      <div className="mb-4 flex items-center gap-2">
-        <span className="relative flex h-2 w-2">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75"></span>
-          <span className="relative inline-flex rounded-full h-2 w-2 bg-success"></span>
-        </span>
-        <span className="text-xs font-medium text-success tracking-wide">Monitoramento Ativo</span>
-        {apiBaseUrl && (
-          <span className={`ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border ${apiConfigured ? "bg-success/10 border-success/20 text-success" : "bg-warning/10 border-warning/20 text-warning"}`}>
-            {apiConfigured ? "API Conectada" : "API Desconectada"}
+      <div className="mb-6 flex flex-wrap items-center gap-4">
+        <div className="flex items-center gap-2 px-2 py-1 rounded-full bg-white/50 border border-black/[0.03] dark:bg-black/20 dark:border-white/[0.05]">
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-success"></span>
           </span>
+          <span className="text-[10px] font-bold uppercase tracking-widest text-success">Monitoramento Ativo</span>
+        </div>
+        {apiBaseUrl && (
+          <div className={`flex items-center gap-1.5 px-2 py-1 rounded-full border text-[10px] font-bold uppercase tracking-widest ${apiConfigured ? "bg-success/5 border-success/10 text-success" : "bg-warning/5 border-warning/10 text-warning"}`}>
+             {apiConfigured ? "API Conectada" : "API Desconectada"}
+          </div>
         )}
       </div>
 
