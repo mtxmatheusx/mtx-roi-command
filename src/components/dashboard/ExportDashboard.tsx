@@ -1,5 +1,21 @@
-import { useState } from "react";
-import { Download, FileText, Image as ImageIcon, Check, Loader2, Settings2 } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { 
+  Download, 
+  FileText, 
+  Image as ImageIcon, 
+  Check, 
+  Loader2, 
+  Settings2, 
+  FileCode, 
+  Maximize, 
+  Type, 
+  Palette,
+  Eye,
+  History,
+  FileDown,
+  Users
+} from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -20,9 +36,12 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
+import { Input } from "@/components/ui/input";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { toPng, toJpeg } from "html-to-image";
+import { toPng, toJpeg, toSvg } from "html-to-image";
 import jsPDF from "jspdf";
+import { format } from "date-fns";
 
 interface ExportDashboardProps {
   elementId: string;
@@ -31,10 +50,12 @@ interface ExportDashboardProps {
   variant?: "dropdown" | "button";
 }
 
+
 export default function ExportDashboard({ elementId, dashboardName = "Dashboard", dateRange, variant = "dropdown" }: ExportDashboardProps) {
   const [isExporting, setIsExporting] = useState(false);
   const [showOptions, setShowOptions] = useState(false);
-  const [exportType, setExportType] = useState<"pdf" | "png" | "jpeg">("pdf");
+  const [exportType, setExportType] = useState<"pdf" | "png" | "jpeg" | "svg">("pdf");
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const { toast } = useToast();
 
   // Export options
@@ -45,18 +66,42 @@ export default function ExportDashboard({ elementId, dashboardName = "Dashboard"
     includeLogs: false,
     includeDemographics: true,
     includeUtm: true,
-    quality: 0.95,
+    quality: 1,
     pixelRatio: 2,
+    margins: 20,
+    title: dashboardName,
+    author: "MTX Intelligence",
+    batchMode: false,
+    theme: "light",
+    customBg: "#f9fafb",
   });
 
-  const handleExportClick = (type: "pdf" | "png" | "jpeg") => {
+  const handleExportClick = (type: "pdf" | "png" | "jpeg" | "svg") => {
     setExportType(type);
     setShowOptions(true);
+    generatePreview();
+  };
+
+  const generatePreview = async () => {
+    const element = document.getElementById(elementId);
+    if (!element) return;
+    
+    try {
+      const dataUrl = await toPng(element, { 
+        pixelRatio: 0.5, 
+        backgroundColor: options.customBg 
+      });
+      setPreviewUrl(dataUrl);
+    } catch (e) {
+      console.error("Preview failed", e);
+    }
   };
 
   const generateFileName = (extension: string) => {
-    const rangeStr = dateRange ? `${dateRange.since}_a_${dateRange.until}` : new Date().toISOString().split("T")[0];
-    return `MTX_${dashboardName}_${rangeStr}.${extension}`;
+    const dateStr = format(new Date(), "yyyy-MM-dd");
+    const rangeStr = dateRange ? `${dateRange.since}_to_${dateRange.until}` : dateStr;
+    const sanitizedTitle = options.title.replace(/\s+/g, "_");
+    return `MTX_${sanitizedTitle}_${rangeStr}.${extension}`;
   };
 
   const performExport = async () => {
@@ -73,9 +118,12 @@ export default function ExportDashboard({ elementId, dashboardName = "Dashboard"
     setIsExporting(true);
     setShowOptions(false);
 
+    const formats: ("pdf" | "png" | "jpeg" | "svg")[] = options.batchMode 
+      ? ["pdf", "png", "svg"] 
+      : [exportType];
+
     try {
-      // Temporarily hide elements if needed
-      // Note: We can use classes to hide elements during capture
+      // Temporarily hide elements
       const hideList: string[] = [];
       if (!options.includeKpis) hideList.push("[data-section='kpis']");
       if (!options.includeCharts) hideList.push("[data-section='charts']");
@@ -93,36 +141,56 @@ export default function ExportDashboard({ elementId, dashboardName = "Dashboard"
         });
       });
 
-      const fileName = generateFileName(exportType);
       const captureOptions = {
         quality: options.quality,
         pixelRatio: options.pixelRatio,
-        backgroundColor: "#f9fafb", // Match app background
+        backgroundColor: options.customBg,
         style: {
-          padding: "20px",
+          padding: `${options.margins}px`,
         }
       };
 
-      if (exportType === "png") {
-        const dataUrl = await toPng(element, captureOptions);
-        downloadFile(dataUrl, fileName);
-      } else if (exportType === "jpeg") {
-        const dataUrl = await toJpeg(element, captureOptions);
-        downloadFile(dataUrl, fileName);
-      } else if (exportType === "pdf") {
-        const dataUrl = await toJpeg(element, { ...captureOptions, quality: 0.95 });
-        const pdf = new jsPDF({
-          orientation: "portrait",
-          unit: "px",
-          format: "a4",
-        });
-
-        const imgProps = pdf.getImageProperties(dataUrl);
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+      for (const format of formats) {
+        const fileName = generateFileName(format);
         
-        pdf.addImage(dataUrl, "JPEG", 0, 0, pdfWidth, pdfHeight);
-        pdf.save(fileName);
+        if (format === "png") {
+          const dataUrl = await toPng(element, captureOptions);
+          downloadFile(dataUrl, fileName);
+        } else if (format === "jpeg") {
+          const dataUrl = await toJpeg(element, captureOptions);
+          downloadFile(dataUrl, fileName);
+        } else if (format === "svg") {
+          const dataUrl = await toSvg(element, captureOptions);
+          downloadFile(dataUrl, fileName);
+        } else if (format === "pdf") {
+          // For PDF, we use high-quality JPEG as the base
+          const dataUrl = await toJpeg(element, { ...captureOptions, quality: 1, pixelRatio: 3 });
+          const pdf = new jsPDF({
+            orientation: "portrait",
+            unit: "px",
+            format: "a4",
+            putOnlyUsedFonts: true,
+          });
+
+          // Add metadata to PDF
+          pdf.setProperties({
+            title: options.title,
+            subject: "Dashboard Performance Report",
+            author: options.author,
+            keywords: "dashboard, analytics, mtx",
+            creator: "MTX Dashboard System"
+          });
+
+          const imgProps = pdf.getImageProperties(dataUrl);
+          const pdfWidth = pdf.internal.pageSize.getWidth();
+          const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+          
+          pdf.addImage(dataUrl, "JPEG", 0, 0, pdfWidth, pdfHeight);
+          pdf.save(fileName);
+        }
+        
+        // Brief delay between batch exports
+        if (options.batchMode) await new Promise(r => setTimeout(r, 500));
       }
 
       // Restore hidden elements
@@ -131,14 +199,14 @@ export default function ExportDashboard({ elementId, dashboardName = "Dashboard"
       });
 
       toast({
-        title: "Exportação concluída",
-        description: `O arquivo ${fileName} foi gerado com sucesso.`,
+        title: options.batchMode ? "Exportação em lote concluída" : "Exportação concluída",
+        description: `Arquivos gerados com alta qualidade e metadados incluídos.`,
       });
     } catch (error) {
       console.error("Export error:", error);
       toast({
         title: "Erro na exportação",
-        description: "Ocorreu um problema ao gerar o arquivo.",
+        description: "Ocorreu um problema ao gerar o arquivo. Tente reduzir a resolução.",
         variant: "destructive",
       });
     } finally {
@@ -153,6 +221,7 @@ export default function ExportDashboard({ elementId, dashboardName = "Dashboard"
     link.click();
   };
 
+
   return (
     <>
       {variant === "dropdown" ? (
@@ -163,17 +232,24 @@ export default function ExportDashboard({ elementId, dashboardName = "Dashboard"
               Exportar
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuLabel>Formato do Arquivo</DropdownMenuLabel>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuLabel className="flex items-center gap-2">
+              <FileDown className="w-4 h-4 text-primary" />
+              Alta Qualidade
+            </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => handleExportClick("pdf")} className="gap-2">
-              <FileText className="w-4 h-4" /> PDF
+              <FileText className="w-4 h-4" /> PDF Documento
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => handleExportClick("png")} className="gap-2">
-              <ImageIcon className="w-4 h-4" /> PNG
+              <ImageIcon className="w-4 h-4" /> PNG Imagem
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleExportClick("jpeg")} className="gap-2">
-              <ImageIcon className="w-4 h-4" /> JPEG
+            <DropdownMenuItem onClick={() => handleExportClick("svg")} className="gap-2">
+              <FileCode className="w-4 h-4" /> SVG Vetorial
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => { setOptions(p => ({ ...p, batchMode: true })); setShowOptions(true); }} className="gap-2 text-primary font-medium">
+              <History className="w-4 h-4" /> Exportação em Lote
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -186,102 +262,184 @@ export default function ExportDashboard({ elementId, dashboardName = "Dashboard"
           onClick={() => handleExportClick("pdf")}
         >
           {isExporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
-          Gerar PDF
+          Gerar Relatório
         </Button>
       )}
 
       <Dialog open={showOptions} onOpenChange={setShowOptions}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Settings2 className="w-5 h-5" />
-              Opções de Exportação
+            <DialogTitle className="flex items-center gap-2 text-xl">
+              <Settings2 className="w-5 h-5 text-primary" />
+              Configurar Diagramação e Exportação
             </DialogTitle>
             <DialogDescription>
-              Personalize o que será incluído no seu {exportType.toUpperCase()}.
+              Ajuste as diretrizes visuais e metadados antes da geração final.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="grid gap-4 py-4">
-            <div className="space-y-3">
-              <h4 className="text-sm font-medium leading-none">Elementos do Dashboard</h4>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="kpis" 
-                    checked={options.includeKpis} 
-                    onCheckedChange={(checked) => setOptions(prev => ({ ...prev, includeKpis: !!checked }))}
-                  />
-                  <Label htmlFor="kpis">KPIs Principais</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="charts" 
-                    checked={options.includeCharts} 
-                    onCheckedChange={(checked) => setOptions(prev => ({ ...prev, includeCharts: !!checked }))}
-                  />
-                  <Label htmlFor="charts">Gráficos</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="campaigns" 
-                    checked={options.includeCampaigns} 
-                    onCheckedChange={(checked) => setOptions(prev => ({ ...prev, includeCampaigns: !!checked }))}
-                  />
-                  <Label htmlFor="campaigns">Tabela de Campanhas</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="demographics" 
-                    checked={options.includeDemographics} 
-                    onCheckedChange={(checked) => setOptions(prev => ({ ...prev, includeDemographics: !!checked }))}
-                  />
-                  <Label htmlFor="demographics">Demografia</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="utm" 
-                    checked={options.includeUtm} 
-                    onCheckedChange={(checked) => setOptions(prev => ({ ...prev, includeUtm: !!checked }))}
-                  />
-                  <Label htmlFor="utm">Análise UTM</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="logs" 
-                    checked={options.includeLogs} 
-                    onCheckedChange={(checked) => setOptions(prev => ({ ...prev, includeLogs: !!checked }))}
-                  />
-                  <Label htmlFor="logs">Logs de Automação</Label>
+          <Tabs defaultValue="elements" className="w-full mt-4">
+            <TabsList className="grid w-full grid-cols-3 h-11">
+              <TabsTrigger value="elements" className="gap-2">
+                <Maximize className="w-4 h-4" /> Elementos
+              </TabsTrigger>
+              <TabsTrigger value="style" className="gap-2">
+                <Palette className="w-4 h-4" /> Estilos
+              </TabsTrigger>
+              <TabsTrigger value="preview" className="gap-2">
+                <Eye className="w-4 h-4" /> Prévia
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="elements" className="space-y-6 pt-4">
+              <div className="space-y-4">
+                <h4 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Conteúdo do Diagrama</h4>
+                <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+                  {[
+                    { id: "kpis", label: "KPIs Principais", state: options.includeKpis, key: "includeKpis" },
+                    { id: "charts", label: "Gráficos Visuais", state: options.includeCharts, key: "includeCharts" },
+                    { id: "campaigns", label: "Tabela de Campanhas", state: options.includeCampaigns, key: "includeCampaigns" },
+                    { id: "demographics", label: "Dados Demográficos", state: options.includeDemographics, key: "includeDemographics" },
+                    { id: "utm", label: "Análise de Canais (UTM)", state: options.includeUtm, key: "includeUtm" },
+                    { id: "logs", label: "Histórico de Automação", state: options.includeLogs, key: "includeLogs" },
+                  ].map((item) => (
+                    <div key={item.id} className="flex items-center space-x-3 p-2 rounded-lg hover:bg-secondary/20 transition-colors">
+                      <Checkbox 
+                        id={item.id} 
+                        checked={item.state} 
+                        onCheckedChange={(checked) => setOptions(prev => ({ ...prev, [item.key]: !!checked }))}
+                      />
+                      <Label htmlFor={item.id} className="cursor-pointer font-medium">{item.label}</Label>
+                    </div>
+                  ))}
                 </div>
               </div>
-            </div>
 
-            <DropdownMenuSeparator />
+              <DropdownMenuSeparator />
 
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="quality">Qualidade / Resolução</Label>
-                <span className="text-xs font-mono text-muted-foreground">{options.pixelRatio}x</span>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label className="text-sm font-bold">Resolução do Export (DPI)</Label>
+                    <p className="text-[10px] text-muted-foreground">Nível de nitidez das linhas e textos.</p>
+                  </div>
+                  <span className="text-xs font-black px-2 py-1 bg-primary/10 text-primary rounded">{options.pixelRatio}x</span>
+                </div>
+                <Slider
+                  min={1}
+                  max={4}
+                  step={0.5}
+                  value={[options.pixelRatio]}
+                  onValueChange={(val) => setOptions(prev => ({ ...prev, pixelRatio: val[0] }))}
+                  className="py-2"
+                />
               </div>
-              <Slider
-                id="quality"
-                min={1}
-                max={3}
-                step={0.5}
-                value={[options.pixelRatio]}
-                onValueChange={(val) => setOptions(prev => ({ ...prev, pixelRatio: val[0] }))}
-              />
-              <p className="text-[10px] text-muted-foreground">
-                Valores mais altos geram imagens mais nítidas, porém arquivos maiores.
+            </TabsContent>
+
+            <TabsContent value="style" className="space-y-6 pt-4">
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-3">
+                  <Label className="flex items-center gap-2">
+                    <Type className="w-4 h-4 text-primary" /> Título do Arquivo
+                  </Label>
+                  <Input 
+                    value={options.title} 
+                    onChange={(e) => setOptions(p => ({ ...p, title: e.target.value }))}
+                    placeholder="Ex: Dashboard Performance Q3"
+                  />
+                </div>
+                <div className="space-y-3">
+                  <Label className="flex items-center gap-2">
+                    <Users className="w-4 h-4 text-primary" /> Autor / Agência
+                  </Label>
+                  <Input 
+                    value={options.author} 
+                    onChange={(e) => setOptions(p => ({ ...p, author: e.target.value }))}
+                    placeholder="Nome do responsável"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <h4 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Ajustes de Diagramação</h4>
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <Label>Margens Internas</Label>
+                      <span className="text-xs font-mono">{options.margins}px</span>
+                    </div>
+                    <Slider
+                      min={0}
+                      max={60}
+                      step={5}
+                      value={[options.margins]}
+                      onValueChange={(val) => setOptions(prev => ({ ...prev, margins: val[0] }))}
+                    />
+                  </div>
+                  <div className="space-y-3">
+                    <Label>Cor de Fundo</Label>
+                    <div className="flex gap-2">
+                      <Input 
+                        type="color" 
+                        value={options.customBg} 
+                        onChange={(e) => setOptions(p => ({ ...p, customBg: e.target.value }))}
+                        className="w-12 h-10 p-1"
+                      />
+                      <Input 
+                        value={options.customBg} 
+                        onChange={(e) => setOptions(p => ({ ...p, customBg: e.target.value }))}
+                        className="flex-1 font-mono uppercase"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-3 p-4 bg-primary/5 rounded-xl border border-primary/20">
+                <Checkbox 
+                  id="batch" 
+                  checked={options.batchMode} 
+                  onCheckedChange={(checked) => setOptions(prev => ({ ...prev, batchMode: !!checked }))}
+                />
+                <div className="space-y-0.5">
+                  <Label htmlFor="batch" className="cursor-pointer font-bold text-primary flex items-center gap-2">
+                    <History className="w-4 h-4" /> Exportação Simultânea (Multi-formato)
+                  </Label>
+                  <p className="text-[10px] text-muted-foreground">
+                    Gera PDF, PNG e SVG simultaneamente com um único clique.
+                  </p>
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="preview" className="pt-4">
+              <div className="relative aspect-video bg-secondary/30 rounded-xl border-2 border-dashed border-muted flex items-center justify-center overflow-hidden">
+                {previewUrl ? (
+                  <img src={previewUrl} alt="Preview" className="w-full h-full object-contain shadow-2xl" />
+                ) : (
+                  <div className="text-center space-y-3">
+                    <Loader2 className="w-8 h-8 animate-spin mx-auto text-muted-foreground" />
+                    <p className="text-xs text-muted-foreground">Gerando prévia em tempo real...</p>
+                  </div>
+                )}
+                <div className="absolute top-4 left-4 bg-black/60 backdrop-blur px-3 py-1.5 rounded-full text-[10px] font-bold text-white flex items-center gap-2">
+                  <Eye className="w-3 h-3" /> Visualização do Diagrama
+                </div>
+              </div>
+              <p className="text-[10px] text-muted-foreground mt-4 text-center italic">
+                * A prévia é gerada em baixa resolução para performance. O export final seguirá sua configuração de DPI.
               </p>
-            </div>
-          </div>
+            </TabsContent>
+          </Tabs>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowOptions(false)}>Cancelar</Button>
-            <Button onClick={performExport} className="gap-2">
-              Gerar {exportType.toUpperCase()}
+          <DialogFooter className="mt-8 gap-3 sm:gap-0">
+            <Button variant="ghost" onClick={() => setShowOptions(false)}>Descartar</Button>
+            <Button onClick={performExport} className="gap-2 bg-primary hover:bg-primary/90 px-8">
+              {options.batchMode ? (
+                <> <History className="w-4 h-4" /> Iniciar Lote </>
+              ) : (
+                <> <Download className="w-4 h-4" /> Gerar {exportType.toUpperCase()} </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

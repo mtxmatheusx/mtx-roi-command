@@ -2,7 +2,10 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import { motion, useScroll, useSpring } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
-import { toPng } from "html-to-image";
+import { toPng, toJpeg, toSvg } from "html-to-image";
+import jsPDF from "jspdf";
+import ExportDashboard from "@/components/dashboard/ExportDashboard";
+
 
 /* ─── helpers ─── */
 function fmt(n: number) {
@@ -113,7 +116,6 @@ export default function Relatorio() {
   const [error, setError] = useState(false);
   const [profileName, setProfileName] = useState("");
   const contentRef = useRef<HTMLDivElement>(null);
-  const downloadBtnRef = useRef<HTMLButtonElement>(null);
 
   const { scrollYProgress } = useScroll();
   const scaleX = useSpring(scrollYProgress, { stiffness: 100, damping: 30 });
@@ -141,20 +143,8 @@ export default function Relatorio() {
     })();
   }, [token]);
 
-  const handleDownload = useCallback(async () => {
-    if (!contentRef.current) return;
-    if (downloadBtnRef.current) downloadBtnRef.current.style.display = "none";
-    try {
-      const dataUrl = await toPng(contentRef.current, { quality: 0.95, backgroundColor: COLORS.preto });
-      const link = document.createElement("a");
-      link.download = `relatorio-${profileName || "mtx"}.png`;
-      link.href = dataUrl;
-      link.click();
-    } catch (e) { console.error(e); }
-    if (downloadBtnRef.current) downloadBtnRef.current.style.display = "";
-  }, [profileName]);
-
   /* ─── LOADING ─── */
+
   if (loading) {
     return (
       <div style={{ background: COLORS.preto, minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -248,7 +238,7 @@ export default function Relatorio() {
         scaleX, transformOrigin: "0%",
       }} />
 
-      <div ref={contentRef} style={{
+      <div ref={contentRef} id="report-content" style={{
         background: COLORS.preto,
         minHeight: "100vh",
         color: "#fff",
@@ -497,27 +487,17 @@ export default function Relatorio() {
           </footer>
         </div>
 
-        {/* Download button */}
-        <button
-          ref={downloadBtnRef}
-          onClick={handleDownload}
-          style={{
-            position: "fixed", bottom: "1.5rem", right: "1.5rem", zIndex: 100,
-            background: COLORS.azulExpert, color: "#fff",
-            border: "none", borderRadius: "100px",
-            padding: "0.8rem 1.5rem", cursor: "pointer",
-            fontWeight: 600, fontSize: "0.85rem",
-            fontFamily: "'Inter', sans-serif",
-            boxShadow: `0 4px 20px rgba(2,127,151,0.3)`,
-            display: "flex", alignItems: "center", gap: "0.5rem",
-            transition: "transform 0.2s",
-          }}
-          onMouseEnter={e => (e.currentTarget.style.transform = "scale(1.05)")}
-          onMouseLeave={e => (e.currentTarget.style.transform = "scale(1)")}
-        >
-          ↓ Baixar Relatório
-        </button>
+        {/* Download action */}
+        <div style={{
+          position: "fixed", bottom: "1.5rem", right: "1.5rem", zIndex: 100,
+        }}>
+          <ExportDashboard 
+            elementId="report-content" 
+            dashboardName={`Relatorio_${profileName}`}
+          />
+        </div>
       </div>
+
     </>
   );
 }
