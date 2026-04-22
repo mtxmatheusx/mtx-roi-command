@@ -116,7 +116,6 @@ export default function Relatorio() {
   const [error, setError] = useState(false);
   const [profileName, setProfileName] = useState("");
   const contentRef = useRef<HTMLDivElement>(null);
-  const downloadBtnRef = useRef<HTMLButtonElement>(null);
 
   const { scrollYProgress } = useScroll();
   const scaleX = useSpring(scrollYProgress, { stiffness: 100, damping: 30 });
@@ -144,20 +143,8 @@ export default function Relatorio() {
     })();
   }, [token]);
 
-  const handleDownload = useCallback(async () => {
-    if (!contentRef.current) return;
-    if (downloadBtnRef.current) downloadBtnRef.current.style.display = "none";
-    try {
-      const dataUrl = await toPng(contentRef.current, { quality: 0.95, backgroundColor: COLORS.preto });
-      const link = document.createElement("a");
-      link.download = `relatorio-${profileName || "mtx"}.png`;
-      link.href = dataUrl;
-      link.click();
-    } catch (e) { console.error(e); }
-    if (downloadBtnRef.current) downloadBtnRef.current.style.display = "";
-  }, [profileName]);
-
   /* ─── LOADING ─── */
+
   if (loading) {
     return (
       <div style={{ background: COLORS.preto, minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
