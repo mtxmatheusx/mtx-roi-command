@@ -43,6 +43,7 @@ export default function ExportDashboard({ elementId, dashboardName = "Dashboard"
     includeCampaigns: true,
     includeLogs: false,
     includeDemographics: true,
+    includeUtm: true,
     quality: 0.95,
     pixelRatio: 2,
   });
@@ -80,6 +81,7 @@ export default function ExportDashboard({ elementId, dashboardName = "Dashboard"
       if (!options.includeCampaigns) hideList.push("[data-section='campaigns']");
       if (!options.includeLogs) hideList.push("[data-section='logs']");
       if (!options.includeDemographics) hideList.push("[data-section='demographics']");
+      if (!options.includeUtm) hideList.push("[data-section='utm']");
 
       const hiddenElements: HTMLElement[] = [];
       hideList.forEach(selector => {
@@ -221,6 +223,14 @@ export default function ExportDashboard({ elementId, dashboardName = "Dashboard"
                     onCheckedChange={(checked) => setOptions(prev => ({ ...prev, includeDemographics: !!checked }))}
                   />
                   <Label htmlFor="demographics">Demografia</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="utm" 
+                    checked={options.includeUtm} 
+                    onCheckedChange={(checked) => setOptions(prev => ({ ...prev, includeUtm: !!checked }))}
+                  />
+                  <Label htmlFor="utm">Análise UTM</Label>
                 </div>
                 <div className="flex items-center space-x-2">
                   <Checkbox 
