@@ -231,7 +231,7 @@ export default function DashboardTab(props: DashboardTabProps) {
 
           {/* Primary KPIs */}
           {show("kpis") && (
-            <>
+            <div data-section="kpis" className="space-y-4">
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                 <MetricCard title="Investimento" value={formatCurrency(totalSpend)} icon={<DollarSign className="w-4 h-4" />} delta={deltaSpend} invertDelta index={0} />
                 <MetricCard title="CPA" value={formatCurrency(avgCPA)} subtitle={`Meta: ${formatCurrency(cpaMeta)}`} variant={avgCPA > cpaMeta * 1.2 ? "danger" : "default"} icon={<Target className="w-4 h-4" />} delta={deltaCPA} invertDelta index={1} />
@@ -243,14 +243,14 @@ export default function DashboardTab(props: DashboardTabProps) {
                 <MetricCard title="CTR" value={`${avgCTR.toFixed(2)}%`} variant={avgCTR < 1 ? "danger" : "default"} icon={<MousePointerClick className="w-4 h-4" />} delta={deltaCTR} index={5} />
                 <MetricCard title="Ticket Médio" value={formatCurrency(calcTicketMedio)} icon={<ShoppingBag className="w-4 h-4" />} delta={deltaTM} index={6} />
               </div>
-            </>
+            </div>
           )}
 
           {/* Charts */}
-          {show("charts") && <DashboardCharts daily={daily} cpaMeta={cpaMeta} />}
+          {show("charts") && <div data-section="charts"><DashboardCharts daily={daily} cpaMeta={cpaMeta} /></div>}
 
           {/* Campaigns Table */}
-          {show("campaigns") && <CampaignsTable campaigns={campaigns} disableScale={(() => {
+          {show("campaigns") && <div data-section="campaigns"><CampaignsTable campaigns={campaigns} disableScale={(() => {
             if (budgetMaximo <= 0) return false;
             const today = new Date().toISOString().slice(0, 10);
             const thisMonth = today.slice(0, 7);
@@ -261,10 +261,11 @@ export default function DashboardTab(props: DashboardTabProps) {
               else sp = daily.filter((d: any) => d.date.startsWith(thisMonth)).reduce((s: number, d: any) => s + d.spend, 0);
             }
             return sp >= budgetMaximo;
-          })()} />}
+          })()} /></div>}
 
           {/* Automation Log */}
           {show("logs") && <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
+            data-section="logs"
             className="rounded-2xl overflow-hidden bg-white/[0.78] backdrop-blur-[20px] backdrop-saturate-[160%] border border-white/70 [border-top-color:rgba(255,255,255,0.92)] shadow-[inset_0_1px_0_rgba(255,255,255,0.80),0_4px_12px_rgba(0,0,0,0.06)] dark:bg-[rgba(30,30,30,0.80)] dark:border-white/[0.08]">
               <div className="px-6 py-4 border-b border-border flex items-center gap-2.5">
                 <div className="w-6 h-6 rounded-md bg-[hsl(var(--green-bg))] flex items-center justify-center">
@@ -290,10 +291,10 @@ export default function DashboardTab(props: DashboardTabProps) {
           </motion.div>}
 
           {/* Demographics */}
-          {show("demographics") && <DemographicsChart data={demographics} />}
+          {show("demographics") && <div data-section="demographics"><DemographicsChart data={demographics} /></div>}
 
           {/* UTM Analysis */}
-          {show("utm") && <UTMAnalysis dateRange={dateRange} />}
+          {show("utm") && <div data-section="utm"><UTMAnalysis dateRange={dateRange} /></div>}
 
           {/* Data Verified */}
           {!isUsingMock && dataVerified && (

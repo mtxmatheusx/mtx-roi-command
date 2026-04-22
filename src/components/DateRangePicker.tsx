@@ -20,21 +20,29 @@ const inlineShortcuts = [
   { label: "7 dias", range: () => ({ since: fmt(subDays(new Date(), 6)), until: fmt(new Date()) }) },
   { label: "15 dias", range: () => ({ since: fmt(subDays(new Date(), 14)), until: fmt(new Date()) }) },
   { label: "30 dias", range: () => ({ since: fmt(subDays(new Date(), 29)), until: fmt(new Date()) }) },
-  { label: "60 dias", range: () => ({ since: fmt(subDays(new Date(), 59)), until: fmt(new Date()) }) },
-  { label: "90 dias", range: () => ({ since: fmt(subDays(new Date(), 89)), until: fmt(new Date()) }) },
-  { label: "180 dias", range: () => ({ since: fmt(subDays(new Date(), 179)), until: fmt(new Date()) }) },
-  { label: "Mês Atual", range: () => ({ since: fmt(startOfMonth(new Date())), until: fmt(new Date()) }) },
+  { label: "Este mês", range: () => ({ since: fmt(startOfMonth(new Date())), until: fmt(new Date()) }) },
+  { label: "Mês Passado", range: () => {
+      const last = subMonths(new Date(), 1);
+      return { since: fmt(startOfMonth(last)), until: fmt(endOfMonth(last)) };
+    },
+  },
+  { label: "Este Ano", range: () => ({ since: fmt(new Date(new Date().getFullYear(), 0, 1)), until: fmt(new Date()) }) },
 ];
 
 const popoverPresets = [
   { label: "Hoje", range: () => ({ since: fmt(new Date()), until: fmt(new Date()) }) },
   { label: "Últimos 7 dias", range: () => ({ since: fmt(subDays(new Date(), 6)), until: fmt(new Date()) }) },
-  { label: "Últimos 15 dias", range: () => ({ since: fmt(subDays(new Date(), 14)), until: fmt(new Date()) }) },
   { label: "Últimos 30 dias", range: () => ({ since: fmt(subDays(new Date(), 29)), until: fmt(new Date()) }) },
   { label: "Este mês", range: () => ({ since: fmt(startOfMonth(new Date())), until: fmt(new Date()) }) },
   { label: "Mês passado", range: () => {
       const last = subMonths(new Date(), 1);
       return { since: fmt(startOfMonth(last)), until: fmt(endOfMonth(last)) };
+    },
+  },
+  { label: "Este ano", range: () => ({ since: fmt(new Date(new Date().getFullYear(), 0, 1)), until: fmt(new Date()) }) },
+  { label: "Ano passado", range: () => {
+      const lastYear = new Date().getFullYear() - 1;
+      return { since: `${lastYear}-01-01`, until: `${lastYear}-12-31` };
     },
   },
 ];
