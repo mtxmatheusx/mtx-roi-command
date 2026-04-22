@@ -151,7 +151,7 @@ export default function Dashboard() {
             <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
             Forçar Atualização
           </Button>
-          <ExportDashboard elementId="dashboard-content" dashboardName="CommandCenter" />
+          <ExportDashboard elementId="dashboard-content" dashboardName="Dashboard" dateRange={dateRange} />
           <DashboardCustomizer />
         </div>
       </div>
