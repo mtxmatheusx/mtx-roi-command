@@ -1,5 +1,19 @@
-import { useState } from "react";
-import { Download, FileText, Image as ImageIcon, Check, Loader2, Settings2 } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { 
+  Download, 
+  FileText, 
+  Image as ImageIcon, 
+  Check, 
+  Loader2, 
+  Settings2, 
+  FileCode, 
+  Maximize, 
+  Type, 
+  Palette,
+  Eye,
+  History,
+  FileDown
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -20,9 +34,12 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
+import { Input } from "@/components/ui/input";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { toPng, toJpeg } from "html-to-image";
+import { toPng, toJpeg, toSvg } from "html-to-image";
 import jsPDF from "jspdf";
+import { format } from "date-fns";
 
 interface ExportDashboardProps {
   elementId: string;
@@ -30,6 +47,7 @@ interface ExportDashboardProps {
   dateRange?: { since: string; until: string };
   variant?: "dropdown" | "button";
 }
+
 
 export default function ExportDashboard({ elementId, dashboardName = "Dashboard", dateRange, variant = "dropdown" }: ExportDashboardProps) {
   const [isExporting, setIsExporting] = useState(false);
