@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Building2, DollarSign, TrendingUp, Activity, AlertTriangle, Loader2, ArrowRight, RefreshCw, Brain } from "lucide-react";
+import { Building2, DollarSign, TrendingUp, Activity, AlertTriangle, Loader2, ArrowRight, RefreshCw, Brain, FileText } from "lucide-react";
+import ExportDashboard from "@/components/dashboard/ExportDashboard";
+
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -134,7 +136,7 @@ export default function AgencyView() {
 
   return (
     <AppLayout>
-      <div className="space-y-6">
+      <div id="agency-dashboard" className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
             <motion.h1 initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-2xl font-bold flex items-center gap-2">
@@ -143,10 +145,17 @@ export default function AgencyView() {
             </motion.h1>
             <p className="text-muted-foreground text-sm mt-1">Métricas agregadas de todos os clientes · Mês atual</p>
           </div>
-          <Button variant="outline" size="sm" onClick={fetchAllMetrics} disabled={loadingMetrics} className="gap-2">
-            <RefreshCw className={`w-4 h-4 ${loadingMetrics ? "animate-spin" : ""}`} />
-            Atualizar
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={fetchAllMetrics} disabled={loadingMetrics} className="gap-2">
+              <RefreshCw className={`w-4 h-4 ${loadingMetrics ? "animate-spin" : ""}`} />
+              Atualizar
+            </Button>
+            <ExportDashboard 
+              elementId="agency-dashboard" 
+              dashboardName="Agencia" 
+              variant="button" 
+            />
+          </div>
         </div>
 
         {/* Executive Cards */}
