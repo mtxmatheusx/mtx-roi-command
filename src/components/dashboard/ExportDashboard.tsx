@@ -27,9 +27,10 @@ import jsPDF from "jspdf";
 interface ExportDashboardProps {
   elementId: string;
   dashboardName?: string;
+  dateRange?: { since: string; until: string };
 }
 
-export default function ExportDashboard({ elementId, dashboardName = "Dashboard" }: ExportDashboardProps) {
+export default function ExportDashboard({ elementId, dashboardName = "Dashboard", dateRange }: ExportDashboardProps) {
   const [isExporting, setIsExporting] = useState(false);
   const [showOptions, setShowOptions] = useState(false);
   const [exportType, setExportType] = useState<"pdf" | "png" | "jpeg">("pdf");
@@ -52,8 +53,8 @@ export default function ExportDashboard({ elementId, dashboardName = "Dashboard"
   };
 
   const generateFileName = (extension: string) => {
-    const date = new Date().toISOString().split("T")[0];
-    return `MTX_${dashboardName}_${date}.${extension}`;
+    const rangeStr = dateRange ? `${dateRange.since}_a_${dateRange.until}` : new Date().toISOString().split("T")[0];
+    return `MTX_${dashboardName}_${rangeStr}.${extension}`;
   };
 
   const performExport = async () => {
