@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Building2, DollarSign, TrendingUp, Activity, AlertTriangle, Loader2, ArrowRight, RefreshCw, Brain } from "lucide-react";
+import { Building2, DollarSign, TrendingUp, Activity, AlertTriangle, Loader2, ArrowRight, RefreshCw, Brain, FileText } from "lucide-react";
+import ExportDashboard from "@/components/dashboard/ExportDashboard";
+
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
