@@ -321,6 +321,9 @@ export default function CarouselPreview({ visualDNA }: CarouselPreviewProps) {
     // ─── Render export slide (offscreen, used by html-to-image) ───
     const renderExportSlide = (slide: CarouselSlide, index: number) => {
         const hasImg = !!slideImages[index];
+        const isSerif = visualDNA.typography.includes("Serif");
+        const accentColor = slide.type === "hook" ? "#ef4444" : slide.type === "cta" ? "#f59e0b" : slide.type === "solution" ? "#10b981" : "#6366f1";
+        
         return (
             <div
                 key={`export-${index}`}
@@ -330,13 +333,14 @@ export default function CarouselPreview({ visualDNA }: CarouselPreviewProps) {
                     height: 1350,
                     display: "none",
                     flexDirection: "column",
-                    justifyContent: "flex-end",
+                    justifyContent: "space-between",
                     position: "relative",
                     overflow: "hidden",
-                    fontFamily: visualDNA.typography.includes("Serif") ? "Georgia, serif" : "'DM Sans', sans-serif",
+                    backgroundColor: "#000000",
+                    fontFamily: isSerif ? "Georgia, serif" : "'Inter', 'Helvetica Neue', sans-serif",
                 }}
             >
-                {/* Background */}
+                {/* Background Layer */}
                 {hasImg ? (
                     <img
                         src={slideImages[index]}
@@ -347,50 +351,91 @@ export default function CarouselPreview({ visualDNA }: CarouselPreviewProps) {
                 ) : (
                     <div style={{
                         position: "absolute", inset: 0,
-                        background: `linear-gradient(145deg, ${visualDNA.palette[0] || "#1a1a2e"}, ${visualDNA.palette[1] || "#16213e"})`,
+                        background: `linear-gradient(135deg, ${visualDNA.palette[0] || "#1a1a2e"} 0%, ${visualDNA.palette[1] || "#16213e"} 100%)`,
                     }} />
                 )}
-                {/* Gradient overlay */}
+
+                {/* Overlays */}
                 <div style={{
                     position: "absolute", inset: 0,
                     background: hasImg
-                        ? "linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.3) 40%, transparent 70%)"
-                        : "linear-gradient(to top, rgba(0,0,0,0.4) 0%, transparent 60%)",
+                        ? "linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.4) 40%, rgba(0,0,0,0.1) 100%)"
+                        : "linear-gradient(to bottom, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.4) 100%)",
                 }} />
-                {/* Text content */}
+
+                {/* Top Bar (Progress/Label) */}
                 <div style={{
-                    position: "relative", zIndex: 10,
-                    padding: "60px 56px",
-                    display: "flex", flexDirection: "column", gap: "16px",
+                    position: "relative", zIndex: 20,
+                    padding: "60px 80px 0",
+                    display: "flex", justifyContent: "space-between", alignItems: "center"
                 }}>
+                    <div style={{ display: "flex", gap: "8px" }}>
+                        {carousel?.slides.map((_, i) => (
+                            <div key={i} style={{
+                                width: "40px", height: "4px",
+                                backgroundColor: i === index ? accentColor : "rgba(255,255,255,0.2)",
+                                borderRadius: "2px"
+                            }} />
+                        ))}
+                    </div>
                     <span style={{
-                        display: "inline-block",
-                        fontSize: "14px",
-                        fontWeight: 800,
-                        letterSpacing: "2px",
-                        textTransform: "uppercase",
-                        color: slide.type === "hook" ? "#ef4444" : slide.type === "cta" ? "#f59e0b" : slide.type === "solution" ? "#10b981" : "#6366f1",
-                        marginBottom: "4px",
+                        fontSize: "16px", fontWeight: 900, letterSpacing: "3px", color: "rgba(255,255,255,0.5)", textTransform: "uppercase"
                     }}>
-                        {(slideTypeConfig[slide.type] || slideTypeConfig.value).label}
+                        {index + 1}/{carousel?.slides.length}
                     </span>
+                </div>
+
+                {/* Main Content Area */}
+                <div style={{
+                    position: "relative", zIndex: 20,
+                    padding: "0 80px 80px",
+                    display: "flex", flexDirection: "column", gap: "24px",
+                }}>
+                    <div style={{
+                        display: "inline-block",
+                        padding: "8px 16px",
+                        backgroundColor: accentColor,
+                        borderRadius: "4px",
+                        width: "fit-content"
+                    }}>
+                        <span style={{
+                            fontSize: "14px", fontWeight: 900, letterSpacing: "2px", textTransform: "uppercase", color: "#ffffff"
+                        }}>
+                            {(slideTypeConfig[slide.type] || slideTypeConfig.value).label}
+                        </span>
+                    </div>
+
                     <h3 style={{
-                        fontSize: "52px",
-                        fontWeight: 800,
-                        color: "#ffffff",
-                        lineHeight: 1.15,
-                        textShadow: "0 2px 12px rgba(0,0,0,0.5)",
+                        fontSize: "64px", fontWeight: 900, color: "#ffffff", lineHeight: 1.1, letterSpacing: "-1px",
+                        textShadow: "0 4px 24px rgba(0,0,0,0.5)",
+                        maxWidth: "900px"
                     }}>
                         {slide.headline}
                     </h3>
+                    
                     <p style={{
-                        fontSize: "26px",
-                        fontWeight: 400,
-                        color: "rgba(255,255,255,0.85)",
-                        lineHeight: 1.5,
+                        fontSize: "28px", fontWeight: 500, color: "rgba(255,255,255,0.9)", lineHeight: 1.5,
+                        maxWidth: "850px", textShadow: "0 2px 8px rgba(0,0,0,0.3)"
                     }}>
                         {slide.body}
                     </p>
+
+                    <div style={{ 
+                        marginTop: "20px", display: "flex", alignItems: "center", gap: "12px",
+                        paddingTop: "32px", borderTop: "1px solid rgba(255,255,255,0.1)"
+                    }}>
+                        <div style={{ 
+                            width: "48px", height: "48px", borderRadius: "50%", 
+                            backgroundColor: visualDNA.palette[0] || "#ffffff",
+                            display: "flex", alignItems: "center", justifyCenter: "center",
+                            fontSize: "20px", fontWeight: 900, color: "#000000"
+                        }}>
+                            {(activeProfile?.name?.[0] || "P").toUpperCase()}
+                        </div>
+                        <span style={{ fontSize: "20px", fontWeight: 700, color: "#ffffff" }}>
+                            @{activeProfile?.name?.toLowerCase().replace(/\s+/g, "") || "perfil"}
+                        </span>
+                    </div>
                 </div>
             </div>
         );
@@ -535,38 +580,95 @@ export default function CarouselPreview({ visualDNA }: CarouselPreviewProps) {
                                                         alt={currentSlideData.headline}
                                                         className="w-full h-full object-cover"
                                                     />
-                                                    <div className="absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
-                                                    <div className="absolute inset-x-0 bottom-0 p-5 space-y-2">
-                                                        <h3 className="text-lg font-bold text-white leading-tight drop-shadow-sm"
+                                                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent pointer-events-none" />
+                                                    
+                                                    {/* Preview Slide Number/Branding */}
+                                                    <div className="absolute top-4 inset-x-5 flex justify-between items-center z-10">
+                                                        <div className="flex gap-1">
+                                                            {carousel.slides.map((_, i) => (
+                                                                <div key={i} className={`h-0.5 rounded-full transition-all ${
+                                                                    i === currentSlide ? "w-4 bg-primary" : "w-2 bg-white/20"
+                                                                }`} />
+                                                            ))}
+                                                        </div>
+                                                        <span className="text-[10px] font-bold text-white/40 tracking-widest uppercase">
+                                                            {currentSlide + 1}/{carousel.slides.length}
+                                                        </span>
+                                                    </div>
+
+                                                    <div className="absolute inset-x-0 bottom-0 p-6 space-y-3 z-10">
+                                                        <div className={`w-fit px-2 py-0.5 rounded text-[9px] font-black tracking-widest text-white uppercase ${
+                                                            currentSlideData.type === 'hook' ? 'bg-destructive' : 
+                                                            currentSlideData.type === 'solution' ? 'bg-success' : 
+                                                            currentSlideData.type === 'cta' ? 'bg-warning' : 'bg-primary'
+                                                        }`}>
+                                                            {currentTypeConfig?.label}
+                                                        </div>
+                                                        <h3 className="text-xl md:text-2xl font-black text-white leading-[1.1] tracking-tight drop-shadow-md"
                                                             style={{ fontFamily: visualDNA.typography.includes("Serif") ? "Georgia, serif" : "inherit" }}>
                                                             {currentSlideData.headline}
                                                         </h3>
-                                                        <p className="text-xs text-white/80 leading-relaxed line-clamp-3">{currentSlideData.body}</p>
+                                                        <p className="text-[13px] text-white/80 leading-relaxed line-clamp-3 font-medium">
+                                                            {currentSlideData.body}
+                                                        </p>
+                                                        <div className="pt-3 border-t border-white/10 flex items-center gap-2">
+                                                            <div className="w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-bold"
+                                                                style={{ backgroundColor: visualDNA.palette[0] || "hsl(var(--primary))", color: '#000' }}>
+                                                                {(activeProfile?.name?.[0] || "P").toUpperCase()}
+                                                            </div>
+                                                            <span className="text-[10px] font-bold text-white/60">@{activeProfile?.name?.toLowerCase().replace(/\s+/g, "") || "perfil"}</span>
+                                                        </div>
                                                     </div>
                                                     <button onClick={() => setExpandedPreview(true)}
-                                                        className="absolute top-3 right-3 w-7 h-7 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center text-white/70 hover:text-white transition-colors cursor-pointer">
+                                                        className="absolute top-4 right-4 w-7 h-7 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center text-white/70 hover:text-white transition-colors cursor-pointer z-20">
                                                         <Maximize2 className="w-3 h-3" />
                                                     </button>
                                                 </>
                                             ) : (
-                                                <div className="w-full h-full flex flex-col items-center justify-center p-8 text-center"
+                                                <div className="w-full h-full flex flex-col justify-between p-8"
                                                     style={{
-                                                        background: `linear-gradient(145deg, ${visualDNA.palette[0] || "#1a1a2e"}, ${visualDNA.palette[1] || "#16213e"})`,
+                                                        background: `linear-gradient(135deg, ${visualDNA.palette[0] || "#1a1a2e"} 0%, ${visualDNA.palette[1] || "#16213e"} 100%)`,
                                                     }}>
-                                                    <div className="max-w-[280px] space-y-4">
-                                                        <h3 className="text-xl font-bold text-white leading-tight"
+                                                    <div className="flex justify-between items-center">
+                                                        <div className="flex gap-1">
+                                                            {carousel.slides.map((_, i) => (
+                                                                <div key={i} className={`h-0.5 rounded-full transition-all ${
+                                                                    i === currentSlide ? "w-4 bg-primary" : "w-2 bg-white/20"
+                                                                }`} />
+                                                            ))}
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="space-y-4">
+                                                        <div className={`w-fit px-2 py-0.5 rounded text-[9px] font-black tracking-widest text-white uppercase ${
+                                                            currentSlideData.type === 'hook' ? 'bg-destructive' : 
+                                                            currentSlideData.type === 'solution' ? 'bg-success' : 
+                                                            currentSlideData.type === 'cta' ? 'bg-warning' : 'bg-primary'
+                                                        }`}>
+                                                            {currentTypeConfig?.label}
+                                                        </div>
+                                                        <h3 className="text-2xl md:text-3xl font-black text-white leading-[1.1] tracking-tight"
                                                             style={{ fontFamily: visualDNA.typography.includes("Serif") ? "Georgia, serif" : "inherit" }}>
                                                             {currentSlideData.headline}
                                                         </h3>
-                                                        <p className="text-sm text-white/70 leading-relaxed">{currentSlideData.body}</p>
+                                                        <p className="text-sm md:text-base text-white/70 leading-relaxed font-medium">{currentSlideData.body}</p>
+                                                        
+                                                        <div className="pt-4 border-t border-white/10 flex items-center gap-2">
+                                                            <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold"
+                                                                style={{ backgroundColor: visualDNA.palette[0] || "#fff", color: '#000' }}>
+                                                                {(activeProfile?.name?.[0] || "P").toUpperCase()}
+                                                            </div>
+                                                            <span className="text-xs font-bold text-white/60">@{activeProfile?.name?.toLowerCase().replace(/\s+/g, "") || "perfil"}</span>
+                                                        </div>
                                                     </div>
+
                                                     {!generatingImages[currentSlide] ? (
                                                         <button onClick={() => generateImageForSlide(currentSlide)}
-                                                            className="mt-6 px-4 py-2 rounded-lg border border-white/20 text-white/50 text-[11px] font-medium hover:text-white/80 hover:border-white/40 transition-all cursor-pointer flex items-center gap-2">
+                                                            className="w-full py-3 rounded-xl bg-white/10 border border-white/20 text-white font-bold text-xs hover:bg-white/20 transition-all cursor-pointer flex items-center justify-center gap-2">
                                                             <ImageIcon className="w-3.5 h-3.5" /> Gerar imagem IA
                                                         </button>
                                                     ) : (
-                                                        <div className="mt-6 flex items-center gap-2 text-white/40 text-[11px]">
+                                                        <div className="w-full py-3 flex items-center justify-center gap-2 text-white/40 text-xs font-bold">
                                                             <Loader2 className="w-4 h-4 animate-spin" /> Gerando...
                                                         </div>
                                                     )}
