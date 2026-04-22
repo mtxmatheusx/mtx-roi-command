@@ -2,7 +2,10 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import { motion, useScroll, useSpring } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
-import { toPng } from "html-to-image";
+import { toPng, toJpeg, toSvg } from "html-to-image";
+import jsPDF from "jspdf";
+import ExportDashboard from "@/components/dashboard/ExportDashboard";
+
 
 /* ─── helpers ─── */
 function fmt(n: number) {
