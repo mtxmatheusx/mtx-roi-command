@@ -487,27 +487,17 @@ export default function Relatorio() {
           </footer>
         </div>
 
-        {/* Download button */}
-        <button
-          ref={downloadBtnRef}
-          onClick={handleDownload}
-          style={{
-            position: "fixed", bottom: "1.5rem", right: "1.5rem", zIndex: 100,
-            background: COLORS.azulExpert, color: "#fff",
-            border: "none", borderRadius: "100px",
-            padding: "0.8rem 1.5rem", cursor: "pointer",
-            fontWeight: 600, fontSize: "0.85rem",
-            fontFamily: "'Inter', sans-serif",
-            boxShadow: `0 4px 20px rgba(2,127,151,0.3)`,
-            display: "flex", alignItems: "center", gap: "0.5rem",
-            transition: "transform 0.2s",
-          }}
-          onMouseEnter={e => (e.currentTarget.style.transform = "scale(1.05)")}
-          onMouseLeave={e => (e.currentTarget.style.transform = "scale(1)")}
-        >
-          ↓ Baixar Relatório
-        </button>
+        {/* Download action */}
+        <div style={{
+          position: "fixed", bottom: "1.5rem", right: "1.5rem", zIndex: 100,
+        }}>
+          <ExportDashboard 
+            elementId="report-content" 
+            dashboardName={`Relatorio_${profileName}`}
+          />
+        </div>
       </div>
+
     </>
   );
 }
