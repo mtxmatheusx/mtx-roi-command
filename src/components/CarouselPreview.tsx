@@ -427,7 +427,7 @@ export default function CarouselPreview({ visualDNA }: CarouselPreviewProps) {
                         <div style={{ 
                             width: "48px", height: "48px", borderRadius: "50%", 
                             backgroundColor: visualDNA.palette[0] || "#ffffff",
-                            display: "flex", alignItems: "center", justifyCenter: "center",
+                            display: "flex", alignItems: "center", justifyContent: "center",
                             fontSize: "20px", fontWeight: 900, color: "#000000"
                         }}>
                             {(activeProfile?.name?.[0] || "P").toUpperCase()}
