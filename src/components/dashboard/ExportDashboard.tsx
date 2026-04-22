@@ -86,14 +86,50 @@ export default function ExportDashboard({ elementId, dashboardName = "Dashboard"
     const element = document.getElementById(elementId);
     if (!element) return;
     
+    // Add temporary header and footer for preview
+    const header = document.createElement("div");
+    header.style.width = "100%";
+    header.style.marginBottom = "20px";
+    header.style.display = "flex";
+    header.style.justifyContent = "space-between";
+    header.style.alignItems = "center";
+    header.style.borderBottom = "1px solid #027F97";
+    header.style.paddingBottom = "10px";
+    header.innerHTML = `
+      <div style="font-weight: 900; font-size: 18px; color: #027F97;">MTX ROI COMMAND</div>
+      <div style="font-size: 8px; color: #8A8A8A; text-transform: uppercase;">Preview</div>
+    `;
+
+    const footer = document.createElement("div");
+    footer.style.width = "100%";
+    footer.style.marginTop = "20px";
+    footer.style.display = "flex";
+    footer.style.justifyContent = "space-between";
+    footer.style.alignItems = "center";
+    footer.style.borderTop = "1px solid #1E1E1E";
+    footer.style.paddingTop = "10px";
+    footer.innerHTML = `
+      <div style="font-size: 8px; color: #8A8A8A;">MTX Assessoria Estratégica</div>
+      <div style="font-size: 8px; color: #8A8A8A;">${format(new Date(), "dd/MM/yyyy")}</div>
+    `;
+
+    element.prepend(header);
+    element.append(footer);
+
     try {
       const dataUrl = await toPng(element, { 
         pixelRatio: 0.5, 
-        backgroundColor: options.customBg 
+        backgroundColor: options.customBg,
+        style: {
+          padding: `${options.margins}px`,
+        }
       });
       setPreviewUrl(dataUrl);
     } catch (e) {
       console.error("Preview failed", e);
+    } finally {
+      header.remove();
+      footer.remove();
     }
   };
 
