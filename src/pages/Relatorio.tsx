@@ -238,7 +238,7 @@ export default function Relatorio() {
         scaleX, transformOrigin: "0%",
       }} />
 
-      <div ref={contentRef} style={{
+      <div ref={contentRef} id="report-content" style={{
         background: COLORS.preto,
         minHeight: "100vh",
         color: "#fff",
