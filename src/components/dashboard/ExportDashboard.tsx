@@ -155,27 +155,40 @@ export default function ExportDashboard({ elementId, dashboardName = "Dashboard"
 
   return (
     <>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="sm" className="gap-2 h-8" disabled={isExporting}>
-            {isExporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-            Exportar
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-48">
-          <DropdownMenuLabel>Formato do Arquivo</DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => handleExportClick("pdf")} className="gap-2">
-            <FileText className="w-4 h-4" /> PDF
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => handleExportClick("png")} className="gap-2">
-            <ImageIcon className="w-4 h-4" /> PNG
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => handleExportClick("jpeg")} className="gap-2">
-            <ImageIcon className="w-4 h-4" /> JPEG
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      {variant === "dropdown" ? (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm" className="gap-2 h-8" disabled={isExporting}>
+              {isExporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+              Exportar
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuLabel>Formato do Arquivo</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => handleExportClick("pdf")} className="gap-2">
+              <FileText className="w-4 h-4" /> PDF
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleExportClick("png")} className="gap-2">
+              <ImageIcon className="w-4 h-4" /> PNG
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleExportClick("jpeg")} className="gap-2">
+              <ImageIcon className="w-4 h-4" /> JPEG
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ) : (
+        <Button 
+          variant="outline" 
+          size="sm" 
+          className="gap-2 h-8" 
+          disabled={isExporting}
+          onClick={() => handleExportClick("pdf")}
+        >
+          {isExporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
+          Gerar PDF
+        </Button>
+      )}
 
       <Dialog open={showOptions} onOpenChange={setShowOptions}>
         <DialogContent className="sm:max-w-md">
