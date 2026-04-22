@@ -31,7 +31,7 @@ export default function MetricCard({ title, value, subtitle, variant = "default"
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay: index * 0.06, ease: [0.22, 1, 0.36, 1] }}
-      className="group relative overflow-hidden rounded-2xl bg-white/[0.65] backdrop-blur-[16px] backdrop-saturate-[150%] border border-white/60 [border-top-color:rgba(255,255,255,0.88)] shadow-[inset_0_1px_0_rgba(255,255,255,0.70),0_2px_8px_rgba(0,0,0,0.05)] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.80),0_12px_32px_rgba(0,0,0,0.08)] hover:-translate-y-px transition-all duration-200 dark:bg-[rgba(30,30,30,0.70)] dark:border-white/[0.08] dark:[border-top-color:rgba(255,255,255,0.12)] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_2px_8px_rgba(0,0,0,0.25)]"
+      className="group relative overflow-hidden rounded-2xl bg-white/[0.80] border border-white/60 shadow-[0_8px_20px_-8px_rgba(0,0,0,0.06),inset_0_1px_0_rgba(255,255,255,0.90)] hover:shadow-[0_12px_24px_-8px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,1)] hover:-translate-y-px transition-all duration-300 dark:bg-black/20 dark:border-white/[0.08] dark:shadow-[0_8px_20px_-8px_rgba(0,0,0,0.4)]"
     >
       {/* Top accent line for non-default variants */}
       {variant !== "default" && styles.topBar && (
