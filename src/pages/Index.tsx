@@ -20,6 +20,7 @@ import FollowerGrowthTab from "@/components/dashboard/FollowerGrowthTab";
 import { DollarSign, TrendingUp, Target, BarChart3, Loader2, AlertTriangle, RefreshCw, Eye, MousePointerClick, ShoppingBag, ShieldCheck, OctagonAlert, Activity, Briefcase, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import DashboardCustomizer from "@/components/DashboardCustomizer";
+import ExportDashboard from "@/components/dashboard/ExportDashboard";
 import { useDashboardPrefs } from "@/hooks/useDashboardPrefs";
 
 interface LogEntry {
@@ -150,6 +151,7 @@ export default function Dashboard() {
             <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
             Forçar Atualização
           </Button>
+          <ExportDashboard elementId="dashboard-content" dashboardName="CommandCenter" />
           <DashboardCustomizer />
         </div>
       </div>
@@ -173,7 +175,7 @@ export default function Dashboard() {
           </a>
         </div>
 
-        <TabsContent value="dashboard">
+        <TabsContent value="dashboard" id="dashboard-content">
           <DashboardTab
             campaigns={campaigns}
             daily={daily}
