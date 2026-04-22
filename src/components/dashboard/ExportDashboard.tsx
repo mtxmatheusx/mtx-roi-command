@@ -12,8 +12,10 @@ import {
   Palette,
   Eye,
   History,
-  FileDown
+  FileDown,
+  Users
 } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
