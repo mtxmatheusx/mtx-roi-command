@@ -28,6 +28,7 @@ interface ExportDashboardProps {
   elementId: string;
   dashboardName?: string;
   dateRange?: { since: string; until: string };
+  variant?: "dropdown" | "button";
 }
 
 export default function ExportDashboard({ elementId, dashboardName = "Dashboard", dateRange }: ExportDashboardProps) {
