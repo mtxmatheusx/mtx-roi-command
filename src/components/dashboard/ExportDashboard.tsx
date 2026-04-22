@@ -52,7 +52,8 @@ interface ExportDashboardProps {
 export default function ExportDashboard({ elementId, dashboardName = "Dashboard", dateRange, variant = "dropdown" }: ExportDashboardProps) {
   const [isExporting, setIsExporting] = useState(false);
   const [showOptions, setShowOptions] = useState(false);
-  const [exportType, setExportType] = useState<"pdf" | "png" | "jpeg">("pdf");
+  const [exportType, setExportType] = useState<"pdf" | "png" | "jpeg" | "svg">("pdf");
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const { toast } = useToast();
 
   // Export options
@@ -63,18 +64,42 @@ export default function ExportDashboard({ elementId, dashboardName = "Dashboard"
     includeLogs: false,
     includeDemographics: true,
     includeUtm: true,
-    quality: 0.95,
+    quality: 1,
     pixelRatio: 2,
+    margins: 20,
+    title: dashboardName,
+    author: "MTX Intelligence",
+    batchMode: false,
+    theme: "light",
+    customBg: "#f9fafb",
   });
 
-  const handleExportClick = (type: "pdf" | "png" | "jpeg") => {
+  const handleExportClick = (type: "pdf" | "png" | "jpeg" | "svg") => {
     setExportType(type);
     setShowOptions(true);
+    generatePreview();
+  };
+
+  const generatePreview = async () => {
+    const element = document.getElementById(elementId);
+    if (!element) return;
+    
+    try {
+      const dataUrl = await toPng(element, { 
+        pixelRatio: 0.5, 
+        backgroundColor: options.customBg 
+      });
+      setPreviewUrl(dataUrl);
+    } catch (e) {
+      console.error("Preview failed", e);
+    }
   };
 
   const generateFileName = (extension: string) => {
-    const rangeStr = dateRange ? `${dateRange.since}_a_${dateRange.until}` : new Date().toISOString().split("T")[0];
-    return `MTX_${dashboardName}_${rangeStr}.${extension}`;
+    const dateStr = format(new Date(), "yyyy-MM-dd");
+    const rangeStr = dateRange ? `${dateRange.since}_to_${dateRange.until}` : dateStr;
+    const sanitizedTitle = options.title.replace(/\s+/g, "_");
+    return `MTX_${sanitizedTitle}_${rangeStr}.${extension}`;
   };
 
   const performExport = async () => {
@@ -91,9 +116,12 @@ export default function ExportDashboard({ elementId, dashboardName = "Dashboard"
     setIsExporting(true);
     setShowOptions(false);
 
+    const formats: ("pdf" | "png" | "jpeg" | "svg")[] = options.batchMode 
+      ? ["pdf", "png", "svg"] 
+      : [exportType];
+
     try {
-      // Temporarily hide elements if needed
-      // Note: We can use classes to hide elements during capture
+      // Temporarily hide elements
       const hideList: string[] = [];
       if (!options.includeKpis) hideList.push("[data-section='kpis']");
       if (!options.includeCharts) hideList.push("[data-section='charts']");
@@ -111,36 +139,56 @@ export default function ExportDashboard({ elementId, dashboardName = "Dashboard"
         });
       });
 
-      const fileName = generateFileName(exportType);
       const captureOptions = {
         quality: options.quality,
         pixelRatio: options.pixelRatio,
-        backgroundColor: "#f9fafb", // Match app background
+        backgroundColor: options.customBg,
         style: {
-          padding: "20px",
+          padding: `${options.margins}px`,
         }
       };
 
-      if (exportType === "png") {
-        const dataUrl = await toPng(element, captureOptions);
-        downloadFile(dataUrl, fileName);
-      } else if (exportType === "jpeg") {
-        const dataUrl = await toJpeg(element, captureOptions);
-        downloadFile(dataUrl, fileName);
-      } else if (exportType === "pdf") {
-        const dataUrl = await toJpeg(element, { ...captureOptions, quality: 0.95 });
-        const pdf = new jsPDF({
-          orientation: "portrait",
-          unit: "px",
-          format: "a4",
-        });
-
-        const imgProps = pdf.getImageProperties(dataUrl);
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+      for (const format of formats) {
+        const fileName = generateFileName(format);
         
-        pdf.addImage(dataUrl, "JPEG", 0, 0, pdfWidth, pdfHeight);
-        pdf.save(fileName);
+        if (format === "png") {
+          const dataUrl = await toPng(element, captureOptions);
+          downloadFile(dataUrl, fileName);
+        } else if (format === "jpeg") {
+          const dataUrl = await toJpeg(element, captureOptions);
+          downloadFile(dataUrl, fileName);
+        } else if (format === "svg") {
+          const dataUrl = await toSvg(element, captureOptions);
+          downloadFile(dataUrl, fileName);
+        } else if (format === "pdf") {
+          // For PDF, we use high-quality JPEG as the base
+          const dataUrl = await toJpeg(element, { ...captureOptions, quality: 1, pixelRatio: 3 });
+          const pdf = new jsPDF({
+            orientation: "portrait",
+            unit: "px",
+            format: "a4",
+            putOnlyUsedFonts: true,
+          });
+
+          // Add metadata to PDF
+          pdf.setProperties({
+            title: options.title,
+            subject: "Dashboard Performance Report",
+            author: options.author,
+            keywords: "dashboard, analytics, mtx",
+            creator: "MTX Dashboard System"
+          });
+
+          const imgProps = pdf.getImageProperties(dataUrl);
+          const pdfWidth = pdf.internal.pageSize.getWidth();
+          const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+          
+          pdf.addImage(dataUrl, "JPEG", 0, 0, pdfWidth, pdfHeight);
+          pdf.save(fileName);
+        }
+        
+        // Brief delay between batch exports
+        if (options.batchMode) await new Promise(r => setTimeout(r, 500));
       }
 
       // Restore hidden elements
@@ -149,14 +197,14 @@ export default function ExportDashboard({ elementId, dashboardName = "Dashboard"
       });
 
       toast({
-        title: "Exportação concluída",
-        description: `O arquivo ${fileName} foi gerado com sucesso.`,
+        title: options.batchMode ? "Exportação em lote concluída" : "Exportação concluída",
+        description: `Arquivos gerados com alta qualidade e metadados incluídos.`,
       });
     } catch (error) {
       console.error("Export error:", error);
       toast({
         title: "Erro na exportação",
-        description: "Ocorreu um problema ao gerar o arquivo.",
+        description: "Ocorreu um problema ao gerar o arquivo. Tente reduzir a resolução.",
         variant: "destructive",
       });
     } finally {
@@ -170,6 +218,7 @@ export default function ExportDashboard({ elementId, dashboardName = "Dashboard"
     link.href = dataUrl;
     link.click();
   };
+
 
   return (
     <>
