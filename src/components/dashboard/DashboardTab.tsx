@@ -200,30 +200,37 @@ export default function DashboardTab(props: DashboardTabProps) {
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-            className="rounded-[20px] relative overflow-hidden bg-white/[0.82] backdrop-blur-[24px] backdrop-saturate-[170%] border border-white/75 [border-top-color:rgba(255,255,255,0.95)] shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_12px_32px_rgba(0,0,0,0.08),0_4px_8px_rgba(0,0,0,0.04)] dark:bg-[rgba(30,30,30,0.85)] dark:border-white/10 dark:[border-top-color:rgba(255,255,255,0.16)] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_12px_32px_rgba(0,0,0,0.35)]"
+            className="rounded-[32px] relative overflow-hidden bg-white/[0.85] backdrop-blur-[32px] backdrop-saturate-[170%] border border-white/70 [border-top-color:rgba(255,255,255,0.95)] shadow-[0_24px_48px_-12px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.90)] dark:bg-black/40 dark:border-white/10 dark:shadow-[0_24px_48px_-12px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.05)]"
           >
-            <div className="p-6 sm:p-10 text-center">
-              <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.03] via-transparent to-[hsl(var(--success))]/[0.03] pointer-events-none" />
-              <div className="relative">
-                <p className="t-label mb-4">Lucro Líquido Total</p>
-                <p className={`text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tighter hero-number ${totalProfit >= 0 ? "text-success" : "text-destructive"}`}>{formatCurrency(totalProfit)}</p>
-                <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-5 mt-5">
-                  <span className="text-sm text-muted-foreground">
-                    Receita <span className="font-semibold text-foreground">{formatCurrency(totalRevenue)}</span>
-                  </span>
-                  <span className="w-1 h-1 rounded-full bg-border" />
-                  <span className="text-sm text-muted-foreground">
-                    Investimento <span className="font-semibold text-foreground">{formatCurrency(totalSpend)}</span>
-                  </span>
-                  {deltaProfit !== null && isFinite(deltaProfit) && (
-                    <>
-                      <span className="w-1 h-1 rounded-full bg-border" />
-                      <span className={`badge-status ${deltaProfit >= 0 ? "badge-green" : "badge-red"}`}>
-                        {deltaProfit >= 0 ? <TrendingUp className="w-3 h-3" /> : null}
-                        {deltaProfit > 0 ? "+" : ""}{deltaProfit.toFixed(1)}%
-                      </span>
-                    </>
-                  )}
+            <div className="p-8 sm:p-12 text-center relative z-10">
+              <div className="absolute inset-0 bg-gradient-to-b from-primary/[0.02] to-transparent pointer-events-none" />
+              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground/80 mb-6">Lucro Líquido Total</p>
+              <div className="flex flex-col items-center gap-1">
+                <p className={`text-5xl sm:text-6xl lg:text-7xl font-black tracking-tighter leading-none hero-number ${totalProfit >= 0 ? "text-success drop-shadow-[0_0_20px_rgba(var(--success),0.2)]" : "text-destructive"}`}>
+                  {formatCurrency(totalProfit)}
+                </p>
+                {deltaProfit !== null && isFinite(deltaProfit) && (
+                  <div className={`mt-4 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border transition-all ${deltaProfit >= 0 ? "bg-success/10 border-success/20 text-success" : "bg-destructive/10 border-destructive/20 text-destructive"}`}>
+                    {deltaProfit >= 0 ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingUp className="w-3.5 h-3.5 rotate-180" />}
+                    {deltaProfit > 0 ? "+" : ""}{deltaProfit.toFixed(1)}% <span className="font-medium opacity-60">vs anterior</span>
+                  </div>
+                )}
+              </div>
+              
+              <div className="flex flex-wrap items-center justify-center gap-8 mt-10 pt-8 border-t border-black/[0.04] dark:border-white/[0.04]">
+                <div className="flex flex-col items-center">
+                  <span className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1">Receita</span>
+                  <span className="text-lg font-bold text-foreground">{formatCurrency(totalRevenue)}</span>
+                </div>
+                <div className="w-px h-8 bg-black/[0.06] dark:bg-white/[0.06] hidden sm:block" />
+                <div className="flex flex-col items-center">
+                  <span className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1">Investimento</span>
+                  <span className="text-lg font-bold text-foreground">{formatCurrency(totalSpend)}</span>
+                </div>
+                <div className="w-px h-8 bg-black/[0.06] dark:bg-white/[0.06] hidden sm:block" />
+                <div className="flex flex-col items-center">
+                  <span className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1">Margem</span>
+                  <span className="text-lg font-bold text-success">{totalRevenue > 0 ? ((totalProfit / totalRevenue) * 100).toFixed(1) : 0}%</span>
                 </div>
               </div>
             </div>
